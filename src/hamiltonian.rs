@@ -36,8 +36,22 @@ impl Default for Pauli {
 // particle operators, so this is probably better than introducing an enum to separate
 // the two cases or using trait objects opertors
 pub struct Operator {
-    index: [usize; 2],
-    data: [Pauli; 2],
+    pub index: [usize; 2],
+    pub data: [Pauli; 2],
+}
+
+impl Operator {
+    pub fn commute(&self, other: &Self) -> bool {
+        let mut res = false;
+        for s in 0..2 {
+            for o in 0..2 {
+                if self.index[s] == other.index[o] && self.data[s] != other.data[o] {
+                    res ^= true;
+                }
+            }
+        }
+        res
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
