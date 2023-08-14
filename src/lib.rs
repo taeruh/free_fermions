@@ -7,7 +7,8 @@ macro_rules! non_semantic_default {
     };
 }
 
-pub mod hamiltonian;
 pub mod graph;
+pub mod hamiltonian;
+pub mod run;
 
 // pub mod mat_mul;

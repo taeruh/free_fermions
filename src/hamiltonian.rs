@@ -1,5 +1,14 @@
+use std::{
+    collections::HashSet,
+    hash::Hash,
+};
+
+use num::integer;
 use rand::{
-    seq::SliceRandom,
+    seq::{
+        index::{self,},
+        SliceRandom,
+    },
     RngCore,
     SeedableRng,
 };
@@ -7,7 +16,7 @@ use rand_pcg::Pcg64;
 
 // n * 3 single particle
 // (n over 2) * 3^2 = (n * (n - 1) / 2) * 3^2 two particle
-fn num_ops(n: usize) -> usize {
+pub fn num_ops(n: usize) -> usize {
     if n == 0 {
         return 0;
     }
@@ -54,10 +63,15 @@ impl Operator {
     }
 }
 
+/// # About the draw_.*sets methods
+///
+/// For enough samples, there shouldn't be a real difference, but we might see some
+/// effects in edge cases. The ...
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct OperatorPool<R> {
     pub ops: Vec<Operator>,
     pub rng: R,
+    pub len: usize,
 }
 
 impl<R> AsRef<[Operator]> for OperatorPool<R> {
@@ -132,18 +146,126 @@ impl<R> OperatorPool<R> {
     }
 
     pub fn new_with(n: usize, rng: R) -> Self {
-        Self { ops: Self::new_pool(n), rng }
+        Self {
+            ops: Self::new_pool(n),
+            rng,
+            len: num_ops(n),
+        }
     }
 
     /// this is not performant, but we shouldn't need it in a hot loop
     pub fn resize(&mut self, n: usize) {
         self.ops = Self::new_pool(n);
     }
+
+    /// The number of possible operators.
+    pub fn num_ops(&self) -> usize {
+        self.ops.len()
+    }
+
+    /// The number of distinct sets with `k` many operators.
+    ///
+    /// If `self.num_ops() > 67`, it might overflow.
+    pub fn num_distinct_k_sets(&self, k: usize) -> usize {
+        integer::binomial(self.len, k)
+    }
+}
+
+#[derive(Debug)]
+pub struct OperatorIter<'l> {
+    ops: &'l Vec<Operator>,
+    ind: std::collections::hash_set::IntoIter<usize>,
+}
+
+impl<'l> Iterator for OperatorIter<'l> {
+    type Item = &'l Operator;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.ind.next().map(|i| &self.ops[i])
+    }
 }
 
 impl<R: RngCore> OperatorPool<R> {
+    /// Draw `amount` many distinct operators from the pool.
     pub fn draw(&mut self, amount: usize) -> impl Iterator<Item = &Operator> {
         self.ops.choose_multiple(&mut self.rng, amount)
+    }
+
+    /// Draw `amount` many distinct operator sets, each with distinct operators.
+    ///
+    /// # Important!
+    ///
+    /// This function will loop endlessly if `amount` is larger than the number of
+    /// possible distinct sets, i.e., if `amount > self.num_distinct_k_sets(set_size)`
+    /// (this is checked, in debug mode, if `self.num_ops <= 67`, which is true for less
+    /// then 5 qubits).
+    pub fn draw_exact_distinct_sets(
+        &mut self,
+        amount: usize,
+        set_size: usize,
+    ) -> impl Iterator<Item = impl Iterator<Item = &Operator>> {
+        #[cfg(debug_assertions)]
+        if self.num_ops() <= 67 {
+            assert!(
+                amount <= self.num_distinct_k_sets(set_size),
+                "amount > self.num_distinct_k_sets(set_size); would loop endlessly"
+            );
+        }
+
+        let mut sets = Vec::<HashSet<_>>::with_capacity(amount);
+        let mut len = 0;
+        'outer: while len < amount {
+            let set =
+                HashSet::from_iter(index::sample(&mut self.rng, self.len, set_size));
+            for s in sets.iter() {
+                if *s == set {
+                    continue 'outer;
+                }
+            }
+            sets.push(set);
+            len += 1;
+        }
+
+        sets.into_iter().map(|e| OperatorIter {
+            ops: &self.ops,
+            ind: e.into_iter(),
+        })
+    }
+
+    /// Draw up to `amount` many distinct operators sets, each with distinct operators.
+    pub fn draw_distinct_sets(
+        &mut self,
+        amount: usize,
+        set_size: usize,
+    ) -> impl Iterator<Item = impl Iterator<Item = &Operator>> {
+        let mut sets = Vec::<HashSet<_>>::new();
+        'outer: for _ in 0..amount {
+            let set =
+                HashSet::from_iter(index::sample(&mut self.rng, self.len, set_size));
+            for s in sets.iter() {
+                if *s == set {
+                    continue 'outer;
+                }
+            }
+            sets.push(set);
+        }
+
+        sets.into_iter().map(|e| OperatorIter {
+            ops: &self.ops,
+            ind: e.into_iter(),
+        })
+    }
+
+    /// Draw `amount` many operators sets, each with distinct operators.
+    pub fn draw_sets(
+        &mut self,
+        amount: usize,
+        set_size: usize,
+    ) -> impl Iterator<Item = impl Iterator<Item = &Operator>> {
+        let mut sets = Vec::with_capacity(amount);
+        for _ in 0..amount {
+            sets.push(self.ops.choose_multiple(&mut self.rng, set_size));
+        }
+        sets.into_iter()
     }
 }
 
@@ -154,10 +276,29 @@ impl OperatorPool<Pcg64> {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use std::collections::HashSet;
 
     use super::*;
+
+    macro_rules! operator {
+        ($i1:expr, $p1:ident, $i2:expr, $p2:ident) => {
+            Operator {
+                index: [$i1, $i2],
+                data: [
+                    $crate::hamiltonian::Pauli::$p1,
+                    $crate::hamiltonian::Pauli::$p2,
+                ],
+            }
+        };
+    }
+    pub(crate) use operator;
+    macro_rules! single_operator {
+        ($i:expr, $p:ident) => {
+            operator!($i, $p, 0, X)
+        };
+    }
+    pub(crate) use single_operator;
 
     // those tests here are pretty trivial, it's just to make sure that we don't break
     // anything accidentally in the future because we think we can do it smarter, but
@@ -172,22 +313,6 @@ mod tests {
             );
         }
 
-        macro_rules! operator {
-            ($i1:expr, $p1:ident, $i2:expr, $p2:ident) => {
-                Operator {
-                    index: [$i1, $i2],
-                    data: [
-                        $crate::hamiltonian::Pauli::$p1,
-                        $crate::hamiltonian::Pauli::$p2,
-                    ],
-                }
-            };
-        }
-        macro_rules! single_operator {
-            ($i:expr, $p:ident) => {
-                operator!($i, $p, 0, X)
-            };
-        }
         macro_rules! singles {
             ($i:expr) => {
                 [
