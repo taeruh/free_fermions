@@ -7,6 +7,7 @@ use std::{
 };
 
 use super::hamiltonian::Operator;
+use crate::mat_mul::Matrix;
 
 pub type Node = Vec<usize>;
 
@@ -111,10 +112,6 @@ impl Graph {
 
         ReducedGraph { nodes: representatives }
     }
-
-    pub fn claw_check(&self) -> bool {
-        todo!()
-    }
 }
 
 /// The neighbors are sorted.
@@ -159,6 +156,68 @@ impl<O: Borrow<Operator>> From<&[O]> for Graph {
         }
 
         Self { nodes }
+    }
+}
+
+impl ReducedGraph {
+    pub fn remove_node(&mut self, node: usize) -> Option<HashSet<usize>> {
+        let neighbors = self.nodes.remove(&node)?;
+        for neighbor in neighbors.iter() {
+            self.nodes
+                .get_mut(neighbor)
+                .expect("graph incomplete")
+                .remove(&node);
+        }
+        Some(neighbors)
+    }
+
+    pub fn complementary_subgraph(&self, main_neighbors: &HashSet<usize>) -> Matrix {
+        let len = main_neighbors.len() + 1;
+        let neighbor_nodes = main_neighbors
+            .iter()
+            .map(|k| (k, self.nodes.get(k).unwrap()))
+            .collect::<Vec<_>>();
+
+        // directly calculate the complement, instead of calculating the real subgraph
+        // and then calling complement on it
+        let mut array = vec![0; len * len];
+        array[0] = 0;
+        for (row, (node, _)) in neighbor_nodes.iter().enumerate() {
+            let row = row + 1;
+            let row_shift = row * len;
+            array[row_shift + row] = 0;
+            for (col, (_, neighbor)) in neighbor_nodes[row..].iter().enumerate() {
+                let col = col + row + 1;
+                let has_edge = !neighbor.contains(node);
+                array[row_shift + col] = has_edge.into();
+                array[col * len + row] = has_edge.into();
+            }
+        }
+
+        Matrix::from_vec_with_shape(array, (len, len))
+    }
+
+    pub fn claw_count(&self, main_neighbors: &HashSet<usize>) -> u32 {
+        if main_neighbors.len() < 3 {
+            return 0;
+        }
+        let array = self.complementary_subgraph(main_neighbors);
+        // why is this the claw count for this node:
+        // - cf. impl of diag_cube; trace = sum_i, sum_k sum_j a_ik * a_kj * a_ji
+        // - counting claws is the same as counting triangles in the complementary
+        // graph;
+        // - in the trace, i.e., each single summand a_ik * a_kj * a_ji is only 1 if i,
+        // k, j build a triangle
+        // - if we have a triangle r, s, t, then there are 3! terms in the sum that
+        // represent the triangle
+        array.trace_cube() / 6
+    }
+
+    pub fn check_all(&self) -> bool {
+        for (node, neighbors) in self.nodes.iter() {
+            println!("{:?}", (node, self.claw_count(neighbors)));
+        }
+        false
     }
 }
 
@@ -213,5 +272,132 @@ mod tests {
                 )
             )
         }
+    }
+
+    #[test]
+    fn claws() {
+        //
+
+        // //    - 1
+        // //  /
+        // // 0 -- 2
+        // //  \
+        // //    - 3
+        // let graph = Graph {
+        //     nodes: vec![
+        //         vec![1, 2, 3],
+        //         vec![0],
+        //         vec![0],
+        //         vec![0],
+        //         // ... preventing line concatenation on format
+        //     ],
+        // };
+        // graph.reduce().check_all();
+        // // #claws = 1
+
+        // //    - 1 -- 4
+        // //  /
+        // // 0 -- 2 -- 5
+        // //  \
+        // //    - 3 -- 6
+        // let graph = Graph {
+        //     nodes: vec![
+        //         vec![1, 2, 3],
+        //         vec![0, 4],
+        //         vec![0, 5],
+        //         vec![0, 6],
+        //         vec![1],
+        //         vec![2],
+        //         vec![3],
+        //     ],
+        // };
+        // graph.reduce().check_all();
+
+        // // 10 -- 7 -     - 1 -- 4
+        // //           \ /
+        // // 11 -- 8 -- 0 -- 2 -- 5
+        // //           / \
+        // // 13 -- 9 -     - 3 -- 6
+        // let graph = Graph {
+        //     nodes: vec![
+        //         vec![1, 2, 3, 7, 8, 9],
+        //         vec![0, 4],
+        //         vec![0, 5],
+        //         vec![0, 6],
+        //         vec![1],
+        //         vec![2],
+        //         vec![3],
+        //         vec![0, 10],
+        //         vec![0, 11],
+        //         vec![0, 12],
+        //         vec![7],
+        //         vec![8],
+        //         vec![9],
+        //     ],
+        // };
+        // graph.reduce().check_all();
+        // // #claws = binom(6, 3) = 20
+
+        // //    - 1 -
+        // //  /       \
+        // // 0 -- 2 -- 4
+        // //  \
+        // //    - 3
+        // let graph = Graph {
+        //     nodes: vec![
+        //         vec![1, 2, 3],
+        //         vec![0, 4],
+        //         vec![0, 4],
+        //         vec![0],
+        //         vec![1, 2],
+        //         // ... preventing line concatenation on format
+        //     ],
+        // };
+        // graph.reduce().check_all();
+
+        // //    - 1
+        // //  /
+        // // 0 -- 2
+        // //  \   |
+        // //    - 3
+        // let graph = Graph {
+        //     nodes: vec![
+        //         vec![1, 2, 3],
+        //         vec![0],
+        //         vec![0, 3],
+        //         vec![0, 2],
+        //         // ... preventing line concatenation on format
+        //     ],
+        // };
+        // graph.reduce().check_all();
+
+        // 7       - 1 -- 4
+        // |     /
+        // 8 -- 0 -- 2 -- 5
+        // |     \
+        // 9 --10  - 3 -- 6
+        let graph = Graph {
+            nodes: vec![
+                vec![1, 2, 3, 8],
+                vec![0, 4],
+                vec![0, 5],
+                vec![0, 6],
+                vec![1],
+                vec![2],
+                vec![3],
+                vec![8],
+                vec![0, 7, 9],
+                vec![8, 10],
+                vec![9],
+            ],
+        };
+        let mut reduced = graph.reduce();
+        reduced.check_all();
+        reduced.remove_node(0);
+        let (node, neighbors) = reduced.nodes.get_key_value(&8).unwrap();
+        println!("\n{:?}", (node, reduced.claw_count(neighbors)));
+        // reduced.check_all();
+
+        //
     }
 }

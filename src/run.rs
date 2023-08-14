@@ -13,7 +13,25 @@ use crate::{
 
 pub fn run() {
     // find_reduction()
-    simple_testing()
+    // simple_testing()
+    claw()
+}
+
+#[allow(unused)]
+fn claw() {
+    let n = 3;
+    let seed = 8;
+
+    let mut pool = OperatorPool::new_with(n, Pcg64::seed_from_u64(seed));
+
+    let p = 0.2;
+    let set_size = (pool.ops.len() as f64 * p).round() as usize;
+    // println!("{:?}", set_size);
+
+    let sample = pool.draw(set_size);
+    let reduced_graph = Graph::from_iter(sample).reduce();
+
+    reduced_graph.check_all();
 }
 
 #[allow(unused)]

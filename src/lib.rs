@@ -10,5 +10,6 @@ macro_rules! non_semantic_default {
 pub mod graph;
 pub mod hamiltonian;
 pub mod run;
+pub mod mat_mul;
 
 // pub mod mat_mul;
