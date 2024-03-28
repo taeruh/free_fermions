@@ -1,7 +1,4 @@
-use std::fmt::{
-    self,
-    Debug,
-};
+use std::fmt::{self, Debug};
 
 pub struct Matrix {
     data: Vec<u32>,
@@ -44,20 +41,20 @@ impl Matrix {
         &self.data[start..end]
     }
 
-    pub fn trace_cube(&self) -> u32 {
+    pub fn diag_cube(&self) -> Vec<u32> {
         assert_eq!(self.dims.0, self.dims.1);
         let dim = self.dims.0;
 
-        let mut trace = 0;
+        let mut diag = vec![0; dim];
 
         // we checked the dimensions above
         unsafe {
-            // trace = sum_i sum_k sum_j a_ik * a_kj * a_ji
-            for i in 0..dim {
+            // diag_i = sum_k sum_j a_ik * a_kj * a_ji
+            for (i, d) in diag.iter_mut().enumerate() {
                 for k in 0..dim {
                     let self_ik = *self.get_unchecked(i, k);
                     for j in 0..dim {
-                        trace += self_ik
+                        *d += self_ik
                             * *self.get_unchecked(k, j)
                             * *self.get_unchecked(j, i);
                     }
@@ -65,7 +62,7 @@ impl Matrix {
             }
         }
 
-        trace
+        diag
     }
 }
 

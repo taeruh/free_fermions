@@ -1,18 +1,26 @@
-use std::{
-    collections::HashSet,
-    hash::Hash,
-};
+use std::{collections::HashSet, hash::Hash};
 
 use num::integer;
 use rand::{
+    distributions::Uniform,
+    prelude::Distribution,
     seq::{
-        index::{self,},
+        index::{self},
         SliceRandom,
     },
-    RngCore,
-    SeedableRng,
+    RngCore, SeedableRng,
 };
 use rand_pcg::Pcg64;
+
+#[derive(Clone, Copy)]
+pub struct Probability(f64);
+
+impl Probability {
+    pub fn new(f: f64) -> Self {
+        assert!((0.0..=1.0).contains(&f));
+        Self(f)
+    }
+}
 
 // n * 3 single particle
 // (n over 2) * 3^2 = (n * (n - 1) / 2) * 3^2 two particle
@@ -184,7 +192,36 @@ impl<'l> Iterator for OperatorIter<'l> {
     }
 }
 
+pub fn draw_with_rate<'l>(
+    ops: &'l [Operator],
+    rng: &mut impl RngCore,
+    dist: &impl Distribution<f64>,
+    acceptance_probability: Probability,
+) -> Vec<&'l Operator> {
+    ops.iter()
+        .filter(|_| dist.sample(rng) < acceptance_probability.0)
+        .collect()
+}
+
 impl<R: RngCore> OperatorPool<R> {
+    pub fn draw_set_with_probability(&mut self, density: Probability) -> Vec<&Operator> {
+        let dist = Uniform::new_inclusive(0.0, 1.0);
+        draw_with_rate(&self.ops, &mut self.rng, &dist, density)
+    }
+
+    pub fn draw_multiple_sets_with_probability(
+        &mut self,
+        density: Probability,
+        amount: usize,
+    ) -> Vec<Vec<&Operator>> {
+        let dist = Uniform::new_inclusive(0.0, 1.0);
+        let mut res = Vec::with_capacity(amount);
+        for _ in 0..amount {
+            res.push(draw_with_rate(&self.ops, &mut self.rng, &dist, density));
+        }
+        res
+    }
+
     /// Draw `amount` many distinct operators from the pool.
     pub fn draw(&mut self, amount: usize) -> impl Iterator<Item = &Operator> {
         self.ops.choose_multiple(&mut self.rng, amount)
@@ -285,10 +322,7 @@ pub mod tests {
         ($i1:expr, $p1:ident, $i2:expr, $p2:ident) => {
             Operator {
                 index: [$i1, $i2],
-                data: [
-                    $crate::hamiltonian::Pauli::$p1,
-                    $crate::hamiltonian::Pauli::$p2,
-                ],
+                data: [$crate::hamiltonian::Pauli::$p1, $crate::hamiltonian::Pauli::$p2],
             }
         };
     }
