@@ -96,3 +96,7 @@ pub fn find_reduction() {
         println!("no reduction at sample {m}");
     }
 }
+
+
+pub fn check_obstinate() {
+}

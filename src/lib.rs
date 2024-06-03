@@ -7,6 +7,7 @@ macro_rules! non_semantic_default {
     };
 }
 
+pub mod algorithms;
 pub mod enumerate_offset;
 pub mod graph;
 pub mod hamiltonian;

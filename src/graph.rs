@@ -246,6 +246,16 @@ impl ReducedGraph {
     }
 }
 
+impl<I: IntoIterator<Item = usize>> FromIterator<(usize, I)> for ReducedGraph {
+    fn from_iter<T: IntoIterator<Item = (usize, I)>>(iter: T) -> Self {
+        Self {
+            nodes: HashMap::from_iter(
+                iter.into_iter().map(|(i, e)| (i, HashSet::from_iter(e))),
+            ),
+        }
+    }
+}
+
 pub fn complementary_subgraph(nodes: &[(usize, &ReducedNode)]) -> Matrix {
     let len = nodes.len();
     // directly calculate the complement, instead of calculating the real subgraph
@@ -253,8 +263,8 @@ pub fn complementary_subgraph(nodes: &[(usize, &ReducedNode)]) -> Matrix {
     let mut array = vec![0; len * len];
     for (row, (node, _)) in nodes.iter().enumerate() {
         let row_shift = row * len;
-        for (col, (_, neighbor)) in Enumerate::new(nodes[row + 1..].iter(), row + 1) {
-            let has_edge = !neighbor.contains(node);
+        for (col, (_, neighborhood)) in Enumerate::new(nodes[row + 1..].iter(), row + 1) {
+            let has_edge = !neighborhood.contains(node); // complement!
             array[row_shift + col] = has_edge.into();
             array[col * len + row] = has_edge.into();
         }
