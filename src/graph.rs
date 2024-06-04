@@ -8,18 +8,27 @@ use super::hamiltonian::Operator;
 use crate::{enumerate_offset::Enumerate, matrix::MatrixTools};
 type Matrix = ndarray::Array2<u32>;
 
-pub type Node = Vec<usize>;
+// some of the following type aliases are not used, but they serve as documentation and
+// orientation for variable names
+pub type Vertex = usize;
+pub type Vertices = Vec<Vertex>;
+pub type Neighbourhood = Vec<Vertex>;
+pub type Node = (Vertex, Neighbourhood);
+pub type Nodes = Vec<Node>;
+pub type SVertices = HashSet<Vertex>; // S for set
+pub type SNeighbourhood = HashSet<Vertex>;
+pub type SNode = (Vertex, SNeighbourhood);
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Graph {
-    pub nodes: Vec<Node>,
+    // not named neighbourhood, since index and value usually come in tuples (clearer in
+    // SGraph ...)
+    pub nodes: Vec<Neighbourhood>,
 }
 
-pub type ReducedNode = HashSet<usize>;
-
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct ReducedGraph {
-    pub nodes: HashMap<usize, ReducedNode>,
+pub struct SGraph {
+    pub nodes: HashMap<usize, SNeighbourhood>,
 }
 
 impl Graph {
@@ -52,7 +61,7 @@ impl Graph {
     ///
     /// Note that elements are `swap_remove`d, so the order of the nodes, and their
     /// neighbours, is not preserved.
-    pub fn reduce(self) -> ReducedGraph {
+    pub fn reduce(self) -> SGraph {
         let mut representatives = HashMap::new();
         let mut twins_set = Vec::new();
 
@@ -109,7 +118,7 @@ impl Graph {
             }
         }
 
-        ReducedGraph { nodes: representatives }
+        SGraph { nodes: representatives }
     }
 }
 
@@ -119,10 +128,10 @@ impl<'l> FromIterator<&'l Operator> for Graph {
         let iter = iter.into_iter();
         let size = iter.size_hint().0;
         let mut ops: Vec<&Operator> = Vec::with_capacity(size);
-        let mut nodes: Vec<Node> = Vec::with_capacity(size);
+        let mut nodes: Vec<Neighbourhood> = Vec::with_capacity(size);
 
         for (i, op) in iter.enumerate() {
-            let mut node = Node::new();
+            let mut node = Neighbourhood::new();
             for (j, other_op) in ops.iter().enumerate() {
                 if !op.commute(other_op) {
                     node.push(j);
@@ -141,10 +150,10 @@ impl<'l> FromIterator<&'l Operator> for Graph {
 impl<O: Borrow<Operator>> From<&[O]> for Graph {
     fn from(ops: &[O]) -> Self {
         let iter = ops.iter();
-        let mut nodes: Vec<Node> = Vec::with_capacity(ops.len());
+        let mut nodes: Vec<Neighbourhood> = Vec::with_capacity(ops.len());
 
         for (i, op) in iter.enumerate() {
-            let mut node = Node::new();
+            let mut node = Neighbourhood::new();
             for (j, other_op) in ops[..i].iter().enumerate() {
                 if !op.borrow().commute(other_op.borrow()) {
                     node.push(j);
@@ -158,7 +167,7 @@ impl<O: Borrow<Operator>> From<&[O]> for Graph {
     }
 }
 
-impl ReducedGraph {
+impl SGraph {
     pub fn complement(&mut self) {
         let vertices = self.nodes.keys().copied().collect::<Vec<_>>();
         for node in self.nodes.iter_mut() {
@@ -260,7 +269,7 @@ impl ReducedGraph {
     }
 }
 
-impl<I: IntoIterator<Item = usize>> FromIterator<(usize, I)> for ReducedGraph {
+impl<I: IntoIterator<Item = usize>> FromIterator<(usize, I)> for SGraph {
     fn from_iter<T: IntoIterator<Item = (usize, I)>>(iter: T) -> Self {
         Self {
             nodes: HashMap::from_iter(
@@ -270,7 +279,7 @@ impl<I: IntoIterator<Item = usize>> FromIterator<(usize, I)> for ReducedGraph {
     }
 }
 
-pub fn complementary_subgraph(nodes: &[(usize, &ReducedNode)]) -> Matrix {
+pub fn complementary_subgraph(nodes: &[(usize, &SNeighbourhood)]) -> Matrix {
     let len = nodes.len();
     // directly calculate the complement, instead of calculating the real subgraph
     // and then complementing it

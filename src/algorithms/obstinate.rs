@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::graph::ReducedGraph;
+use crate::graph::SGraph;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Obstinate {
@@ -14,13 +14,15 @@ pub enum ObstinateKind {
     Complement,
 }
 
-pub fn obstinate(mut graph: ReducedGraph) -> Obstinate {
+pub fn obstinate(mut graph: SGraph) -> Obstinate {
     let len = graph.nodes.len();
-    let len2 = if len % 2 != 0 {
+    if len == 0 {
+        return Obstinate::True(ObstinateKind::Itself, (vec![], vec![]));
+    }
+    if len % 2 != 0 {
         return Obstinate::False;
-    } else {
-        len / 2
-    };
+    }
+    let len2 = len / 2;
 
     let mut degrees = graph
         .nodes
@@ -68,7 +70,7 @@ pub fn obstinate(mut graph: ReducedGraph) -> Obstinate {
     let a_part = graph.nodes[&b_start].clone();
     let b_part = graph.nodes[&a_end].clone();
 
-    fn is_independent(graph: &ReducedGraph, subset: &HashSet<usize>) -> bool {
+    fn is_independent(graph: &SGraph, subset: &HashSet<usize>) -> bool {
         let subset = subset.iter().collect::<Vec<_>>();
         // TODO: use my Enumerate here
         for i in 0..subset.len() {
@@ -152,6 +154,7 @@ mod tests {
     use rand_pcg::Pcg64;
 
     use super::*;
+    use crate::graph::{Nodes, Vertices};
 
     fn randomize_labels(
         max_list: usize,
@@ -188,9 +191,9 @@ mod tests {
         max_list: usize,
         max_rand: usize,
         list: Vec<(usize, Vec<usize>)>,
-    ) -> (ReducedGraph, Vec<usize>) {
+    ) -> (SGraph, Vec<usize>) {
         let (graph, map) = randomize_labels(max_list, max_rand, list);
-        (ReducedGraph::from_iter(graph), map)
+        (SGraph::from_iter(graph), map)
     }
 
     fn create_expected(
@@ -228,20 +231,27 @@ mod tests {
     }
 
     #[test]
-    fn loop_positive() {
+    fn true_empty() {
+        let (graph, map) = create_graph!(0, 0,);
+        assert_eq!(obstinate(graph), create_expected!(Itself, [], [], map)[0]);
+    }
+
+    #[test]
+    // check all (co-)obstinate up to MAX vertices (up to isomorphisms)
+    fn true_all() {
         const MAX: usize = 10;
 
         fn test(
             partition_size: usize,
             kind: ObstinateKind,
-            a_part_full: Vec<(usize, Vec<usize>)>,
-            b_part_full: Vec<(usize, Vec<usize>)>,
+            a_part_full: Nodes,
+            b_part_full: Nodes,
         ) {
             let size = partition_size * 2 - 1;
 
-            let mut list = Vec::with_capacity(size);
-            let mut a_part = Vec::with_capacity(partition_size);
-            let mut b_part = Vec::with_capacity(partition_size);
+            let mut list: Nodes = Vec::with_capacity(size);
+            let mut a_part: Vertices = Vec::with_capacity(partition_size);
+            let mut b_part: Vertices = Vec::with_capacity(partition_size);
             for (a, b) in a_part_full.into_iter().zip(b_part_full.into_iter()) {
                 a_part.push(a.0);
                 b_part.push(b.0);
@@ -254,7 +264,7 @@ mod tests {
             let expected = create_expected(kind, a_part, b_part, map);
             if !expected.contains(&result) {
                 panic!(
-                    "expected:\n{:?} or\n{:?}\ngot:\n{:?}",
+                    "expected:\n{:?} or\n{:?}\nbut got:\n{:?}",
                     expected[0], expected[1], result
                 );
             }
@@ -262,10 +272,10 @@ mod tests {
 
         for part_size in 1..=MAX {
             let size = 2 * part_size;
-            let mut a_part = Vec::with_capacity(part_size);
-            let mut b_part = Vec::with_capacity(part_size);
-            let mut co_a_part = Vec::with_capacity(part_size);
-            let mut co_b_part = Vec::with_capacity(part_size);
+            let mut a_part: Nodes = Vec::with_capacity(part_size);
+            let mut b_part: Nodes = Vec::with_capacity(part_size);
+            let mut co_a_part: Nodes = Vec::with_capacity(part_size);
+            let mut co_b_part: Nodes = Vec::with_capacity(part_size);
             for i in 0..part_size {
                 a_part.push((2 * i, (0..=i).map(|j| 2 * j + 1).collect()));
                 b_part.push((2 * i + 1, (i..part_size).map(|j| 2 * j).collect()));
@@ -298,5 +308,13 @@ mod tests {
                 test(part_size, ObstinateKind::Itself, a_part, b_part);
             }
         }
+    }
+
+    #[test]
+    // no need to do many tests for that, since this check is very simple and we just
+    // ensure that it is there
+    fn fail_odd() {
+        let (graph, _) = create_graph!(3, 3, (0, [1]), (1, [2]), (2, [0]),);
+        assert_eq!(obstinate(graph), Obstinate::False);
     }
 }
