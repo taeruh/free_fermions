@@ -1,6 +1,7 @@
 use std::{
     borrow::Borrow,
     collections::{HashMap, HashSet},
+    mem,
 };
 
 use super::hamiltonian::Operator;
@@ -158,6 +159,19 @@ impl<O: Borrow<Operator>> From<&[O]> for Graph {
 }
 
 impl ReducedGraph {
+    pub fn complement(&mut self) {
+        let vertices = self.nodes.keys().copied().collect::<Vec<_>>();
+        for node in self.nodes.iter_mut() {
+            let mut neighbourhood = mem::take(node.1);
+            neighbourhood.insert(*node.0);
+            for vertex in vertices.iter() {
+                if !neighbourhood.contains(vertex) {
+                    node.1.insert(*vertex);
+                }
+            }
+        }
+    }
+
     pub fn remove_node(&mut self, node: usize) -> Option<HashSet<usize>> {
         let neighbors = self.nodes.remove(&node)?;
         for neighbor in neighbors.iter() {

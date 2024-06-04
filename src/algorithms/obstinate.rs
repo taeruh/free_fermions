@@ -2,19 +2,19 @@ use std::collections::HashSet;
 
 use crate::graph::ReducedGraph;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Obstinate {
     True(ObstinateKind, (Vec<usize>, Vec<usize>)),
     False,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ObstinateKind {
     Itself,
     Complement,
 }
 
-pub fn check(graph: ReducedGraph) -> Obstinate {
+pub fn obstinate(mut graph: ReducedGraph) -> Obstinate {
     let len = graph.nodes.len();
     let len2 = if len % 2 != 0 {
         return Obstinate::False;
@@ -25,12 +25,9 @@ pub fn check(graph: ReducedGraph) -> Obstinate {
     let mut degrees = graph
         .nodes
         .iter()
-        .map(|(node, neighbors)| (*node, neighbors.len()))
+        .map(|(vertex, neighbours)| (*vertex, neighbours.len()))
         .collect::<Vec<_>>();
-
     degrees.sort_unstable_by_key(|(_, degree)| *degree);
-
-    // println!("{:?}", degrees);
 
     fn check_sequence(
         start: usize,
@@ -52,22 +49,24 @@ pub fn check(graph: ReducedGraph) -> Obstinate {
     let kind = if check_sequence(1, len2, &degrees) {
         ObstinateKind::Itself
     } else if check_sequence(len2 - 1, len - 2, &degrees) {
+        graph.complement();
+        // no need to update degrees, since we can get the right (a_end, b_start) nodes
+        // with some basic logic below
         ObstinateKind::Complement
     } else {
         return Obstinate::False;
     };
 
-    // println!("{:?}", kind);
-
-    let ak = degrees[len - 2].0;
-    let b1 = degrees[len - 1].0;
-    let A = graph.nodes[&b1].clone();
-    let B = graph.nodes[&ak].clone();
-
-    // println!("{:?}", ak);
-    // println!("{:?}", b1);
-    // println!("{:?}", A);
-    // println!("{:?}", B);
+    let (a_end, b_start) = if let ObstinateKind::Itself = kind {
+        (degrees[len - 2].0, degrees[len - 1].0)
+    } else {
+        // it is Complement
+        // (decgree_complement = len2) <=> (degree = len2 - 1)
+        // since len2 = len - (len2 - 1) - 1   (last -1 is for the node itself)
+        (degrees[0].0, degrees[1].0)
+    };
+    let a_part = graph.nodes[&b_start].clone();
+    let b_part = graph.nodes[&a_end].clone();
 
     fn is_independent(graph: &ReducedGraph, subset: &HashSet<usize>) -> bool {
         let subset = subset.iter().collect::<Vec<_>>();
@@ -82,21 +81,19 @@ pub fn check(graph: ReducedGraph) -> Obstinate {
         true
     }
 
-    if (A.intersection(&B).count() != 0)
-        || !is_independent(&graph, &A)
-        || !is_independent(&graph, &B)
+    if (a_part.intersection(&b_part).count() != 0)
+        || !is_independent(&graph, &a_part)
+        || !is_independent(&graph, &b_part)
     {
         return Obstinate::False;
     }
 
-    // println!("{:?}", kind);
-
-    fn check_single_sequence(
+    fn check_part_sequence(
         start: usize,
         end_inclusive: usize,
-        degrees: &[(usize, usize)],
+        degrees_part: &[(usize, usize)],
     ) -> bool {
-        let mut iter_degrees = degrees.iter().map(|(_, degree)| *degree);
+        let mut iter_degrees = degrees_part.iter().map(|(_, degree)| *degree);
         for i in start..=end_inclusive {
             if i != iter_degrees.next().unwrap() {
                 return false;
@@ -105,39 +102,36 @@ pub fn check(graph: ReducedGraph) -> Obstinate {
         true
     }
 
-    let mut degreesA = A
+    let mut a_degrees = a_part
         .iter()
-        .map(|node| (*node, graph.nodes[node].len()))
+        .map(|vertex| (*vertex, graph.nodes[vertex].len()))
         .collect::<Vec<_>>();
-    degreesA.sort_unstable_by_key(|(_, degree)| *degree);
-    if !check_single_sequence(1, len2, &degreesA) {
+    a_degrees.sort_unstable_by_key(|(_, degree)| *degree);
+    if !check_part_sequence(1, len2, &a_degrees) {
         return Obstinate::False;
     }
 
-    // println!("{:?}", degreesA);
-
-    let mut degreesB = B
+    let mut b_degrees = b_part
         .iter()
-        .map(|node| (*node, graph.nodes[node].len()))
+        .map(|vertex| (*vertex, graph.nodes[vertex].len()))
         .collect::<Vec<_>>();
-    degreesB.sort_unstable_by(|(_, degree1), (_, degree2)| degree2.cmp(degree1));
-    if !check_single_sequence(len2, 1, &degreesB) {
+    b_degrees.sort_unstable_by(|(_, degree1), (_, degree2)| degree2.cmp(degree1));
+    if !check_part_sequence(len2, 1, &b_degrees) {
         return Obstinate::False;
     }
 
-    // println!("{:?}", degreesB);
-
-    for (mut i, (a, _)) in degreesA.iter().enumerate() {
+    // one could get rid of the loop in the final return below, by adding the logic here,
+    // i.e, pushing the vertices to a vector, however, it is more likely that we early
+    // return here, so it would be inefficient to allocate the vector in all cases
+    for (mut i, (a, _)) in a_degrees.iter().enumerate() {
         i += 1;
-        for b in degreesB.iter().take(i) {
+        for b in b_degrees.iter().take(i) {
             if !graph.nodes[a].contains(&b.0) {
-                println!("!edge: {:?}", (a, b.0));
                 return Obstinate::False;
             }
         }
-        for b in degreesB.iter().skip(i) {
+        for b in b_degrees.iter().skip(i) {
             if graph.nodes[a].contains(&b.0) {
-                println!("edge: {:?}", (a, b.0));
                 return Obstinate::False;
             }
         }
@@ -146,51 +140,163 @@ pub fn check(graph: ReducedGraph) -> Obstinate {
     Obstinate::True(
         kind,
         (
-            degreesA.into_iter().map(|(node, _)| node).collect(),
-            degreesB.into_iter().map(|(node, _)| node).collect(),
+            a_degrees.into_iter().map(|(vertex, _)| vertex).collect(),
+            b_degrees.into_iter().map(|(vertex, _)| vertex).collect(),
         ),
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use rand::{
-        seq::{IteratorRandom, SliceRandom},
-        SeedableRng,
-    };
+    use rand::{seq::IteratorRandom, SeedableRng};
     use rand_pcg::Pcg64;
 
     use super::*;
 
     fn randomize_labels(
-        mut list: Vec<(usize, Vec<usize>)>,
         max_list: usize,
         max_rand: usize,
-    ) -> Vec<(usize, Vec<usize>)> {
+        mut list: Vec<(usize, Vec<usize>)>,
+    ) -> (Vec<(usize, Vec<usize>)>, Vec<usize>) {
         let mut rng = Pcg64::from_entropy();
+        // let mut rng = Pcg64::seed_from_u64(42);
         let map = (0..=max_rand).choose_multiple(&mut rng, max_list + 1);
+        // let map = (0..=max_rand).collect::<Vec<_>>();
 
-        for (node, neighbors) in list.iter_mut() {
-            *node = map[*node];
-            for neighbor in neighbors.iter_mut() {
+        for (vertex, neighbours) in list.iter_mut() {
+            *vertex = map[*vertex];
+            for neighbor in neighbours.iter_mut() {
                 *neighbor = map[*neighbor];
             }
         }
 
-        list
+        (list, map)
+    }
+
+    fn adjust_expected(expected: Obstinate, map: &[usize]) -> Obstinate {
+        match expected {
+            Obstinate::True(kind, (mut a, mut b)) => {
+                a.iter_mut().for_each(|vertex| *vertex = map[*vertex]);
+                b.iter_mut().for_each(|vertex| *vertex = map[*vertex]);
+                Obstinate::True(kind, (a, b))
+            },
+            Obstinate::False => Obstinate::False,
+        }
+    }
+
+    fn create_graph(
+        max_list: usize,
+        max_rand: usize,
+        list: Vec<(usize, Vec<usize>)>,
+    ) -> (ReducedGraph, Vec<usize>) {
+        let (graph, map) = randomize_labels(max_list, max_rand, list);
+        (ReducedGraph::from_iter(graph), map)
+    }
+
+    fn create_expected(
+        kind: ObstinateKind,
+        a: Vec<usize>,
+        b: Vec<usize>,
+        map: Vec<usize>,
+    ) -> [Obstinate; 2] {
+        [
+            adjust_expected(Obstinate::True(kind, (a.clone(), b.clone())), &map),
+            adjust_expected(
+                Obstinate::True(
+                    kind,
+                    (b.into_iter().rev().collect(), a.into_iter().rev().collect()),
+                ),
+                &map,
+            ),
+        ]
+    }
+
+    macro_rules! create_graph {
+        (
+            $max_list:expr, $max_rand:expr,
+            $(($vertex:expr, [$($neighbor:expr),*]),)*
+        ) => {
+            create_graph($max_list, $max_rand, vec![$(($vertex, vec![$($neighbor),*]),)*])
+        };
+    }
+
+    macro_rules! create_expected {
+        (False) => { Obstinate::False };
+        ($kind:ident, [$($a:expr),*], [$($b:expr),*], $map:expr) => {
+            create_expected(ObstinateKind::$kind, vec![$($a),*], vec![$($b),*], $map)
+        };
     }
 
     #[test]
-    fn obstinate() {
-        let graph = ReducedGraph::from_iter(randomize_labels(
-            vec![(0, vec![1]), (1, vec![0, 2]), (2, vec![1, 3]), (3, vec![2])],
-            3,
-            42,
-        ));
+    fn loop_positive() {
+        const MAX: usize = 10;
 
-        let obs = check(graph);
+        fn test(
+            partition_size: usize,
+            kind: ObstinateKind,
+            a_part_full: Vec<(usize, Vec<usize>)>,
+            b_part_full: Vec<(usize, Vec<usize>)>,
+        ) {
+            let size = partition_size * 2 - 1;
 
-        println!("{:?}", obs);
-        // assert!(matches!(obs, Obstinate::True(ObstinateKind::Itself, _)));
+            let mut list = Vec::with_capacity(size);
+            let mut a_part = Vec::with_capacity(partition_size);
+            let mut b_part = Vec::with_capacity(partition_size);
+            for (a, b) in a_part_full.into_iter().zip(b_part_full.into_iter()) {
+                a_part.push(a.0);
+                b_part.push(b.0);
+                list.push(a);
+                list.push(b);
+            }
+
+            let (graph, map) = create_graph(size, size + 42, list);
+            let result = obstinate(graph);
+            let expected = create_expected(kind, a_part, b_part, map);
+            if !expected.contains(&result) {
+                panic!(
+                    "expected:\n{:?} or\n{:?}\ngot:\n{:?}",
+                    expected[0], expected[1], result
+                );
+            }
+        }
+
+        for part_size in 1..=MAX {
+            let size = 2 * part_size;
+            let mut a_part = Vec::with_capacity(part_size);
+            let mut b_part = Vec::with_capacity(part_size);
+            let mut co_a_part = Vec::with_capacity(part_size);
+            let mut co_b_part = Vec::with_capacity(part_size);
+            for i in 0..part_size {
+                a_part.push((2 * i, (0..=i).map(|j| 2 * j + 1).collect()));
+                b_part.push((2 * i + 1, (i..part_size).map(|j| 2 * j).collect()));
+                let mut co_a_neighbourhood = Vec::with_capacity(size - 1 - i);
+                let mut co_b_neighbourhood =
+                    Vec::with_capacity(size - 1 - (part_size - i));
+                for j in 0..i {
+                    co_a_neighbourhood.push(2 * j);
+                    co_b_neighbourhood.push(2 * j + 1);
+                    co_b_neighbourhood.push(2 * j);
+                }
+                for j in i + 1..part_size {
+                    co_a_neighbourhood.push(2 * j);
+                    co_b_neighbourhood.push(2 * j + 1);
+                    co_a_neighbourhood.push(2 * j + 1);
+                }
+                co_a_part.push((2 * i, co_a_neighbourhood));
+                co_b_part.push((2 * i + 1, co_b_neighbourhood));
+            }
+            test(part_size, ObstinateKind::Itself, a_part, b_part);
+            if part_size != 2 {
+                test(part_size, ObstinateKind::Complement, co_a_part, co_b_part);
+            } else {
+                // in that case, the graph itself is obstinate (as well as the
+                // complement), but our algorithm goes down the Itself path, so we wont
+                // get the result that the complement is obstinate; the pop order is
+                // important here!
+                let b_part = vec![co_b_part.pop().unwrap(), co_a_part.pop().unwrap()];
+                let a_part = vec![co_b_part.pop().unwrap(), co_a_part.pop().unwrap()];
+                test(part_size, ObstinateKind::Itself, a_part, b_part);
+            }
+        }
     }
 }
