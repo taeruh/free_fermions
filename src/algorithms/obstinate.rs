@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::graph::SGraph;
+use crate::graph::{SGraph, SVertices};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Obstinate {
@@ -14,6 +14,10 @@ pub enum ObstinateKind {
     Complement,
 }
 
+// note that, if a graph is obstinate, then there are two expected results, since we can
+// swap a with b and in each part we then reverse the order of the vertices; this
+// algorithm does not guarantee which of the two results will be returned, since we use
+// unstable sorting in some places
 pub fn obstinate(mut graph: SGraph) -> Obstinate {
     let len = graph.nodes.len();
     if len == 0 {
@@ -31,7 +35,10 @@ pub fn obstinate(mut graph: SGraph) -> Obstinate {
         .collect::<Vec<_>>();
     degrees.sort_unstable_by_key(|(_, degree)| *degree);
 
-    fn check_sequence(
+    // we want the sequence
+    // start, start, start + 1, start + 1, ... end, end
+    // where start = 1|len2 - 1 and end = len2 - 1|len - 2
+    fn check_degree_sequence(
         start: usize,
         end_inclusive: usize,
         degrees: &[(usize, usize)],
@@ -48,12 +55,12 @@ pub fn obstinate(mut graph: SGraph) -> Obstinate {
         true
     }
 
-    let kind = if check_sequence(1, len2, &degrees) {
+    let kind = if check_degree_sequence(1, len2, &degrees) {
         ObstinateKind::Itself
-    } else if check_sequence(len2 - 1, len - 2, &degrees) {
+    } else if check_degree_sequence(len2 - 1, len - 2, &degrees) {
         graph.complement();
-        // no need to update degrees, since we can get the right (a_end, b_start) nodes
-        // with some basic logic below
+        // no need to update the `degrees`, since we can get the right (a_end, b_start)
+        // nodes with some basic logic below
         ObstinateKind::Complement
     } else {
         return Obstinate::False;
@@ -63,14 +70,14 @@ pub fn obstinate(mut graph: SGraph) -> Obstinate {
         (degrees[len - 2].0, degrees[len - 1].0)
     } else {
         // it is Complement
-        // (decgree_complement = len2) <=> (degree = len2 - 1)
+        // (degree_complement = len2) <=> (degree = len2 - 1)
         // since len2 = len - (len2 - 1) - 1   (last -1 is for the node itself)
         (degrees[0].0, degrees[1].0)
     };
     let a_part = graph.nodes[&b_start].clone();
     let b_part = graph.nodes[&a_end].clone();
 
-    fn is_independent(graph: &SGraph, subset: &HashSet<usize>) -> bool {
+    fn is_independent(graph: &SGraph, subset: &SVertices) -> bool {
         let subset = subset.iter().collect::<Vec<_>>();
         // TODO: use my Enumerate here
         for i in 0..subset.len() {
@@ -90,7 +97,8 @@ pub fn obstinate(mut graph: SGraph) -> Obstinate {
         return Obstinate::False;
     }
 
-    fn check_part_sequence(
+    // now we want the sequence 1, 2, ..., len2
+    fn check_part_degree_sequence(
         start: usize,
         end_inclusive: usize,
         degrees_part: &[(usize, usize)],
@@ -109,7 +117,7 @@ pub fn obstinate(mut graph: SGraph) -> Obstinate {
         .map(|vertex| (*vertex, graph.nodes[vertex].len()))
         .collect::<Vec<_>>();
     a_degrees.sort_unstable_by_key(|(_, degree)| *degree);
-    if !check_part_sequence(1, len2, &a_degrees) {
+    if !check_part_degree_sequence(1, len2, &a_degrees) {
         return Obstinate::False;
     }
 
@@ -118,10 +126,12 @@ pub fn obstinate(mut graph: SGraph) -> Obstinate {
         .map(|vertex| (*vertex, graph.nodes[vertex].len()))
         .collect::<Vec<_>>();
     b_degrees.sort_unstable_by(|(_, degree1), (_, degree2)| degree2.cmp(degree1));
-    if !check_part_sequence(len2, 1, &b_degrees) {
+    if !check_part_degree_sequence(len2, 1, &b_degrees) {
         return Obstinate::False;
     }
 
+    // finally we check the edges between the two parts of the bi-partition
+    //
     // one could get rid of the loop in the final return below, by adding the logic here,
     // i.e, pushing the vertices to a vector, however, it is more likely that we early
     // return here, so it would be inefficient to allocate the vector in all cases
@@ -156,6 +166,9 @@ mod tests {
     use super::*;
     use crate::graph::{Nodes, Vertices};
 
+    // we will randomize vertex labels, so that we can always use simple vertex labels,
+    // i.e., 0, 1, 2, ..., when creating the examples, but we still check that the
+    // algorithm does not depend on structured vertex labels accidentally
     fn randomize_labels(
         max_list: usize,
         max_rand: usize,
@@ -176,6 +189,7 @@ mod tests {
         (list, map)
     }
 
+    // we will need to adjust the expected results to the randomized vertex labels
     fn adjust_expected(expected: Obstinate, map: &[usize]) -> Obstinate {
         match expected {
             Obstinate::True(kind, (mut a, mut b)) => {
@@ -231,16 +245,21 @@ mod tests {
     }
 
     #[test]
+    // separate test case for the empty graph because:
+    // a) I don't want to introduce special logic in the loops in the true_all test
+    // b) I'm not sure yet, whether we want the empty graph to be obstinate or not
     fn true_empty() {
         let (graph, map) = create_graph!(0, 0,);
         assert_eq!(obstinate(graph), create_expected!(Itself, [], [], map)[0]);
     }
 
     #[test]
-    // check all (co-)obstinate up to MAX vertices (up to isomorphisms)
+    // check all (co-)obstinate graphs (except the empty one) up to MAX vertices (up to
+    // isomorphisms)
     fn true_all() {
         const MAX: usize = 10;
 
+        // the testing logic, when two bi-partitions are given that are obstinate
         fn test(
             partition_size: usize,
             kind: ObstinateKind,
@@ -270,6 +289,8 @@ mod tests {
             }
         }
 
+        // create the obstinate bi-partitions; co_* is for the cases when the complement
+        // of the graph is obstinate
         for part_size in 1..=MAX {
             let size = 2 * part_size;
             let mut a_part: Nodes = Vec::with_capacity(part_size);
