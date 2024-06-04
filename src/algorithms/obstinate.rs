@@ -170,10 +170,11 @@ mod tests {
     // i.e., 0, 1, 2, ..., when creating the examples, but we still check that the
     // algorithm does not depend on structured vertex labels accidentally
     fn randomize_labels(
-        max_list: usize,
-        max_rand: usize,
+        max_list: usize, // the highest vertex label in the list
+        max_rand: usize, // the highest randomize_labels; require max_rand >= max_list
         mut list: Vec<(usize, Vec<usize>)>,
     ) -> (Vec<(usize, Vec<usize>)>, Vec<usize>) {
+        assert!(max_rand >= max_list);
         let mut rng = Pcg64::from_entropy();
         // let mut rng = Pcg64::seed_from_u64(42);
         let map = (0..=max_rand).choose_multiple(&mut rng, max_list + 1);
@@ -334,8 +335,49 @@ mod tests {
     #[test]
     // no need to do many tests for that, since this check is very simple and we just
     // ensure that it is there
-    fn fail_odd() {
-        let (graph, _) = create_graph!(3, 3, (0, [1]), (1, [2]), (2, [0]),);
+    fn false_odd() {
+        let (graph, _) = create_graph!(2, 2, (0, [1]), (1, [2]), (2, [0]),);
         assert_eq!(obstinate(graph), Obstinate::False);
+    }
+
+    #[test]
+    // only test graphs that have an even number of vertices
+    fn false_other() {
+        // cycle
+        let (graph, _) =
+            create_graph!(3, 7, (0, [3, 1]), (1, [0, 2]), (2, [1, 3]), (3, [2, 0]),);
+        assert_eq!(obstinate(graph), Obstinate::False);
+
+        // same as above but with one additional edge
+        let (graph, _) = create_graph!(
+            3,
+            7,
+            (0, [3, 1, 2]),
+            (1, [0, 2]),
+            (2, [1, 3, 0]),
+            (3, [2, 0]),
+        );
+        assert_eq!(obstinate(graph), Obstinate::False);
+
+        // all-to-all
+        let (graph, _) = create_graph!(
+            3,
+            7,
+            (0, [1, 2, 3]),
+            (1, [0, 2, 3]),
+            (2, [0, 1, 3]),
+            (3, [0, 1, 2]),
+        );
+        assert_eq!(obstinate(graph), Obstinate::False);
+
+        // completely independent
+        let (graph, _) = create_graph!(3, 7, (0, []), (1, []), (2, []), (3, []),);
+        assert_eq!(obstinate(graph), Obstinate::False);
+
+        // two disconnected paths
+        let (graph, _) = create_graph!(3, 7, (0, [1]), (1, [0]), (2, [3]), (3, [2]),);
+        assert_eq!(obstinate(graph), Obstinate::False);
+
+        // TODO: more negative tests
     }
 }
