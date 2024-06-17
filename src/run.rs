@@ -1,12 +1,12 @@
-use std::collections::HashSet;
+// use std::collections::HashSet;
 
 use rand::SeedableRng;
 use rand_pcg::Pcg64;
 
 use crate::{
-    graph::Graph,
+    graph::my_graph::MyGraph,
     hamiltonian::{self, OperatorPool},
-    playing_around,
+    // playing_around,
 };
 
 pub fn run() {
@@ -24,7 +24,7 @@ pub fn run() {
         println!("k: {k}; {amount}");
         let samples = pool.draw_exact_distinct_sets(amount, k);
         for sample in samples {
-            let reduced_graph = Graph::from_iter(sample).reduce();
+            let reduced_graph = MyGraph::from_iter(sample).reduce();
             if reduced_graph.has_claw() {
                 break 'outer;
                 // println!("{:?}", reduced_graph);

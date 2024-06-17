@@ -4,7 +4,7 @@ use rand::SeedableRng;
 use rand_pcg::Pcg64;
 
 use crate::{
-    graph::Graph,
+    graph::my_graph::MyGraph,
     hamiltonian::{self, OperatorPool},
 };
 
@@ -20,7 +20,7 @@ pub fn claw() {
 
     let sample = pool.draw(set_size);
 
-    let graph = Graph::from_iter(sample);
+    let graph = MyGraph::from_iter(sample);
     let reduced_graph = graph.clone().reduce();
 
     // println!("{:?}", graph);
@@ -80,7 +80,7 @@ pub fn find_reduction() {
         let mut count = 0;
         for i in 0..200 {
             let sample = pool.draw(m).collect::<Vec<_>>();
-            let graph = Graph::sorted_from(&sample.clone());
+            let graph = MyGraph::sorted_from(&sample.clone());
             let reduced_graph = graph.clone().reduce();
             if reduced_graph.nodes.len() != graph.nodes.len() {
                 println!("reduction at sample {m};{i}");
