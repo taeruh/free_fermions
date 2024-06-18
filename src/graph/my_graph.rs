@@ -4,7 +4,7 @@ use std::{
     mem,
 };
 
-use super::{super::hamiltonian::Operator, VNeighbourhood, Node, HNeighbourhood};
+use super::{super::hamiltonian::Operator, HNeighbourhood, Node, VNeighbourhood};
 use crate::{enumerate_offset::Enumerate, fix_int::enumerate, matrix::MatrixTools};
 type Matrix = ndarray::Array2<u32>;
 

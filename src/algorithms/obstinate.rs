@@ -1,4 +1,4 @@
-use crate::graph::{my_graph::MySGraph, Node, VNodes, HNodes};
+use crate::graph::{Graph, ImplGraph, Node, NodeCollection, VNodes};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Obstinate {
@@ -12,148 +12,137 @@ pub enum ObstinateKind {
     Complement,
 }
 
-// note that, if a graph is obstinate, then there are two expected results, since we can
-// swap a with b and in each part we then reverse the order of the vertices; this
-// algorithm does not guarantee which of the two results will be returned, since we use
-// unstable sorting in some places
-pub fn obstinate(mut graph: MySGraph) -> Obstinate {
-    let len = graph.nodes.len();
-    if len == 0 {
-        return Obstinate::True(ObstinateKind::Itself, (vec![], vec![]));
-    }
-    if len % 2 != 0 {
-        return Obstinate::False;
-    }
-    let len2 = len / 2;
-
-    let mut degrees = graph
-        .nodes
-        .iter()
-        .map(|(vertex, neighbours)| (*vertex, neighbours.len()))
-        .collect::<Vec<_>>();
-    degrees.sort_unstable_by_key(|(_, degree)| *degree);
-
-    // we want the sequence
-    // start, start, start + 1, start + 1, ... end, end
-    // where start = 1|len2 - 1 and end = len2 - 1|len - 2
-    fn check_degree_sequence(
-        start: usize,
-        end_inclusive: usize,
-        degrees: &[(Node, usize)],
-    ) -> bool {
-        let mut iter_degrees = degrees.iter().map(|(_, degree)| *degree);
-        for i in start..=end_inclusive {
-            if i != iter_degrees.next().unwrap() {
-                return false;
-            }
-            if i != iter_degrees.next().unwrap() {
-                return false;
-            }
+impl<G: ImplGraph> Graph<G> {
+    // note that, if a graph is obstinate, then there are two expected results, since we
+    // can swap a with b and in each part we then reverse the order of the vertices; this
+    // algorithm does not guarantee which of the two results will be returned, since we
+    // use unstable sorting in some places
+    pub fn obstinate(mut self) -> Obstinate {
+        let len = self.len();
+        if len == 0 {
+            return Obstinate::True(ObstinateKind::Itself, (vec![], vec![]));
         }
-        true
-    }
+        if len % 2 != 0 {
+            return Obstinate::False;
+        }
+        let len2 = len / 2;
 
-    let kind = if check_degree_sequence(1, len2, &degrees) {
-        ObstinateKind::Itself
-    } else if check_degree_sequence(len2 - 1, len - 2, &degrees) {
-        graph.complement();
-        // no need to update the `degrees`, since we can get the right (a_end, b_start)
-        // nodes with some basic logic below
-        ObstinateKind::Complement
-    } else {
-        return Obstinate::False;
-    };
+        let mut degrees = self
+            .iter_node_info()
+            .map(|(vertex, neighbours)| (vertex, neighbours.len()))
+            .collect::<Vec<_>>();
+        degrees.sort_unstable_by_key(|(_, degree)| *degree);
 
-    let (a_end, b_start) = if let ObstinateKind::Itself = kind {
-        (degrees[len - 2].0, degrees[len - 1].0)
-    } else {
-        // it is Complement
-        // (degree_complement = len2) <=> (degree = len2 - 1)
-        // since len2 = len - (len2 - 1) - 1   (last -1 is for the node itself)
-        (degrees[0].0, degrees[1].0)
-    };
-    let a_part = graph.nodes[&b_start].clone();
-    let b_part = graph.nodes[&a_end].clone();
-
-    fn is_independent(graph: &MySGraph, subset: &HNodes) -> bool {
-        let subset = subset.iter().collect::<Vec<_>>();
-        // TODO: use my Enumerate here
-        for i in 0..subset.len() {
-            for j in i + 1..subset.len() {
-                if graph.nodes[subset[i]].contains(subset[j]) {
+        // we want the sequence
+        // start, start, start + 1, start + 1, ... end, end
+        // where start = 1|len2 - 1 and end = len2 - 1|len - 2
+        fn check_degree_sequence(
+            start: usize,
+            end_inclusive: usize,
+            degrees: &[(Node, usize)],
+        ) -> bool {
+            let mut iter_degrees = degrees.iter().map(|(_, degree)| *degree);
+            for i in start..=end_inclusive {
+                if i != iter_degrees.next().unwrap() {
+                    return false;
+                }
+                if i != iter_degrees.next().unwrap() {
                     return false;
                 }
             }
+            true
         }
-        true
-    }
 
-    if (a_part.intersection(&b_part).count() != 0)
-        || !is_independent(&graph, &a_part)
-        || !is_independent(&graph, &b_part)
-    {
-        return Obstinate::False;
-    }
+        let kind = if check_degree_sequence(1, len2, &degrees) {
+            ObstinateKind::Itself
+        } else if check_degree_sequence(len2 - 1, len - 2, &degrees) {
+            self.complement();
+            // no need to update the `degrees`, since we can get the right (a_end,
+            // b_start) nodes with some basic logic below
+            ObstinateKind::Complement
+        } else {
+            return Obstinate::False;
+        };
 
-    // now we want the sequence 1, 2, ..., len2
-    fn check_part_degree_sequence(
-        start: usize,
-        end_inclusive: usize,
-        degrees_part: &[(Node, usize)],
-    ) -> bool {
-        let mut iter_degrees = degrees_part.iter().map(|(_, degree)| *degree);
-        for i in start..=end_inclusive {
-            if i != iter_degrees.next().unwrap() {
-                return false;
+        let (a_end, b_start) = if let ObstinateKind::Itself = kind {
+            (degrees[len - 2].0, degrees[len - 1].0)
+        } else {
+            // it is Complement
+            // (degree_complement = len2) <=> (degree = len2 - 1)
+            // since len2 = len - (len2 - 1) - 1   (last -1 is for the node itself)
+            (degrees[0].0, degrees[1].0)
+        };
+        let a_part = self[b_start].clone();
+        let b_part = self[a_end].clone();
+
+        if (a_part.intersection(&b_part).count() != 0)
+            || !self.set_is_independent(&a_part)
+            || !self.set_is_independent(&b_part)
+        {
+            return Obstinate::False;
+        }
+
+        // now we want the sequence 1, 2, ..., len2
+        fn check_part_degree_sequence(
+            start: usize,
+            end_inclusive: usize,
+            degrees_part: &[(Node, usize)],
+        ) -> bool {
+            let mut iter_degrees = degrees_part.iter().map(|(_, degree)| *degree);
+            for i in start..=end_inclusive {
+                if i != iter_degrees.next().unwrap() {
+                    return false;
+                }
+            }
+            true
+        }
+
+        let mut a_degrees = a_part
+            .iter()
+            .map(|vertex| (vertex, self[vertex].len()))
+            .collect::<Vec<_>>();
+        a_degrees.sort_unstable_by_key(|(_, degree)| *degree);
+        if !check_part_degree_sequence(1, len2, &a_degrees) {
+            return Obstinate::False;
+        }
+
+        let mut b_degrees = b_part
+            .iter()
+            .map(|vertex| (vertex, self[vertex].len()))
+            .collect::<Vec<_>>();
+        b_degrees.sort_unstable_by(|(_, degree1), (_, degree2)| degree2.cmp(degree1));
+        if !check_part_degree_sequence(len2, 1, &b_degrees) {
+            return Obstinate::False;
+        }
+
+        // finally we check the edges between the two parts of the bi-partition
+        //
+        // one could get rid of the loop in the final return below, by adding the logic
+        // here, i.e, pushing the vertices to a vector, however, it is more likely that we
+        // early return here, so it would be inefficient to allocate the vector in all
+        // cases
+        for (mut i, (a, _)) in a_degrees.iter().enumerate() {
+            i += 1;
+            for b in b_degrees.iter().take(i) {
+                if !self[*a].contains(b.0) {
+                    return Obstinate::False;
+                }
+            }
+            for b in b_degrees.iter().skip(i) {
+                if self[*a].contains(b.0) {
+                    return Obstinate::False;
+                }
             }
         }
-        true
-    }
 
-    let mut a_degrees = a_part
-        .iter()
-        .map(|vertex| (*vertex, graph.nodes[vertex].len()))
-        .collect::<Vec<_>>();
-    a_degrees.sort_unstable_by_key(|(_, degree)| *degree);
-    if !check_part_degree_sequence(1, len2, &a_degrees) {
-        return Obstinate::False;
+        Obstinate::True(
+            kind,
+            (
+                a_degrees.into_iter().map(|(vertex, _)| vertex).collect(),
+                b_degrees.into_iter().map(|(vertex, _)| vertex).collect(),
+            ),
+        )
     }
-
-    let mut b_degrees = b_part
-        .iter()
-        .map(|vertex| (*vertex, graph.nodes[vertex].len()))
-        .collect::<Vec<_>>();
-    b_degrees.sort_unstable_by(|(_, degree1), (_, degree2)| degree2.cmp(degree1));
-    if !check_part_degree_sequence(len2, 1, &b_degrees) {
-        return Obstinate::False;
-    }
-
-    // finally we check the edges between the two parts of the bi-partition
-    //
-    // one could get rid of the loop in the final return below, by adding the logic here,
-    // i.e, pushing the vertices to a vector, however, it is more likely that we early
-    // return here, so it would be inefficient to allocate the vector in all cases
-    for (mut i, (a, _)) in a_degrees.iter().enumerate() {
-        i += 1;
-        for b in b_degrees.iter().take(i) {
-            if !graph.nodes[a].contains(&b.0) {
-                return Obstinate::False;
-            }
-        }
-        for b in b_degrees.iter().skip(i) {
-            if graph.nodes[a].contains(&b.0) {
-                return Obstinate::False;
-            }
-        }
-    }
-
-    Obstinate::True(
-        kind,
-        (
-            a_degrees.into_iter().map(|(vertex, _)| vertex).collect(),
-            b_degrees.into_iter().map(|(vertex, _)| vertex).collect(),
-        ),
-    )
 }
 
 #[cfg(test)]
@@ -162,7 +151,10 @@ mod tests {
     use rand_pcg::Pcg64;
 
     use super::*;
-    use crate::{fix_int::int, graph::VNodes};
+    use crate::{
+        fix_int::int,
+        graph::{adj_graph::AdjHashGraph, VNodes},
+    };
 
     // we will randomize vertex labels, so that we can always use simple vertex labels,
     // i.e., 0, 1, 2, ..., when creating the examples, but we still check that the
@@ -204,9 +196,9 @@ mod tests {
         max_list: Node,
         max_rand: Node,
         list: Vec<(Node, VNodes)>,
-    ) -> (MySGraph, VNodes) {
+    ) -> (Graph<AdjHashGraph>, VNodes) {
         let (graph, map) = randomize_labels(max_list, max_rand, list);
-        (MySGraph::from_iter(graph), map)
+        (Graph::new(AdjHashGraph::from_adjacency_vec(graph)), map)
     }
 
     fn create_expected(
@@ -249,7 +241,7 @@ mod tests {
     // b) I'm not sure yet, whether we want the empty graph to be obstinate or not
     fn true_empty() {
         let (graph, map) = create_graph!(0, 0,);
-        assert_eq!(obstinate(graph), create_expected!(Itself, [], [], map)[0]);
+        assert_eq!(graph.obstinate(), create_expected!(Itself, [], [], map)[0]);
     }
 
     #[test]
@@ -278,7 +270,7 @@ mod tests {
             }
 
             let (graph, map) = create_graph(size, size + 42, list);
-            let result = obstinate(graph);
+            let result = graph.obstinate();
             let expected = create_expected(kind, a_part, b_part, map);
             if !expected.contains(&result) {
                 panic!(
@@ -335,7 +327,7 @@ mod tests {
     // ensure that it is there
     fn false_odd() {
         let (graph, _) = create_graph!(2, 2, (0, [1]), (1, [2]), (2, [0]),);
-        assert_eq!(obstinate(graph), Obstinate::False);
+        assert_eq!(graph.obstinate(), Obstinate::False);
     }
 
     #[test]
@@ -344,7 +336,7 @@ mod tests {
         // cycle
         let (graph, _) =
             create_graph!(3, 7, (0, [3, 1]), (1, [0, 2]), (2, [1, 3]), (3, [2, 0]),);
-        assert_eq!(obstinate(graph), Obstinate::False);
+        assert_eq!(graph.obstinate(), Obstinate::False);
 
         // same as above but with one additional edge
         let (graph, _) = create_graph!(
@@ -355,7 +347,7 @@ mod tests {
             (2, [1, 3, 0]),
             (3, [2, 0]),
         );
-        assert_eq!(obstinate(graph), Obstinate::False);
+        assert_eq!(graph.obstinate(), Obstinate::False);
 
         // all-to-all
         let (graph, _) = create_graph!(
@@ -366,15 +358,15 @@ mod tests {
             (2, [0, 1, 3]),
             (3, [0, 1, 2]),
         );
-        assert_eq!(obstinate(graph), Obstinate::False);
+        assert_eq!(graph.obstinate(), Obstinate::False);
 
         // completely independent
         let (graph, _) = create_graph!(3, 7, (0, []), (1, []), (2, []), (3, []),);
-        assert_eq!(obstinate(graph), Obstinate::False);
+        assert_eq!(graph.obstinate(), Obstinate::False);
 
         // two disconnected paths
         let (graph, _) = create_graph!(3, 7, (0, [1]), (1, [0]), (2, [3]), (3, [2]),);
-        assert_eq!(obstinate(graph), Obstinate::False);
+        assert_eq!(graph.obstinate(), Obstinate::False);
 
         // TODO: more negative tests
     }

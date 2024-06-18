@@ -97,6 +97,4 @@ pub fn find_reduction() {
     }
 }
 
-
-pub fn check_obstinate() {
-}
+pub fn check_obstinate() {}
