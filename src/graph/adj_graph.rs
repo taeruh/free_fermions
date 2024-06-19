@@ -3,11 +3,6 @@ use std::{
     mem,
 };
 
-use petgraph::{
-    visit::{GraphProp, IntoNeighbors, NodeCompactIndexable},
-    Undirected,
-};
-
 use super::{Edge, HNeighbourhood, HNodes, ImplGraph, Node, NodeCollection};
 
 pub type Nodes = HNodes;

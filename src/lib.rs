@@ -1,8 +1,8 @@
 /*!
 # ***IMPORTANT:***
 **This library only safely works on 32bit, or higher, platforms (for performance reasons)!
-Use [fix_int::ensure_32bit_platform], *before calling any other code in this library,* to
-check that you are on a 32bit platform!**
+Use [fix_int::ensure_at_least_32bit_platform], *before calling any other code in this
+library,* to check that you are on a 32bit platform!**
 
 For an application, copy-paste the following into your main function:
 ```rust

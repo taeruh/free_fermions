@@ -2,7 +2,7 @@ use std::{
     collections::{hash_set, HashMap, HashSet},
     fmt::Debug,
     iter::{self, Copied},
-    ops::{Deref, DerefMut, Index, IndexMut},
+    ops::{Index, IndexMut},
     slice,
 };
 
@@ -21,26 +21,12 @@ pub type HNodes = HashSet<Node>;
 pub type HNeighbourhood = HashSet<Node>;
 pub type HNodeInfo = (Node, HNeighbourhood);
 
-// Intended misuse of the newtype pattern and Deref(Mut) traits: I want to implement
-// foreign traits generically on G: ImplGraph (which is not directly possible), so I wrap
-// into a newtype; it is not like we are extending G, but rather we want to say that
-// Graph<G> is G, so I think the Deref(Mut) is justified
+/// Newtype around `impl `[ImplGraph] types that supports foreign traits.
 pub struct Graph<G>(G);
+
 impl<G> Graph<G> {
     pub fn new(graph: G) -> Self {
         Self(graph)
-    }
-}
-impl<G> Deref for Graph<G> {
-    type Target = G;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl<G> DerefMut for Graph<G> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
     }
 }
 
@@ -145,6 +131,106 @@ pub trait ImplGraph {
             }
         }
         true
+    }
+}
+
+impl<G: ImplGraph> ImplGraph for Graph<G> {
+    type NodeCollection = G::NodeCollection;
+    #[inline]
+    fn from_edges(edges: impl IntoIterator<Item = Edge>) -> Self
+    where
+        Self: Sized,
+    {
+        Self(G::from_edges(edges))
+    }
+    #[inline]
+    fn from_edge_vec(edges: Vec<Edge>) -> Self
+    where
+        Self: Sized,
+    {
+        Self(G::from_edges(edges))
+    }
+    #[inline]
+    fn from_edge_set(edges: HashSet<Edge>) -> Self
+    where
+        Self: Sized,
+    {
+        Self(G::from_edges(edges))
+    }
+    #[inline]
+    fn from_adjacencies<A, N>(adj: A) -> Self
+    where
+        A: IntoIterator<Item = (Node, N)>,
+        N: IntoIterator<Item = Node>,
+    {
+        Self(G::from_adjacencies(adj))
+    }
+    #[inline]
+    fn from_adjacency_vec(adj: Vec<VNodeInfo>) -> Self
+    where
+        Self: Sized,
+    {
+        Self(G::from_adjacencies(adj))
+    }
+    fn from_adjacency_hash(adj: HashMap<Node, HashSet<Node>>) -> Self
+    where
+        Self: Sized,
+    {
+        Self(G::from_adjacencies(adj))
+    }
+    #[inline]
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+    #[inline]
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+    #[inline]
+    fn get(&self, node: Node) -> Option<&Self::NodeCollection> {
+        self.0.get(node)
+    }
+    #[inline]
+    fn get_mut(&mut self, node: Node) -> Option<&mut Self::NodeCollection> {
+        self.0.get_mut(node)
+    }
+    #[inline]
+    fn retain_nodes(&mut self, f: impl Fn(Node) -> bool) {
+        self.0.retain_nodes(f)
+    }
+    #[inline]
+    fn remove_node(&mut self, node: Node) {
+        self.0.remove_node(node);
+    }
+    #[inline]
+    fn into_subgraph(self, nodes: impl NodeCollection) -> Self
+    where
+        Self: Sized,
+    {
+        Self(self.0.into_subgraph(nodes))
+    }
+    #[inline]
+    fn subgraph(&self, nodes: impl NodeCollection) -> Self
+    where
+        Self: Sized,
+    {
+        Self(self.0.subgraph(nodes))
+    }
+    #[inline]
+    fn complement(&mut self) {
+        self.0.complement()
+    }
+    #[inline]
+    fn iter_nodes(&self) -> impl Iterator<Item = Node> {
+        self.0.iter_nodes()
+    }
+    #[inline]
+    fn iter_node_info(&self) -> impl Iterator<Item = (Node, &Self::NodeCollection)> {
+        self.0.iter_node_info()
+    }
+    #[inline]
+    fn set_is_independent(&self, subset: &Self::NodeCollection) -> bool {
+        self.0.set_is_independent(subset)
     }
 }
 
@@ -373,7 +459,7 @@ pub mod test_utils {
 
     #[test]
     fn test() {
-        let map = RandomMap::new(10, 20);
+        // let map = RandomMap::new(10, 20);
         let g = collect!(adj, vec; (1, [2, 3]), (2, [1]), (3, [1]),);
         let h = collect!(edge, vec; (1, 2), (1, 3),);
         println!("{:?}", g);
