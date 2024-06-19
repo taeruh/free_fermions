@@ -299,17 +299,23 @@ pub trait NodeCollection: Clone + Debug + IntoIterator<Item = Node> {
     type Iter<'a>: Iterator<Item = Node> + Clone
     where
         Self: 'a;
+
     fn contains(&self, e: Node) -> bool;
+
     fn iter(&self) -> Self::Iter<'_>;
+
     fn len(&self) -> usize {
         self.iter().count()
     }
+
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
     fn intersection<'a>(&'a self, other: &'a Self) -> impl Iterator<Item = Node> + 'a {
         self.iter().filter(|n| other.contains(*n))
     }
+
     fn pop(&mut self) -> Option<Node> {
         self.iter().next()
     }
@@ -431,54 +437,60 @@ pub mod test_utils {
 
     macro_rules! collect {
         (adj, hash, $map:expr; $($node_info:tt,)*) => {
-            adj_hash(&$map, collect_adj!($($node_info,)*))
+            $crate::graph::test_utils::adj_hash(
+                &$map, $crate::graph::test_utils::collect_adj!($($node_info,)*)
+            )
         };
         (adj, hash; $($node_info:tt,)*) => {
-            collect!(adj, hash, &RandomMap::Identity; $($node_info,)*)
+            $crate::graph::test_utils::collect!(
+                adj, hash, &$crate::graph::test_utils::RandomMap::Identity; $($node_info,)*
+            )
         };
         (adj, vec, $map:expr; $($node_info:tt,)*) => {
-            adj_vec(&$map, collect_adj!($($node_info,)*))
+            $crate::graph::test_utils::adj_vec(
+                &$map, $crate::graph::test_utils::collect_adj!($($node_info,)*)
+            )
         };
         (adj, vec; $($node_info:tt,)*) => {
-            collect!(adj, vec, &RandomMap::Identity; $($node_info,)*)
+            $crate::graph::test_utils::collect!(
+                adj, vec, &$crate::graph::test_utils::RandomMap::Identity; $($node_info,)*
+            )
         };
         (edge, hash, $map:expr; $($edge:tt,)*) => {
-            edge_hash(&$map, vec![$($edge,)*])
+            $crate::graph::test_utils::edge_hash(&$map, vec![$($edge,)*])
         };
         (edge, hash; $($edge:tt,)*) => {
-            collect!(edge, hash, &RandomMap::Identity; $($edge,)*)
+            $crate::graph::test_utils::collect!(
+                edge, hash, &$crate::graph::test_utils::RandomMap::Identity; $($edge,)*
+            )
         };
         (edge, vec, $map:expr; $($edge:tt,)*) => {
-            edge_vec(&$map, vec![$($edge,)*])
+            $crate::graph::test_utils::edge_vec(&$map, vec![$($edge,)*])
         };
         (edge, vec; $($edge:tt,)*) => {
-            collect!(edge, vec, &RandomMap::Identity; $($edge,)*)
+            $crate::graph::test_utils::collect!(
+                edge, vec, &$crate::graph::test_utils::RandomMap::Identity; $($edge,)*
+            )
         };
     }
     pub(crate) use collect;
 
+    // just a naive test whether the utils compile, more or less
     #[test]
-    fn test() {
-        // let map = RandomMap::new(10, 20);
-        let g = collect!(adj, vec; (1, [2, 3]), (2, [1]), (3, [1]),);
-        let h = collect!(edge, vec; (1, 2), (1, 3),);
-        println!("{:?}", g);
-        println!("{:?}", h);
+    fn macros() {
+        assert_eq!(
+            vec![(1, vec![2, 3]), (2, vec![1]), (3, vec![1])],
+            collect!(adj, vec; (1, [2, 3]), (2, [1]), (3, [1]),)
+        );
+        let map = RandomMap::new(10, 20);
+        assert_eq!(
+            HashSet::from_iter(
+                [(1, 2), (1, 3)].into_iter().map(|(a, b)| (map.map(a), map.map(b)))
+            ),
+            collect!(edge, hash, map; (1, 2), (1, 3),)
+        );
     }
 }
 
 pub mod adj_graph;
 pub mod my_graph;
-
-// fn set_is_independent(&self, subset: &Self::NodeCollection) -> bool {
-//     let subset = subset.iter().collect::<Vec<_>>();
-//     // todo: use my Enumerate here
-//     for i in 0..subset.len() {
-//         for j in i + 1..subset.len() {
-//             if self.get(subset[i]).expect("invalid node").contains(subset[j]) {
-//                 return false;
-//             }
-//         }
-//     }
-//     true
-// }

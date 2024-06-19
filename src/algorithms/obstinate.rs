@@ -147,92 +147,84 @@ impl<G: ImplGraph> Graph<G> {
 
 #[cfg(test)]
 mod tests {
-    use rand::{seq::IteratorRandom, SeedableRng};
-    use rand_pcg::Pcg64;
-
     use super::*;
     use crate::{
         fix_int::int,
-        graph::{adj_graph::AdjHashGraph, VNodes},
+        graph::{self, adj_graph::AdjHashGraph},
     };
 
-    // we will randomize vertex labels, so that we can always use simple vertex labels,
-    // i.e., 0, 1, 2, ..., when creating the examples, but we still check that the
-    // algorithm does not depend on structured vertex labels accidentally
-    fn randomize_labels(
-        max_list: Node, // the highest vertex label in the list
-        max_rand: Node, // the highest randomize_labels; require max_rand >= max_list
-        mut list: Vec<(Node, VNodes)>,
-    ) -> (Vec<(Node, VNodes)>, VNodes) {
-        assert!(max_rand >= max_list);
-        let mut rng = Pcg64::from_entropy();
-        // let mut rng = Pcg64::seed_from_u64(42);
-        let map = (0..=max_rand).choose_multiple(&mut rng, max_list as usize + 1);
-        // let map = (0..=max_rand).collect::<Vec<_>>();
+    type Graph = graph::Graph<AdjHashGraph>;
 
-        for (vertex, neighbours) in list.iter_mut() {
-            *vertex = map[*vertex as usize];
-            for neighbor in neighbours.iter_mut() {
-                *neighbor = map[*neighbor as usize];
-            }
-        }
-
-        (list, map)
-    }
-
-    // we will need to adjust the expected results to the randomized vertex labels
-    fn adjust_expected(expected: Obstinate, map: &[Node]) -> Obstinate {
-        match expected {
-            Obstinate::True(kind, (mut a, mut b)) => {
-                a.iter_mut().for_each(|vertex| *vertex = map[*vertex as usize]);
-                b.iter_mut().for_each(|vertex| *vertex = map[*vertex as usize]);
-                Obstinate::True(kind, (a, b))
+    pub use utils::*;
+    mod utils {
+        use super::{Graph, ImplGraph, Obstinate, ObstinateKind};
+        use crate::{
+            fix_int::int,
+            graph::{
+                test_utils::{self, RandomMap},
+                VNodeInfo, VNodes,
             },
-            Obstinate::False => Obstinate::False,
+        };
+
+        pub fn create_graph(
+            map_length: int,
+            map_max: int,
+            list: Vec<VNodeInfo>,
+        ) -> (Graph, RandomMap) {
+            let map = RandomMap::new(map_length, map_max);
+            let graph = Graph::from_adjacency_hash(test_utils::adj_hash(&map, list));
+            (graph, map)
         }
-    }
 
-    fn create_graph(
-        max_list: Node,
-        max_rand: Node,
-        list: Vec<(Node, VNodes)>,
-    ) -> (Graph<AdjHashGraph>, VNodes) {
-        let (graph, map) = randomize_labels(max_list, max_rand, list);
-        (Graph::new(AdjHashGraph::from_adjacency_vec(graph)), map)
-    }
+        pub fn create_expected(
+            kind: ObstinateKind,
+            a: VNodes,
+            b: VNodes,
+            map: RandomMap,
+        ) -> [Obstinate; 2] /* [obstinate, complement obstinate] */ {
+            // we will need to adjust the expected results to the randomized vertex labels
+            fn adjust_expected(expected: Obstinate, map: &RandomMap) -> Obstinate {
+                match expected {
+                    Obstinate::True(kind, (mut a, mut b)) => {
+                        a.iter_mut().for_each(|node| *node = map.map(*node));
+                        b.iter_mut().for_each(|node| *node = map.map(*node));
+                        Obstinate::True(kind, (a, b))
+                    },
+                    Obstinate::False => Obstinate::False,
+                }
+            }
 
-    fn create_expected(
-        kind: ObstinateKind,
-        a: VNodes,
-        b: VNodes,
-        map: VNodes,
-    ) -> [Obstinate; 2] {
-        [
-            adjust_expected(Obstinate::True(kind, (a.clone(), b.clone())), &map),
-            adjust_expected(
-                Obstinate::True(
-                    kind,
-                    (b.into_iter().rev().collect(), a.into_iter().rev().collect()),
+            [
+                adjust_expected(Obstinate::True(kind, (a.clone(), b.clone())), &map),
+                adjust_expected(
+                    Obstinate::True(
+                        kind,
+                        (b.into_iter().rev().collect(), a.into_iter().rev().collect()),
+                    ),
+                    &map,
                 ),
-                &map,
-            ),
-        ]
-    }
+            ]
+        }
 
-    macro_rules! create_graph {
-        (
-            $max_list:expr, $max_rand:expr,
-            $(($vertex:expr, [$($neighbor:expr),*]),)*
-        ) => {
-            create_graph($max_list, $max_rand, vec![$(($vertex, vec![$($neighbor),*]),)*])
-        };
-    }
+        macro_rules! graph {
+            (
+                $max_list:expr, $max_rand:expr,
+                $(($vertex:expr, [$($neighbor:expr),*]),)*
+            ) => {
+                create_graph(
+                    $max_list, $max_rand, vec![$(($vertex, vec![$($neighbor),*]),)*]
+                )
+            };
+        }
+        pub(super) use graph;
 
-    macro_rules! create_expected {
-        (False) => { Obstinate::False };
-        ($kind:ident, [$($a:expr),*], [$($b:expr),*], $map:expr) => {
-            create_expected(ObstinateKind::$kind, vec![$($a),*], vec![$($b),*], $map)
-        };
+        macro_rules! expected {
+            (False) => { Obstinate::False };
+            ($kind:ident, [$($a:expr),*], [$($b:expr),*], $map:expr) => {
+                create_expected(ObstinateKind::$kind, vec![$($a),*], vec![$($b),*], $map)
+            };
+        }
+        pub(super) use expected;
     }
 
     #[test]
@@ -240,8 +232,8 @@ mod tests {
     // a) I don't want to introduce special logic in the loops in the true_all test
     // b) I'm not sure yet, whether we want the empty graph to be obstinate or not
     fn true_empty() {
-        let (graph, map) = create_graph!(0, 0,);
-        assert_eq!(graph.obstinate(), create_expected!(Itself, [], [], map)[0]);
+        let (graph, map) = graph!(0, 0,);
+        assert_eq!(graph.obstinate(), expected!(Itself, [], [], map)[0]);
     }
 
     #[test]
@@ -250,7 +242,7 @@ mod tests {
     fn true_all() {
         const MAX: int = 10;
 
-        // the testing logic, when two bi-partitions are given that are obstinate
+        // the testing logic for two bi-partitions that are obstinate
         fn test(
             partition_size: int,
             kind: ObstinateKind,
@@ -307,6 +299,7 @@ mod tests {
                 co_a_part.push((2 * i, co_a_neighbourhood));
                 co_b_part.push((2 * i + 1, co_b_neighbourhood));
             }
+
             test(part_size, ObstinateKind::Itself, a_part, b_part);
             if part_size != 2 {
                 test(part_size, ObstinateKind::Complement, co_a_part, co_b_part);
@@ -326,7 +319,7 @@ mod tests {
     // no need to do many tests for that, since this check is very simple and we just
     // ensure that it is there
     fn false_odd() {
-        let (graph, _) = create_graph!(2, 2, (0, [1]), (1, [2]), (2, [0]),);
+        let (graph, _) = graph!(2, 2, (0, [1]), (1, [2]), (2, [0]),);
         assert_eq!(graph.obstinate(), Obstinate::False);
     }
 
@@ -335,37 +328,25 @@ mod tests {
     fn false_other() {
         // cycle
         let (graph, _) =
-            create_graph!(3, 7, (0, [3, 1]), (1, [0, 2]), (2, [1, 3]), (3, [2, 0]),);
+            graph!(3, 7, (0, [3, 1]), (1, [0, 2]), (2, [1, 3]), (3, [2, 0]),);
         assert_eq!(graph.obstinate(), Obstinate::False);
 
         // same as above but with one additional edge
-        let (graph, _) = create_graph!(
-            3,
-            7,
-            (0, [3, 1, 2]),
-            (1, [0, 2]),
-            (2, [1, 3, 0]),
-            (3, [2, 0]),
-        );
+        let (graph, _) =
+            graph!(3, 7, (0, [3, 1, 2]), (1, [0, 2]), (2, [1, 3, 0]), (3, [2, 0]),);
         assert_eq!(graph.obstinate(), Obstinate::False);
 
         // all-to-all
-        let (graph, _) = create_graph!(
-            3,
-            7,
-            (0, [1, 2, 3]),
-            (1, [0, 2, 3]),
-            (2, [0, 1, 3]),
-            (3, [0, 1, 2]),
-        );
+        let (graph, _) =
+            graph!(3, 7, (0, [1, 2, 3]), (1, [0, 2, 3]), (2, [0, 1, 3]), (3, [0, 1, 2]),);
         assert_eq!(graph.obstinate(), Obstinate::False);
 
         // completely independent
-        let (graph, _) = create_graph!(3, 7, (0, []), (1, []), (2, []), (3, []),);
+        let (graph, _) = graph!(3, 7, (0, []), (1, []), (2, []), (3, []),);
         assert_eq!(graph.obstinate(), Obstinate::False);
 
         // two disconnected paths
-        let (graph, _) = create_graph!(3, 7, (0, [1]), (1, [0]), (2, [3]), (3, [2]),);
+        let (graph, _) = graph!(3, 7, (0, [1]), (1, [0]), (2, [3]), (3, [2]),);
         assert_eq!(graph.obstinate(), Obstinate::False);
 
         // TODO: more negative tests
