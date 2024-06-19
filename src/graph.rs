@@ -21,7 +21,12 @@ pub type HNodes = HashSet<Node>;
 pub type HNeighbourhood = HashSet<Node>;
 pub type HNodeInfo = (Node, HNeighbourhood);
 
+// // petgraph::adj::NodeIndex is per default already petgraph::adj::NodeIndex<DefaultIx>
+// // where DefaultIx is int; this is just to makes things clear
+// pub type NodeIndex = petgraph::adj::NodeIndex<int>; // = int
+
 /// Newtype around `impl `[ImplGraph] types that supports foreign traits.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Graph<G>(G);
 
 impl<G> Graph<G> {
