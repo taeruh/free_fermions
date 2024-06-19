@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::graph::{Graph, ImplGraph, Node, NodeCollection, VNodes};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -12,13 +14,18 @@ pub enum ObstinateKind {
     Complement,
 }
 
-impl<G: ImplGraph> Graph<G> {
+impl<G: ImplGraph + Clone> Graph<G> {
     // note that, if a graph is obstinate, then there are two expected results, since we
     // can swap a with b and in each part we then reverse the order of the vertices; this
     // algorithm does not guarantee which of the two results will be returned, since we
     // use unstable sorting in some places
-    pub fn obstinate(mut self) -> Obstinate {
-        let len = self.len();
+    pub fn obstinate(&self) -> Obstinate {
+        // directly alias self(: &Self) with graph, because we have to do it later anyways
+        // when I put into into a Cow (so that we don't confuse self/graph (for
+        // consistencty))
+        let graph = self;
+
+        let len = graph.len();
         if len == 0 {
             return Obstinate::True(ObstinateKind::Itself, (vec![], vec![]));
         }
@@ -27,7 +34,7 @@ impl<G: ImplGraph> Graph<G> {
         }
         let len2 = len / 2;
 
-        let mut degrees = self
+        let mut degrees = graph
             .iter_node_info()
             .map(|(vertex, neighbours)| (vertex, neighbours.len()))
             .collect::<Vec<_>>();
@@ -53,10 +60,13 @@ impl<G: ImplGraph> Graph<G> {
             true
         }
 
+        // we only need to clone when ObstinateKind::Complement
+        let mut graph = Cow::Borrowed(graph);
+
         let kind = if check_degree_sequence(1, len2, &degrees) {
             ObstinateKind::Itself
         } else if check_degree_sequence(len2 - 1, len - 2, &degrees) {
-            self.complement();
+            graph.to_mut().complement();
             // no need to update the `degrees`, since we can get the right (a_end,
             // b_start) nodes with some basic logic below
             ObstinateKind::Complement
@@ -72,12 +82,12 @@ impl<G: ImplGraph> Graph<G> {
             // since len2 = len - (len2 - 1) - 1   (last -1 is for the node itself)
             (degrees[0].0, degrees[1].0)
         };
-        let a_part = self[b_start].clone();
-        let b_part = self[a_end].clone();
+        let a_part = graph[b_start].clone();
+        let b_part = graph[a_end].clone();
 
         if (a_part.intersection(&b_part).count() != 0)
-            || !self.set_is_independent(&a_part)
-            || !self.set_is_independent(&b_part)
+            || !graph.set_is_independent(&a_part)
+            || !graph.set_is_independent(&b_part)
         {
             return Obstinate::False;
         }
@@ -99,7 +109,7 @@ impl<G: ImplGraph> Graph<G> {
 
         let mut a_degrees = a_part
             .iter()
-            .map(|vertex| (vertex, self[vertex].len()))
+            .map(|vertex| (vertex, graph[vertex].len()))
             .collect::<Vec<_>>();
         a_degrees.sort_unstable_by_key(|(_, degree)| *degree);
         if !check_part_degree_sequence(1, len2, &a_degrees) {
@@ -108,7 +118,7 @@ impl<G: ImplGraph> Graph<G> {
 
         let mut b_degrees = b_part
             .iter()
-            .map(|vertex| (vertex, self[vertex].len()))
+            .map(|vertex| (vertex, graph[vertex].len()))
             .collect::<Vec<_>>();
         b_degrees.sort_unstable_by(|(_, degree1), (_, degree2)| degree2.cmp(degree1));
         if !check_part_degree_sequence(len2, 1, &b_degrees) {
@@ -124,12 +134,12 @@ impl<G: ImplGraph> Graph<G> {
         for (mut i, (a, _)) in a_degrees.iter().enumerate() {
             i += 1;
             for b in b_degrees.iter().take(i) {
-                if !self[*a].contains(b.0) {
+                if !graph[*a].contains(b.0) {
                     return Obstinate::False;
                 }
             }
             for b in b_degrees.iter().skip(i) {
-                if self[*a].contains(b.0) {
+                if graph[*a].contains(b.0) {
                     return Obstinate::False;
                 }
             }
