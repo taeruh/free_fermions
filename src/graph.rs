@@ -6,6 +6,15 @@ use std::{
     slice,
 };
 
+use adj_graph::AdjHashGraph;
+use petgraph::{
+    visit::{
+        GraphBase, GraphProp, IntoNeighbors, NodeCompactIndexable, NodeCount,
+        NodeIndexable,
+    },
+    Undirected,
+};
+
 use crate::fix_int::int;
 
 // some of the following type aliases are not used, but they serve as documentation and
@@ -21,13 +30,14 @@ pub type HNodes = HashSet<Node>;
 pub type HNeighbourhood = HashSet<Node>;
 pub type HNodeInfo = (Node, HNeighbourhood);
 
-// // petgraph::adj::NodeIndex is per default already petgraph::adj::NodeIndex<DefaultIx>
-// // where DefaultIx is int; this is just to makes things clear
-// pub type NodeIndex = petgraph::adj::NodeIndex<int>; // = int
+// // petgraph::petgraph::NodeIndex is per default already
+// petgraph::petgraph::NodeIndex<DefaultIx> // where DefaultIx is int; this is just to
+// makes things clear
+pub type NodeIndex = petgraph::graph::NodeIndex<int>; // = int
 
 /// Newtype around `impl `[ImplGraph] types that supports foreign traits.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Graph<G>(G);
+pub struct Graph<G = AdjHashGraph>(G);
 
 impl<G> Graph<G> {
     pub fn new(graph: G) -> Self {
@@ -253,15 +263,7 @@ impl<G: ImplGraph> IndexMut<Node> for Graph<G> {
     }
 }
 
-// needed for modular-decomposition:
-use petgraph::{
-    visit::{
-        GraphBase, GraphProp, IntoNeighbors, NodeCompactIndexable, NodeCount,
-        NodeIndexable,
-    },
-    Undirected,
-};
-
+// needed for modular-decomposition: {{{
 impl<G: ImplGraph> GraphBase for Graph<G> {
     type NodeId = Node;
     type EdgeId = Edge;
@@ -275,7 +277,7 @@ impl<G: ImplGraph> NodeCount for Graph<G> {
 
 impl<G: ImplGraph> NodeIndexable for Graph<G> {
     fn node_bound(&self) -> usize {
-        Node::MAX as usize
+        self.len() // maybe -1
     }
 
     fn to_index(&self, a: Self::NodeId) -> usize {
@@ -299,6 +301,7 @@ impl<'a, G: ImplGraph> IntoNeighbors for &'a Graph<G> {
 impl<G: ImplGraph> GraphProp for Graph<G> {
     type EdgeType = Undirected;
 }
+// }}}
 
 pub trait NodeCollection: Clone + Debug + IntoIterator<Item = Node> {
     type Iter<'a>: Iterator<Item = Node> + Clone

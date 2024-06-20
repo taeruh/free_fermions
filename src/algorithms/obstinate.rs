@@ -158,16 +158,10 @@ impl<G: ImplGraph + Clone> Graph<G> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        fix_int::int,
-        graph::{self, adj_graph::AdjHashGraph},
-    };
+    use crate::{fix_int::int, graph::Graph};
 
-    type Graph = graph::Graph<AdjHashGraph>;
-
-    pub use utils::*;
     mod utils {
-        use super::{Graph, ImplGraph, Obstinate, ObstinateKind};
+        use super::*;
         use crate::{
             fix_int::int,
             graph::{
@@ -236,6 +230,7 @@ mod tests {
         }
         pub(super) use expected;
     }
+    pub use utils::*;
 
     #[test]
     // separate test case for the empty graph because:

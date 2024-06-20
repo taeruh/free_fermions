@@ -3,7 +3,7 @@ use std::{
     mem,
 };
 
-use super::{Edge, HNeighbourhood, HNodes, ImplGraph, Node, NodeCollection};
+use super::{Edge, Graph, HNeighbourhood, HNodes, ImplGraph, Node, NodeCollection};
 
 pub type Nodes = HNodes;
 pub type Neighbourhood = HNeighbourhood;
@@ -152,8 +152,14 @@ impl AdjHashGraph {
 }
 
 impl From<HashMap<Node, HashSet<Node>>> for AdjHashGraph {
-    fn from(adj: HashMap<Node, HashSet<Node>>) -> Self {
+    fn from(adj: HashMap<Node, HNodes>) -> Self {
         AdjHashGraph { nodes: adj }
+    }
+}
+
+impl From<HashMap<Node, HashSet<Node>>> for Graph<AdjHashGraph> {
+    fn from(adj: HashMap<Node, HNodes>) -> Self {
+        Self(AdjHashGraph { nodes: adj })
     }
 }
 
