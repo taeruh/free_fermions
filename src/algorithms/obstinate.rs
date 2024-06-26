@@ -1,6 +1,9 @@
 use std::borrow::Cow;
 
-use crate::graph::{Graph, ImplGraph, Node, NodeCollection, VNodes};
+use crate::{
+    fix_int::enumerate,
+    graph::{Graph, ImplGraph, Node, NodeCollection, VNodes},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Obstinate {
@@ -34,8 +37,7 @@ impl<G: ImplGraph + Clone> Graph<G> {
         }
         let len2 = len / 2;
 
-        let mut degrees = graph
-            .iter_node_info()
+        let mut degrees = enumerate!(graph.iter_neighbourhoods())
             .map(|(vertex, neighbours)| (vertex, neighbours.len()))
             .collect::<Vec<_>>();
         degrees.sort_unstable_by_key(|(_, degree)| *degree);
@@ -176,7 +178,9 @@ mod tests {
             list: Vec<VNodeInfo>,
         ) -> (Graph, RandomMap) {
             let map = RandomMap::new(map_length, map_max);
-            let graph = Graph::from_adjacency_hash(test_utils::adj_hash(&map, list));
+            let (graph, okay) =
+                Graph::from_adjacencies(test_utils::adj_hash_hash(&map, list));
+            assert_eq!(okay, Ok(()));
             (graph, map)
         }
 
@@ -267,7 +271,11 @@ mod tests {
             }
 
             let (graph, map) = create_graph(size, size + 42, list);
-            let result = graph.obstinate();
+            let mut result = graph.obstinate();
+            if let Obstinate::True(_, (a, b)) = &mut result {
+                a.iter_mut().for_each(|node| *node = graph.get_label(*node).unwrap());
+                b.iter_mut().for_each(|node| *node = graph.get_label(*node).unwrap());
+            }
             let expected = create_expected(kind, a_part, b_part, map);
             if !expected.contains(&result) {
                 panic!(
@@ -324,7 +332,7 @@ mod tests {
     // no need to do many tests for that, since this check is very simple and we just
     // ensure that it is there
     fn false_odd() {
-        let (graph, _) = graph!(2, 2, (0, [1]), (1, [2]), (2, [0]),);
+        let (graph, _) = graph!(2, 2, (0, [1]), (1, [0]), (2, []),);
         assert_eq!(graph.obstinate(), Obstinate::False);
     }
 

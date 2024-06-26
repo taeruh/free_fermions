@@ -2,11 +2,11 @@ use std::{
     collections::{hash_set, HashMap, HashSet},
     fmt::Debug,
     iter::{self, Copied},
-    ops::{Index, IndexMut},
-    slice,
+    ops::{Index, IndexMut, Range},
+    ptr, slice,
 };
 
-use adj_graph::AdjHashGraph;
+use adj::AdjGraph;
 use petgraph::{
     visit::{
         GraphBase, GraphProp, IntoNeighbors, NodeCompactIndexable, NodeCount,
@@ -15,20 +15,22 @@ use petgraph::{
     Undirected,
 };
 
-use crate::fix_int::int;
+use crate::fix_int::{enumerate, int};
 
 // some of the following type aliases are not used, but they serve as documentation and
 // orientation for variable names
 pub type Node = int;
 pub type Edge = (Node, Node);
-// V for vec
-pub type VNodes = Vec<Node>;
-pub type VNeighbourhood = Vec<Node>;
-pub type VNodeInfo = (Node, VNeighbourhood);
+pub type Label = int; // i.e, the weight which is in our case just the label
+
+// V for vector
+pub(crate) type VNodes = Vec<Node>;
+#[allow(unused)]
+pub(crate) type VNodeInfo = (int, Vec<Node>);
 // H for hash
-pub type HNodes = HashSet<Node>;
-pub type HNeighbourhood = HashSet<Node>;
-pub type HNodeInfo = (Node, HNeighbourhood);
+pub(crate) type HNodes = HashSet<Node>;
+#[allow(unused)]
+pub(crate) type HNodeInfo = (Node, HashSet<Node>);
 
 // // petgraph::petgraph::NodeIndex is per default already
 // petgraph::petgraph::NodeIndex<DefaultIx> // where DefaultIx is int; this is just to
@@ -37,13 +39,17 @@ pub type NodeIndex = petgraph::graph::NodeIndex<int>; // = int
 
 /// Newtype around `impl `[ImplGraph] types that supports foreign traits.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Graph<G = AdjHashGraph>(G);
+pub struct Graph<G = AdjGraph>(G);
 
 impl<G> Graph<G> {
     pub fn new(graph: G) -> Self {
         Self(graph)
     }
 }
+
+/// Marker trait, that promises that the nodes in the graph go from 0 to n-1 without
+/// skipping any values.
+pub trait CompactNodes {}
 
 // TODO: maybe split this trait using some traits from petgraph (some of them I have to
 // implement anyways, so it might be a good idea to use them directly)
@@ -58,44 +64,38 @@ impl<G> Graph<G> {
 // note that some graph representations use, for example, a vector of edges internally as
 // representation; that's why we have additional from_* methods, so that they are are
 // cheaper (instead of always using the iterator-based from_ methods)
-pub trait ImplGraph {
+pub trait ImplGraph: CompactNodes + Clone {
     type NodeCollection: NodeCollection;
 
-    fn from_edges(edges: impl IntoIterator<Item = Edge>) -> Self
+    fn from_edges_unchecked(edges: impl IntoIterator<Item = Edge>) -> Self
     where
         Self: Sized;
 
-    fn from_edge_vec(edges: Vec<Edge>) -> Self
+    fn from_adjacencies_unchecked<A, N>(adj: A) -> Self
+    where
+        A: IntoIterator<Item = (int, N)>,
+        N: IntoIterator<Item = int>;
+
+    fn from_edges(
+        edges: impl IntoIterator<Item = Edge>,
+    ) -> (Self, Result<(), InvalidGraph>)
     where
         Self: Sized,
     {
-        ImplGraph::from_edges(edges)
+        let graph = Self::from_edges_unchecked(edges);
+        let check = graph.check();
+        (graph, check)
     }
 
-    fn from_edge_set(edges: HashSet<Edge>) -> Self
+    fn from_adjacencies<A, N>(adj: A) -> (Self, Result<(), InvalidGraph>)
     where
+        A: IntoIterator<Item = (int, N)>,
+        N: IntoIterator<Item = int>,
         Self: Sized,
     {
-        ImplGraph::from_edges(edges)
-    }
-
-    fn from_adjacencies<A, N>(adj: A) -> Self
-    where
-        A: IntoIterator<Item = (Node, N)>,
-        N: IntoIterator<Item = Node>;
-
-    fn from_adjacency_vec(adj: Vec<VNodeInfo>) -> Self
-    where
-        Self: Sized,
-    {
-        ImplGraph::from_adjacencies(adj)
-    }
-
-    fn from_adjacency_hash(adj: HashMap<Node, HashSet<Node>>) -> Self
-    where
-        Self: Sized,
-    {
-        ImplGraph::from_adjacencies(adj)
+        let graph = Self::from_adjacencies_unchecked(adj);
+        let check = graph.check();
+        (graph, check)
     }
 
     fn len(&self) -> usize;
@@ -104,15 +104,23 @@ pub trait ImplGraph {
         self.len() == 0
     }
 
-    fn get(&self, node: Node) -> Option<&Self::NodeCollection>;
+    fn get_label(&self, node: int) -> Option<int>;
 
-    fn get_mut(&mut self, node: Node) -> Option<&mut Self::NodeCollection>;
+    fn get_label_mut(&mut self, node: int) -> Option<&mut int>;
 
-    fn retain_nodes(&mut self, f: impl Fn(Node) -> bool);
+    fn get_neighbours(&self, node: int) -> Option<&Self::NodeCollection>;
 
-    /// Default implementation: Calls filter_nodes. You probably want to override this.
-    fn remove_node(&mut self, node: Node) {
-        self.retain_nodes(|n| n != node);
+    fn get_neighbours_mut(&mut self, node: int) -> Option<&mut Self::NodeCollection>;
+
+    fn remove_node(&mut self, node: int);
+
+    /// Default implementation uses [Self::remove_node]
+    fn retain_nodes(&mut self, f: impl Fn(int) -> bool) {
+        for node in self.iter_nodes() {
+            if !f(node) {
+                self.remove_node(node);
+            }
+        }
     }
 
     /// Default implementation: Calls filter_nodes. You may want to override this.
@@ -124,74 +132,161 @@ pub trait ImplGraph {
         self
     }
 
-    /// Note for implementation: One can easily implement this method by cloning and then
-    /// calling into_subgraph.
+    /// Default implementation: Clones self and calls into_subgraph.
     fn subgraph(&self, nodes: impl NodeCollection) -> Self
     where
-        Self: Sized;
+        Self: Sized,
+    {
+        self.clone().into_subgraph(nodes)
+    }
 
     fn complement(&mut self);
-
-    fn iter_nodes(&self) -> impl Iterator<Item = Node>;
-
-    fn iter_node_info(&self) -> impl Iterator<Item = (Node, &Self::NodeCollection)>;
 
     fn set_is_independent(&self, subset: &Self::NodeCollection) -> bool {
         let mut iter = subset.iter();
         while let Some(node) = iter.next() {
             let mut remaining = iter.clone();
-            let neighbours = self.get(node).expect("invalid node");
+            let neighbours = self.get_neighbours(node).expect("invalid node");
             if remaining.any(|n| neighbours.contains(n)) {
                 return false;
             }
         }
         true
     }
+
+    fn iter_nodes(&self) -> Range<Node> {
+        0..self.len() as Node
+    }
+
+    fn iter_labels(&self) -> impl Iterator<Item = Node> {
+        self.iter_nodes()
+            .map(|node| self.get_label(node).expect("invalid node"))
+    }
+
+    fn iter_labels_mut(&mut self) -> impl Iterator<Item = &mut Node>;
+
+    fn iter_with_labels(&self) -> impl Iterator<Item = (Node, Node)> {
+        self.iter_nodes()
+            .map(|node| (node, self.get_label(node).expect("invalid node")))
+    }
+
+    fn iter_with_labels_mut(&mut self) -> impl Iterator<Item = (Node, &mut Node)> {
+        enumerate!(self.iter_labels_mut())
+    }
+
+    fn iter_neighbourhoods(&self) -> impl Iterator<Item = &Self::NodeCollection> {
+        self.iter_nodes()
+            .map(|node| self.get_neighbours(node).expect("invalid node"))
+    }
+
+    fn iter_neighbourhoods_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut Self::NodeCollection>;
+
+    fn iter_with_neighbourhoods(
+        &self,
+    ) -> impl Iterator<Item = (Node, &Self::NodeCollection)> {
+        self.iter_nodes()
+            .map(|node| (node, self.get_neighbours(node).expect("invalid node")))
+    }
+
+    fn iter_with_neighbourhoods_mut(
+        &mut self,
+    ) -> impl Iterator<Item = (Node, &mut Self::NodeCollection)> {
+        enumerate!(self.iter_neighbourhoods_mut())
+    }
+
+    /// Check whether it is a valid graph description.
+    fn check(&self) -> Result<(), InvalidGraph> {
+        for (node, neighbours) in self.iter_with_neighbourhoods() {
+            for neighbour in neighbours.iter() {
+                if node == neighbour {
+                    return Err(InvalidGraph::SelfLoop(node));
+                }
+                if !self.get_neighbours(neighbour).unwrap().contains(node) {
+                    return Err(InvalidGraph::IncompatibleNeighbourhoods(
+                        node, neighbour,
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Correct (potentially) invalid graph description.
+    fn correct(&mut self) {
+        // PERF: safety bounds us here to first collect the keys, instead of doing things
+        // in one loop
+        let nodes = self.iter_nodes().collect::<Vec<_>>();
+        for node in nodes {
+            let neighbours = self.get_neighbours_mut(node).unwrap();
+            neighbours.remove(node);
+            // PERF: have to clone here
+            for neighbour in neighbours.clone() {
+                if !self.get_neighbours(neighbour).unwrap().contains(node) {
+                    self.get_neighbours_mut(neighbour).unwrap().insert(node);
+                }
+            }
+        }
+    }
+
+    fn map_to_labels(&self) -> HashMap<Node, HNodes> {
+        self.iter_with_neighbourhoods()
+            .map(|(node, neighbours)| {
+                (
+                    self.get_label(node).unwrap(),
+                    neighbours.iter().map(|n| self.get_label(n).unwrap()).collect(),
+                )
+            })
+            .collect()
+    }
+
+    fn find_node(&self, label: int) -> Option<Node> {
+        self.iter_with_labels()
+            .find_map(|(n, l)| if l == label { Some(n) } else { None })
+    }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, thiserror::Error)]
+pub enum InvalidGraph {
+    #[error("Self loop detected on node {0}")]
+    SelfLoop(Node),
+    #[error("Incompatible neighbourhoods between the nodes {0} and {1}")]
+    IncompatibleNeighbourhoods(Node, Node),
+}
+
+impl InvalidGraph {
+    pub fn map_to_labels(&self, graph: &impl ImplGraph) -> Self {
+        match self {
+            Self::SelfLoop(node) => Self::SelfLoop(graph.get_label(*node).unwrap()),
+            Self::IncompatibleNeighbourhoods(node, neighbour) => {
+                Self::IncompatibleNeighbourhoods(
+                    graph.get_label(*node).unwrap(),
+                    graph.get_label(*neighbour).unwrap(),
+                )
+            },
+        }
+    }
+}
+
+impl<G: CompactNodes> CompactNodes for Graph<G> {}
 
 impl<G: ImplGraph> ImplGraph for Graph<G> {
     type NodeCollection = G::NodeCollection;
     #[inline]
-    fn from_edges(edges: impl IntoIterator<Item = Edge>) -> Self
+    fn from_edges_unchecked(edges: impl IntoIterator<Item = Edge>) -> Self
     where
         Self: Sized,
     {
-        Self(G::from_edges(edges))
+        Self(G::from_edges_unchecked(edges))
     }
     #[inline]
-    fn from_edge_vec(edges: Vec<Edge>) -> Self
+    fn from_adjacencies_unchecked<A, N>(adj: A) -> Self
     where
-        Self: Sized,
+        A: IntoIterator<Item = (int, N)>,
+        N: IntoIterator<Item = int>,
     {
-        Self(G::from_edges(edges))
-    }
-    #[inline]
-    fn from_edge_set(edges: HashSet<Edge>) -> Self
-    where
-        Self: Sized,
-    {
-        Self(G::from_edges(edges))
-    }
-    #[inline]
-    fn from_adjacencies<A, N>(adj: A) -> Self
-    where
-        A: IntoIterator<Item = (Node, N)>,
-        N: IntoIterator<Item = Node>,
-    {
-        Self(G::from_adjacencies(adj))
-    }
-    #[inline]
-    fn from_adjacency_vec(adj: Vec<VNodeInfo>) -> Self
-    where
-        Self: Sized,
-    {
-        Self(G::from_adjacencies(adj))
-    }
-    fn from_adjacency_hash(adj: HashMap<Node, HashSet<Node>>) -> Self
-    where
-        Self: Sized,
-    {
-        Self(G::from_adjacencies(adj))
+        Self(G::from_adjacencies_unchecked(adj))
     }
     #[inline]
     fn len(&self) -> usize {
@@ -202,20 +297,28 @@ impl<G: ImplGraph> ImplGraph for Graph<G> {
         self.0.is_empty()
     }
     #[inline]
-    fn get(&self, node: Node) -> Option<&Self::NodeCollection> {
-        self.0.get(node)
+    fn get_label(&self, node: int) -> Option<int> {
+        self.0.get_label(node)
     }
     #[inline]
-    fn get_mut(&mut self, node: Node) -> Option<&mut Self::NodeCollection> {
-        self.0.get_mut(node)
+    fn get_label_mut(&mut self, node: int) -> Option<&mut int> {
+        self.0.get_label_mut(node)
     }
     #[inline]
-    fn retain_nodes(&mut self, f: impl Fn(Node) -> bool) {
-        self.0.retain_nodes(f)
+    fn get_neighbours(&self, node: int) -> Option<&Self::NodeCollection> {
+        self.0.get_neighbours(node)
     }
     #[inline]
-    fn remove_node(&mut self, node: Node) {
+    fn get_neighbours_mut(&mut self, node: int) -> Option<&mut Self::NodeCollection> {
+        self.0.get_neighbours_mut(node)
+    }
+    #[inline]
+    fn remove_node(&mut self, node: int) {
         self.0.remove_node(node);
+    }
+    #[inline]
+    fn retain_nodes(&mut self, f: impl Fn(int) -> bool) {
+        self.0.retain_nodes(f)
     }
     #[inline]
     fn into_subgraph(self, nodes: impl NodeCollection) -> Self
@@ -236,36 +339,74 @@ impl<G: ImplGraph> ImplGraph for Graph<G> {
         self.0.complement()
     }
     #[inline]
-    fn iter_nodes(&self) -> impl Iterator<Item = Node> {
-        self.0.iter_nodes()
-    }
-    #[inline]
-    fn iter_node_info(&self) -> impl Iterator<Item = (Node, &Self::NodeCollection)> {
-        self.0.iter_node_info()
-    }
-    #[inline]
     fn set_is_independent(&self, subset: &Self::NodeCollection) -> bool {
         self.0.set_is_independent(subset)
     }
-}
-
-impl<G: ImplGraph> Index<Node> for Graph<G> {
-    type Output = G::NodeCollection;
-
-    fn index(&self, index: Node) -> &Self::Output {
-        self.0.get(index).expect("node not found")
+    #[inline]
+    fn iter_nodes(&self) -> Range<int> {
+        self.0.iter_nodes()
+    }
+    #[inline]
+    fn iter_labels(&self) -> impl Iterator<Item = int> {
+        self.0.iter_labels()
+    }
+    #[inline]
+    fn iter_labels_mut(&mut self) -> impl Iterator<Item = &mut int> {
+        self.0.iter_labels_mut()
+    }
+    #[inline]
+    fn iter_with_labels(&self) -> impl Iterator<Item = (int, int)> {
+        self.0.iter_with_labels()
+    }
+    #[inline]
+    fn iter_with_labels_mut(&mut self) -> impl Iterator<Item = (int, &mut int)> {
+        self.0.iter_with_labels_mut()
+    }
+    #[inline]
+    fn iter_neighbourhoods(&self) -> impl Iterator<Item = &Self::NodeCollection> {
+        self.0.iter_neighbourhoods()
+    }
+    #[inline]
+    fn iter_neighbourhoods_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut Self::NodeCollection> {
+        self.0.iter_neighbourhoods_mut()
+    }
+    #[inline]
+    fn iter_with_neighbourhoods(
+        &self,
+    ) -> impl Iterator<Item = (int, &Self::NodeCollection)> {
+        self.0.iter_with_neighbourhoods()
+    }
+    #[inline]
+    fn check(&self) -> Result<(), InvalidGraph> {
+        self.0.check()
+    }
+    #[inline]
+    fn correct(&mut self) {
+        self.0.correct()
     }
 }
 
-impl<G: ImplGraph> IndexMut<Node> for Graph<G> {
-    fn index_mut(&mut self, index: Node) -> &mut Self::Output {
-        self.0.get_mut(index).expect("node not found")
+// we usually do not care about labels, until the very end, so we use indexing to get the
+// neighbourhoods for convenience
+impl<G: ImplGraph> Index<int> for Graph<G> {
+    type Output = G::NodeCollection;
+
+    fn index(&self, index: int) -> &Self::Output {
+        self.0.get_neighbours(index).expect("invalid node")
+    }
+}
+
+impl<G: ImplGraph> IndexMut<int> for Graph<G> {
+    fn index_mut(&mut self, index: int) -> &mut Self::Output {
+        self.0.get_neighbours_mut(index).expect("invalid node")
     }
 }
 
 // needed for modular-decomposition: {{{
 impl<G: ImplGraph> GraphBase for Graph<G> {
-    type NodeId = Node;
+    type NodeId = int;
     type EdgeId = Edge;
 }
 
@@ -276,8 +417,9 @@ impl<G: ImplGraph> NodeCount for Graph<G> {
 }
 
 impl<G: ImplGraph> NodeIndexable for Graph<G> {
+    // this makes sense, because ImplGraph requires CompactNodes
     fn node_bound(&self) -> usize {
-        self.len() // maybe -1
+        self.len()
     }
 
     fn to_index(&self, a: Self::NodeId) -> usize {
@@ -289,6 +431,7 @@ impl<G: ImplGraph> NodeIndexable for Graph<G> {
     }
 }
 
+// this makes sense, because ImplGraph requires CompactNodes
 impl<G: ImplGraph> NodeCompactIndexable for Graph<G> {}
 
 impl<'a, G: ImplGraph> IntoNeighbors for &'a Graph<G> {
@@ -303,12 +446,12 @@ impl<G: ImplGraph> GraphProp for Graph<G> {
 }
 // }}}
 
-pub trait NodeCollection: Clone + Debug + IntoIterator<Item = Node> {
-    type Iter<'a>: Iterator<Item = Node> + Clone
+pub trait NodeCollection: Clone + Debug + IntoIterator<Item = int> {
+    type Iter<'a>: Iterator<Item = int> + Clone
     where
         Self: 'a;
 
-    fn contains(&self, e: Node) -> bool;
+    fn contains(&self, e: int) -> bool;
 
     fn iter(&self) -> Self::Iter<'_>;
 
@@ -320,34 +463,48 @@ pub trait NodeCollection: Clone + Debug + IntoIterator<Item = Node> {
         self.len() == 0
     }
 
-    fn intersection<'a>(&'a self, other: &'a Self) -> impl Iterator<Item = Node> + 'a {
+    fn intersection<'a>(&'a self, other: &'a Self) -> impl Iterator<Item = int> + 'a {
         self.iter().filter(|n| other.contains(*n))
     }
 
-    fn pop(&mut self) -> Option<Node> {
-        self.iter().next()
-    }
+    fn remove(&mut self, e: int) -> Option<int>;
+
+    fn insert(&mut self, e: int);
 }
 
 impl NodeCollection for VNodes {
-    type Iter<'a> = iter::Copied<slice::Iter<'a, Node>>;
-    fn contains(&self, e: Node) -> bool {
-        <[Node]>::contains(self, &e)
+    type Iter<'a> = iter::Copied<slice::Iter<'a, int>>;
+    fn contains(&self, e: int) -> bool {
+        <[int]>::contains(self, &e)
     }
     fn iter(&self) -> Self::Iter<'_> {
-        <[Node]>::iter(self).copied()
+        <[int]>::iter(self).copied()
     }
     fn len(&self) -> usize {
-        <[Node]>::len(self)
+        <[int]>::len(self)
     }
-    fn pop(&mut self) -> Option<Node> {
-        self.pop()
+    fn remove(&mut self, e: int) -> Option<int> {
+        let len = self.len();
+        if e >= len as int {
+            return None;
+        }
+        // copy-paste code from Vec::swap_remove
+        unsafe {
+            let value = ptr::read(self.as_ptr().add(e as usize));
+            let base_ptr = self.as_mut_ptr();
+            ptr::copy(base_ptr.add(len - 1), base_ptr.add(e as usize), 1);
+            self.set_len(len - 1);
+            Some(value)
+        }
+    }
+    fn insert(&mut self, e: int) {
+        self.push(e);
     }
 }
 
 impl NodeCollection for HNodes {
-    type Iter<'a> = Copied<hash_set::Iter<'a, Node>>;
-    fn contains(&self, e: Node) -> bool {
+    type Iter<'a> = Copied<hash_set::Iter<'a, int>>;
+    fn contains(&self, e: int) -> bool {
         HashSet::contains(self, &e)
     }
     fn iter(&self) -> Self::Iter<'_> {
@@ -356,8 +513,14 @@ impl NodeCollection for HNodes {
     fn len(&self) -> usize {
         HashSet::len(self)
     }
-    fn intersection<'a>(&'a self, other: &'a Self) -> impl Iterator<Item = Node> + 'a {
+    fn intersection<'a>(&'a self, other: &'a Self) -> impl Iterator<Item = int> + 'a {
         HashSet::intersection(self, other).copied()
+    }
+    fn remove(&mut self, e: int) -> Option<int> {
+        HashSet::take(self, &e)
+    }
+    fn insert(&mut self, e: int) {
+        HashSet::insert(self, e);
     }
 }
 
@@ -368,9 +531,9 @@ pub mod test_utils {
     use rand::{seq::IteratorRandom, SeedableRng};
     use rand_pcg::Pcg64;
 
-    use super::{HNeighbourhood, Node, VNeighbourhood, VNodeInfo};
-    use crate::fix_int::int;
+    use super::{int, HNodes, VNodeInfo, VNodes};
 
+    #[derive(Debug, Clone)]
     pub enum RandomMap {
         Random(Vec<int>),
         Identity,
@@ -383,7 +546,7 @@ pub mod test_utils {
             Self::Random((0..=map_max).choose_multiple(&mut rng, map_length as usize + 1))
         }
 
-        pub fn map(&self, node: Node) -> Node {
+        pub fn map(&self, node: int) -> int {
             match self {
                 RandomMap::Random(v) => v[node as usize],
                 RandomMap::Identity => node,
@@ -408,16 +571,49 @@ pub mod test_utils {
         };
     }
 
-    pub fn adj_hash(
-        map: &RandomMap,
-        list: Vec<VNodeInfo>,
-    ) -> HashMap<Node, HNeighbourhood> {
+    pub fn adj_hash_hash(map: &RandomMap, list: Vec<VNodeInfo>) -> HashMap<int, HNodes> {
         adj_map!(map, list)
     }
 
-    pub fn adj_vec(map: &RandomMap, list: Vec<VNodeInfo>) -> Vec<(Node, VNeighbourhood)> {
+    pub fn adj_hash_vec(map: &RandomMap, list: Vec<VNodeInfo>) -> HashMap<int, VNodes> {
         adj_map!(map, list)
     }
+
+    pub fn adj_vec_hash(map: &RandomMap, list: Vec<VNodeInfo>) -> Vec<(int, HNodes)> {
+        adj_map!(map, list)
+    }
+
+    pub fn adj_vec_vec(map: &RandomMap, list: Vec<VNodeInfo>) -> Vec<(int, VNodes)> {
+        adj_map!(map, list)
+    }
+
+    // pub fn col_hash_hash(map: &RandomMap, list: Vec<VNodes>) -> HashSet<HNodes> {
+    //     col_map!(map, list)
+    // }
+
+    pub fn col_hash_vec(map: &RandomMap, list: Vec<VNodes>) -> HashSet<VNodes> {
+        col_map!(map, list)
+    }
+
+    pub fn col_vec_hash(map: &RandomMap, list: Vec<VNodes>) -> Vec<HNodes> {
+        col_map!(map, list)
+    }
+
+    pub fn col_vec_vec(map: &RandomMap, list: Vec<VNodes>) -> Vec<VNodes> {
+        col_map!(map, list)
+    }
+
+    macro_rules! col_map {
+        ($map:expr, $list:expr) => {
+            $list
+                .into_iter()
+                .map(|collection| {
+                    collection.into_iter().map(|element| $map.map(element)).collect()
+                })
+                .collect()
+        };
+    }
+    pub(crate) use col_map;
 
     macro_rules! edge_map {
         ($map:expr, $list:expr) => {
@@ -428,11 +624,11 @@ pub mod test_utils {
         };
     }
 
-    pub fn edge_hash(map: &RandomMap, list: Vec<(Node, Node)>) -> HashSet<(Node, Node)> {
+    pub fn edge_hash(map: &RandomMap, list: Vec<(int, int)>) -> HashSet<(int, int)> {
         edge_map!(map, list)
     }
 
-    pub fn edge_vec(map: &RandomMap, list: Vec<(Node, Node)>) -> Vec<(Node, Node)> {
+    pub fn edge_vec(map: &RandomMap, list: Vec<(int, int)>) -> Vec<(int, int)> {
         edge_map!(map, list)
     }
 
@@ -443,41 +639,63 @@ pub mod test_utils {
     }
     pub(crate) use collect_adj;
 
+    macro_rules! collect_col {
+        ($([$($neighbor:expr),*],)*) => {
+            vec![$(vec![$($neighbor),*],)*]
+        };
+    }
+    pub(crate) use collect_col;
+
     macro_rules! collect {
-        (adj, hash, $map:expr; $($node_info:tt,)*) => {
-            $crate::graph::test_utils::adj_hash(
-                &$map, $crate::graph::test_utils::collect_adj!($($node_info,)*)
+        (hh, $map:expr; $(($node:expr, $neighbours:tt),)*) => {
+            $crate::graph::test_utils::adj_hash_hash(
+                &$map, $crate::graph::test_utils::collect_adj!($(($node, $neighbours),)*)
             )
         };
-        (adj, hash; $($node_info:tt,)*) => {
-            $crate::graph::test_utils::collect!(
-                adj, hash, &$crate::graph::test_utils::RandomMap::Identity; $($node_info,)*
+        (hv, $map:expr; $(($node:expr, $neighbours:tt),)*) => {
+            $crate::graph::test_utils::adj_hash_vec(
+                &$map, $crate::graph::test_utils::collect_adj!($(($node, $neighbours),)*)
             )
         };
-        (adj, vec, $map:expr; $($node_info:tt,)*) => {
-            $crate::graph::test_utils::adj_vec(
-                &$map, $crate::graph::test_utils::collect_adj!($($node_info,)*)
+        (vh, $map:expr; $(($node:expr, $neighbours:tt),)*) => {
+            $crate::graph::test_utils::adj_vec_hash(
+                &$map, $crate::graph::test_utils::collect_adj!($(($node, $neighbours),)*)
             )
         };
-        (adj, vec; $($node_info:tt,)*) => {
-            $crate::graph::test_utils::collect!(
-                adj, vec, &$crate::graph::test_utils::RandomMap::Identity; $($node_info,)*
+        (vv, $map:expr; $(($node:expr, $neighbours:tt),)*) => {
+            $crate::graph::test_utils::adj_vec_vec(
+                &$map, $crate::graph::test_utils::collect_adj!($(($node, $neighbours),)*)
             )
         };
-        (edge, hash, $map:expr; $($edge:tt,)*) => {
+        (hh, $map:expr; $($neighbours:tt,)*) => {
+            $crate::graph::test_utils::adj_hash_hash(
+                &$map, $crate::graph::test_utils::collect_col!($($neighbours,)*)
+            )
+        };
+        (hv, $map:expr; $($collection:tt,)*) => {
+            $crate::graph::test_utils::col_hash_vec(
+                &$map, $crate::graph::test_utils::collect_col!($($collection,)*)
+            )
+        };
+        (vh, $map:expr; $($collection:tt,)*) => {
+            $crate::graph::test_utils::col_vec_hash(
+                &$map, $crate::graph::test_utils::collect_col!($($collection,)*)
+            )
+        };
+        (vv, $map:expr; $($collection:tt,)*) => {
+            $crate::graph::test_utils::col_vec_vec(
+                &$map, $crate::graph::test_utils::collect_col!($($collection,)*)
+            )
+        };
+        (h, $map:expr; $($edge:tt,)*) => {
             $crate::graph::test_utils::edge_hash(&$map, vec![$($edge,)*])
         };
-        (edge, hash; $($edge:tt,)*) => {
-            $crate::graph::test_utils::collect!(
-                edge, hash, &$crate::graph::test_utils::RandomMap::Identity; $($edge,)*
-            )
-        };
-        (edge, vec, $map:expr; $($edge:tt,)*) => {
+        (v, $map:expr; $($edge:tt,)*) => {
             $crate::graph::test_utils::edge_vec(&$map, vec![$($edge,)*])
         };
-        (edge, vec; $($edge:tt,)*) => {
+        ($repr:tt; $($input:tt,)*) => {
             $crate::graph::test_utils::collect!(
-                edge, vec, &$crate::graph::test_utils::RandomMap::Identity; $($edge,)*
+                $repr, &$crate::graph::test_utils::RandomMap::Identity; $($input,)*
             )
         };
     }
@@ -488,17 +706,17 @@ pub mod test_utils {
     fn macros() {
         assert_eq!(
             vec![(1, vec![2, 3]), (2, vec![1]), (3, vec![1])],
-            collect!(adj, vec; (1, [2, 3]), (2, [1]), (3, [1]),)
+            collect!(vv; (1, [2, 3]), (2, [1]), (3, [1]),)
         );
         let map = RandomMap::new(10, 20);
         assert_eq!(
             HashSet::from_iter(
                 [(1, 2), (1, 3)].into_iter().map(|(a, b)| (map.map(a), map.map(b)))
             ),
-            collect!(edge, hash, map; (1, 2), (1, 3),)
+            collect!(h, map; (1, 2), (1, 3),)
         );
     }
 }
 
-pub mod adj_graph;
-pub mod my_graph;
+pub mod adj;
+// pub mod my_graph;

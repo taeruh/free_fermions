@@ -4,32 +4,32 @@ use rand::SeedableRng;
 use rand_pcg::Pcg64;
 
 use crate::{
-    graph::my_graph::MyGraph,
+    // graph::my_graph::MyGraph,
     hamiltonian::{self, OperatorPool},
 };
 
 pub fn claw() {
-    let n = 3;
-    let seed = 8;
+    // let n = 3;
+    // let seed = 8;
 
-    let mut pool = OperatorPool::new_with(n, Pcg64::seed_from_u64(seed));
+    // let mut pool = OperatorPool::new_with(n, Pcg64::seed_from_u64(seed));
 
-    let p = 0.21;
-    let set_size = (pool.ops.len() as f64 * p).round() as usize;
-    // println!("{:?}", set_size);
+    // let p = 0.21;
+    // let set_size = (pool.ops.len() as f64 * p).round() as usize;
+    // // println!("{:?}", set_size);
 
-    let sample = pool.draw(set_size);
+    // let sample = pool.draw(set_size);
 
-    let graph = MyGraph::from_iter(sample);
-    let reduced_graph = graph.clone().reduce();
+    // let graph = MyGraph::from_iter(sample);
+    // let reduced_graph = graph.clone().reduce();
 
-    // println!("{:?}", graph);
-    // println!("{:?}", reduced_graph);
-    for (node, neighbors) in reduced_graph.nodes.iter() {
-        println!("{:?}: {:?}", node, neighbors);
-    }
+    // // println!("{:?}", graph);
+    // // println!("{:?}", reduced_graph);
+    // for (node, neighbors) in reduced_graph.nodes.iter() {
+    //     println!("{:?}: {:?}", node, neighbors);
+    // }
 
-    reduced_graph.check_all();
+    // reduced_graph.check_all();
 }
 
 pub fn simple_testing() {
@@ -70,31 +70,31 @@ pub fn simple_testing() {
 }
 
 pub fn find_reduction() {
-    let n = 3;
-    let seed = 8;
-    let num_examples = 3;
+    // let n = 3;
+    // let seed = 8;
+    // let num_examples = 3;
 
-    let mut pool = OperatorPool::new_with(n, Pcg64::seed_from_u64(seed));
+    // let mut pool = OperatorPool::new_with(n, Pcg64::seed_from_u64(seed));
 
-    for m in 2..=hamiltonian::num_ops(n) {
-        let mut count = 0;
-        for i in 0..200 {
-            let sample = pool.draw(m).collect::<Vec<_>>();
-            let graph = MyGraph::sorted_from(&sample.clone());
-            let reduced_graph = graph.clone().reduce();
-            if reduced_graph.nodes.len() != graph.nodes.len() {
-                println!("reduction at sample {m};{i}");
-                println!("{:?}", graph);
-                println!("{:?}", reduced_graph);
-                println!("diff: {}", graph.nodes.len() - reduced_graph.nodes.len());
-                count += 1;
-                if count == num_examples {
-                    break;
-                }
-            }
-        }
-        println!("no reduction at sample {m}");
-    }
+    // for m in 2..=hamiltonian::num_ops(n) {
+    //     let mut count = 0;
+    //     for i in 0..200 {
+    //         let sample = pool.draw(m).collect::<Vec<_>>();
+    //         let graph = MyGraph::sorted_from(&sample.clone());
+    //         let reduced_graph = graph.clone().reduce();
+    //         if reduced_graph.nodes.len() != graph.nodes.len() {
+    //             println!("reduction at sample {m};{i}");
+    //             println!("{:?}", graph);
+    //             println!("{:?}", reduced_graph);
+    //             println!("diff: {}", graph.nodes.len() - reduced_graph.nodes.len());
+    //             count += 1;
+    //             if count == num_examples {
+    //                 break;
+    //             }
+    //         }
+    //     }
+    //     println!("no reduction at sample {m}");
+    // }
 }
 
 pub fn check_obstinate() {}

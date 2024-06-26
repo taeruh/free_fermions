@@ -4,7 +4,7 @@ use std::{
     mem,
 };
 
-use super::{super::hamiltonian::Operator, HNeighbourhood, Node, VNeighbourhood};
+use super::{super::hamiltonian::Operator, HNeighbourhood, Index, VNeighbourhood};
 use crate::{enumerate_offset::Enumerate, fix_int::enumerate, matrix::MatrixTools};
 type Matrix = ndarray::Array2<u32>;
 
@@ -17,7 +17,7 @@ pub struct MyGraph {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MySGraph {
-    pub nodes: HashMap<Node, HNeighbourhood>,
+    pub nodes: HashMap<Index, HNeighbourhood>,
 }
 
 impl MyGraph {
@@ -170,7 +170,7 @@ impl MySGraph {
         }
     }
 
-    pub fn remove_node(&mut self, node: Node) -> Option<HNeighbourhood> {
+    pub fn remove_node(&mut self, node: Index) -> Option<HNeighbourhood> {
         let neighbors = self.nodes.remove(&node)?;
         for neighbor in neighbors.iter() {
             self.nodes.get_mut(neighbor).expect("graph incomplete").remove(&node);
@@ -182,7 +182,7 @@ impl MySGraph {
     pub fn ordered_complementary_neighborhood_subgraph(
         &self,
         neighbors: &HNeighbourhood,
-    ) -> (Vec<Node>, Matrix) {
+    ) -> (Vec<Index>, Matrix) {
         let mut neighbor_idcs = Vec::with_capacity(neighbors.len());
         let neighbor_nodes = neighbors
             .iter()
@@ -209,7 +209,7 @@ impl MySGraph {
     pub fn ordered_raw_node_claw_count(
         &self,
         neighbors: &HNeighbourhood,
-    ) -> (Vec<Node>, Vec<u32>) {
+    ) -> (Vec<Index>, Vec<u32>) {
         if neighbors.len() < 3 {
             return (Vec::new(), Vec::new());
         }
@@ -258,8 +258,8 @@ impl MySGraph {
     }
 }
 
-impl<I: IntoIterator<Item = Node>> FromIterator<(Node, I)> for MySGraph {
-    fn from_iter<T: IntoIterator<Item = (Node, I)>>(iter: T) -> Self {
+impl<I: IntoIterator<Item = Index>> FromIterator<(Index, I)> for MySGraph {
+    fn from_iter<T: IntoIterator<Item = (Index, I)>>(iter: T) -> Self {
         Self {
             nodes: HashMap::from_iter(
                 iter.into_iter().map(|(i, e)| (i, HashSet::from_iter(e))),
@@ -268,7 +268,7 @@ impl<I: IntoIterator<Item = Node>> FromIterator<(Node, I)> for MySGraph {
     }
 }
 
-pub fn complementary_subgraph(nodes: &[(Node, &HNeighbourhood)]) -> Matrix {
+pub fn complementary_subgraph(nodes: &[(Index, &HNeighbourhood)]) -> Matrix {
     let len = nodes.len();
     // directly calculate the complement, instead of calculating the real subgraph
     // and then complementing it
