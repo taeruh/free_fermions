@@ -78,24 +78,28 @@ pub trait ImplGraph: CompactNodes + Clone {
 
     fn from_edges(
         edges: impl IntoIterator<Item = Edge>,
-    ) -> (Self, Result<(), InvalidGraph>)
+    ) -> Result<Self, (Self, InvalidGraph)>
     where
         Self: Sized,
     {
         let graph = Self::from_edges_unchecked(edges);
-        let check = graph.check();
-        (graph, check)
+        match graph.check() {
+            Ok(()) => Ok(graph),
+            Err(err) => Err((graph, err)),
+        }
     }
 
-    fn from_adjacencies<A, N>(adj: A) -> (Self, Result<(), InvalidGraph>)
+    fn from_adjacencies<A, N>(adj: A) -> Result<Self, (Self, InvalidGraph)>
     where
         A: IntoIterator<Item = (int, N)>,
         N: IntoIterator<Item = int>,
         Self: Sized,
     {
         let graph = Self::from_adjacencies_unchecked(adj);
-        let check = graph.check();
-        (graph, check)
+        match graph.check() {
+            Ok(()) => Ok(graph),
+            Err(err) => Err((graph, err)),
+        }
     }
 
     fn len(&self) -> usize;

@@ -17,6 +17,7 @@ impl<G: ImplGraph> Graph<G> {
                 *node = graph_map.map(*node);
             }
         }
+        tree.root = tree_map.map(tree.root.index() as u32).into();
     }
 
     fn recurse_collapse(
@@ -111,7 +112,10 @@ mod tests {
     use rand_pcg::Pcg64;
 
     use super::*;
-    use crate::graph::{adj::AdjGraph, test_utils::collect};
+    use crate::graph::{
+        adj::AdjGraph,
+        test_utils::{collect, RandomMap},
+    };
 
     #[test]
     fn swap_remove() {
@@ -134,38 +138,44 @@ mod tests {
 
     #[test]
     fn test() {
-        let (mut graph, okay) = Graph::<AdjGraph>::from_adjacencies(collect!(
-            hh;
+        let map = RandomMap::new(24, 42);
+
+        let mut graph = Graph::<AdjGraph>::from_adjacencies(collect!(
+            hh, map;
             (0, [1]),
             (1, [0, 2]),
             (2, [1, 3, 4, 5]),
             (3, [2, 4]),
             (4, [2, 3]),
             (5, [2]),
-        ));
-        assert_eq!(okay, Ok(()));
+        ))
+        .unwrap();
         let expected = [3, 4, 5]
             .into_iter()
             .map(|representative| {
-                let (collapsed, okay) = Graph::<AdjGraph>::from_adjacencies(collect!(
-                    hh;
+                Graph::<AdjGraph>::from_adjacencies(collect!(
+                    hh, map;
                     (0, [1]),
                     (1, [0, 2]),
                     (2, [1, representative]),
                     (representative, [2]),
-                ));
-                assert_eq!(okay, Ok(()));
-                collapsed.map_to_labels()
+                ))
+                .unwrap()
             })
             .collect::<Vec<_>>();
 
         let mut tree = graph.modular_decomposition();
         graph.twin_collapse(&mut tree);
-        assert!(expected.contains(&graph.map_to_labels()));
 
-        let collapsed_tree = graph.modular_decomposition();
+        let sanity_tree = graph.modular_decomposition();
+        assert!(Tree::is_equivalent(&tree, &sanity_tree, &graph, &graph));
 
-        println!("{:#?}", tree);
-        println!("{:#?}", collapsed_tree);
+        let mapped_graph = graph.map_to_labels();
+        let equivalent_graph = expected
+            .iter()
+            .find(|graph| graph.map_to_labels() == mapped_graph)
+            .unwrap();
+        let equivalent_tree = equivalent_graph.modular_decomposition();
+        assert!(Tree::is_equivalent(&tree, &equivalent_tree, &graph, equivalent_graph));
     }
 }

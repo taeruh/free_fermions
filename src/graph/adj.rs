@@ -3,9 +3,7 @@ use std::{
     mem,
 };
 
-use super::{
-    CompactNodes, Edge, HNodes, ImplGraph, InvalidGraph, Label, Node, NodeCollection,
-};
+use super::{CompactNodes, Edge, HNodes, ImplGraph, Label, Node, NodeCollection};
 use crate::fix_int::{enumerate, int};
 
 pub type Neighbourhood = HashSet<Node>;
@@ -155,14 +153,13 @@ fn insert(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::test_utils::*;
+    use crate::graph::{test_utils::*, InvalidGraph};
 
     #[test]
     fn from_adj() {
         let list = collect!(vv; (1, [2, 3]), (2, [1, 3]), (3, [1, 2]),);
         let expected_nodes = collect!(vh; [1, 2], [0, 2], [0, 1],);
-        let (graph, okay) = AdjGraph::from_adjacencies(list);
-        assert_eq!(okay, Ok(()));
+        let graph = AdjGraph::from_adjacencies(list).unwrap();
         assert_eq!(
             graph.iter_neighbourhoods().cloned().collect::<Vec<_>>(),
             expected_nodes
@@ -179,8 +176,7 @@ mod tests {
             HashSet::from_iter(vec![1]),    // label 1
         ];
 
-        let (graph, okay) = AdjGraph::from_adjacencies(list);
-        assert_eq!(okay, Ok(()));
+        let graph = AdjGraph::from_adjacencies(list).unwrap();
         assert_eq!(
             graph.iter_neighbourhoods().cloned().collect::<Vec<_>>(),
             expected_nodes
@@ -194,10 +190,10 @@ mod tests {
             AdjGraph::from_adjacencies_unchecked(collect!(vh; (1, [2]), (2, [1]),));
 
         let (mut self_looped, self_looped_err) =
-            AdjGraph::from_adjacencies(collect!(vh; (1, [1, 2]), (2, [1]),));
+            AdjGraph::from_adjacencies(collect!(vh; (1, [1, 2]), (2, [1]),)).unwrap_err();
         assert_eq!(
-            self_looped_err.map_err(|e| e.map_to_labels(&self_looped)),
-            Err(InvalidGraph::SelfLoop(1))
+            self_looped_err.map_to_labels(&self_looped),
+            InvalidGraph::SelfLoop(1)
         );
         self_looped.correct();
         assert_eq!(self_looped, correct);
@@ -218,14 +214,14 @@ mod tests {
         // constructor (therefore we cannot allow any randomness on the order of
         // insertion)
         let map = RandomMap::new(5, 42);
-        let (correct, okay) = AdjGraph::from_adjacencies(collect!(vv, map;
+        let correct = AdjGraph::from_adjacencies(collect!(vv, map;
                 (0, [2, 4]),
                 (1, [2, 3, 4]),
                 (2, [0, 1, 4]),
                 (3, [1]),
                 (4, [0, 1, 2]),
-        )); // insert order 0, 2, 4, 1, 3
-        assert_eq!(okay, Ok(()));
+        ))
+        .unwrap(); // insert order 0, 2, 4, 1, 3
         let (mut wrong, _) = AdjGraph::from_adjacencies(collect!(vv, map;
                 // importantly, the same insert order
                 (0, [2, 4]),
@@ -233,7 +229,8 @@ mod tests {
                 (3, [1]),
                 (1, [2, 1, 4]),
                 (2, [0, 4]),
-        ));
+        ))
+        .unwrap_err();
         wrong.correct();
         assert_eq!(wrong, correct);
         assert_eq!(wrong.check(), Ok(()));
@@ -241,9 +238,9 @@ mod tests {
 
     #[test]
     fn from_edges() {
-        let (graph, okay) =
-            AdjGraph::from_edges(collect!(v; (1, 2), (2, 3), (3, 4), (4, 1),));
-        assert_eq!(okay, Ok(()));
+        let graph = AdjGraph::from_edges(collect!(v; (1, 2), (2, 3), (3, 4), (4,
+                    1),))
+        .unwrap();
         let labelled_graph = graph.map_to_labels();
 
         let expected = collect!(hh;
@@ -257,12 +254,12 @@ mod tests {
 
     #[test]
     fn subgraph() {
-        let (graph, okay) = AdjGraph::from_adjacencies(collect!(hh;
+        let graph = AdjGraph::from_adjacencies(collect!(hh;
             (1, [2]),
             (2, [1, 3]),
             (3, [2]),
-        ));
-        assert_eq!(okay, Ok(()));
+        ))
+        .unwrap();
         let nodes =
             HNodes::from_iter([1, 3].into_iter().map(|e| graph.find_node(e).unwrap()));
         let expected = AdjGraph::from_adjacencies_unchecked(collect!(hh;

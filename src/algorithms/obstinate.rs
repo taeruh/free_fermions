@@ -178,9 +178,8 @@ mod tests {
             list: Vec<VNodeInfo>,
         ) -> (Graph, RandomMap) {
             let map = RandomMap::new(map_length, map_max);
-            let (graph, okay) =
-                Graph::from_adjacencies(test_utils::adj_hash_hash(&map, list));
-            assert_eq!(okay, Ok(()));
+            let graph =
+                Graph::from_adjacencies(test_utils::adj_hash_hash(&map, list)).unwrap();
             (graph, map)
         }
 
