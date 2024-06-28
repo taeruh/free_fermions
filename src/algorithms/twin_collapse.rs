@@ -136,32 +136,15 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test() {
-        let map = RandomMap::new(24, 42);
-
-        let mut graph = Graph::<AdjGraph>::from_adjacencies(collect!(
-            hh, map;
-            (0, [1]),
-            (1, [0, 2]),
-            (2, [1, 3, 4, 5]),
-            (3, [2, 4]),
-            (4, [2, 3]),
-            (5, [2]),
-        ))
-        .unwrap();
-        let expected = [3, 4, 5]
+    fn check<A, N>(input: A, collapsed: impl IntoIterator<Item = A>)
+    where
+        A: IntoIterator<Item = (int, N)>,
+        N: IntoIterator<Item = int>,
+    {
+        let mut graph = Graph::<AdjGraph>::from_adjacencies(input).unwrap();
+        let expected = collapsed
             .into_iter()
-            .map(|representative| {
-                Graph::<AdjGraph>::from_adjacencies(collect!(
-                    hh, map;
-                    (0, [1]),
-                    (1, [0, 2]),
-                    (2, [1, representative]),
-                    (representative, [2]),
-                ))
-                .unwrap()
-            })
+            .map(|adj| Graph::<AdjGraph>::from_adjacencies(adj).unwrap())
             .collect::<Vec<_>>();
 
         let mut tree = graph.modular_decomposition();
@@ -177,5 +160,29 @@ mod tests {
             .unwrap();
         let equivalent_tree = equivalent_graph.modular_decomposition();
         assert!(Tree::is_equivalent(&tree, &equivalent_tree, &graph, equivalent_graph));
+    }
+
+    #[test]
+    fn test() {
+        let map = RandomMap::new(24, 42);
+        let input = collect!(
+            hh, map;
+            (0, [1]),
+            (1, [0, 2]),
+            (2, [1, 3, 4, 5]),
+            (3, [2, 4]),
+            (4, [2, 3]),
+            (5, [2]),
+        );
+        let collapsed = [3, 4, 5].into_iter().map(|representative| {
+            collect!(
+                hh, map;
+                (0, [1]),
+                (1, [0, 2]),
+                (2, [1, representative]),
+                (representative, [2]),
+            )
+        });
+        check(input, collapsed);
     }
 }
