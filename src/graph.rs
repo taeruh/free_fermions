@@ -532,7 +532,7 @@ impl NodeCollection for HNodes {
 pub mod test_utils {
     use std::collections::{HashMap, HashSet};
 
-    use rand::{seq::IteratorRandom, SeedableRng};
+    use rand::{seq::IteratorRandom, Rng, SeedableRng};
     use rand_pcg::Pcg64;
 
     use super::{int, HNodes, VNodeInfo, VNodes};
@@ -544,10 +544,9 @@ pub mod test_utils {
     }
 
     impl RandomMap {
-        pub fn new(map_length: int, map_max: int) -> Self {
+        pub fn new(map_length: int, map_max: int, rng: &mut impl Rng) -> Self {
             assert!(map_max >= map_length);
-            let mut rng = Pcg64::from_entropy();
-            Self::Random((0..=map_max).choose_multiple(&mut rng, map_length as usize + 1))
+            Self::Random((0..=map_max).choose_multiple(rng, map_length as usize + 1))
         }
 
         pub fn map(&self, node: int) -> int {
@@ -671,7 +670,7 @@ pub mod test_utils {
                 &$map, $crate::graph::test_utils::collect_adj!($(($node, $neighbours),)*)
             )
         };
-        (hh, $map:expr; $($neighbours:tt,)*) => {
+        (hh, $map:expr; $($collection:tt,)*) => {
             $crate::graph::test_utils::adj_hash_hash(
                 &$map, $crate::graph::test_utils::collect_col!($($neighbours,)*)
             )
@@ -712,7 +711,7 @@ pub mod test_utils {
             vec![(1, vec![2, 3]), (2, vec![1]), (3, vec![1])],
             collect!(vv; (1, [2, 3]), (2, [1]), (3, [1]),)
         );
-        let map = RandomMap::new(10, 20);
+        let map = RandomMap::new(10, 20, &mut Pcg64::from_entropy());
         assert_eq!(
             HashSet::from_iter(
                 [(1, 2), (1, 3)].into_iter().map(|(a, b)| (map.map(a), map.map(b)))

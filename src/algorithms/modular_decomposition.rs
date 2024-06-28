@@ -253,16 +253,16 @@ mod tests {
 
     #[test]
     fn equivalences() {
-        let mut rng = Pcg64::from_entropy();
+        let rng = &mut Pcg64::from_entropy();
 
-        let map = RandomMap::new(1000, 2000);
+        let map = RandomMap::new(1000, 2000, rng);
         let mut edges = collect!(v, map;
             (0, 1), (1, 2), (2, 3), (3, 4), (3, 5), (3, 6), (3, 7), (4, 5), (6, 7),);
 
-        edges.shuffle(&mut rng);
+        edges.shuffle(rng);
         let graph1 = Graph::<AdjGraph>::from_edges(edges.clone()).unwrap();
         let tree1 = graph1.modular_decomposition();
-        edges.shuffle(&mut rng);
+        edges.shuffle(rng);
         let graph2 = Graph::<AdjGraph>::from_edges(edges).unwrap();
         let tree2 = graph2.modular_decomposition();
         assert!(Tree::is_equivalent(&tree1, &tree2, &graph1, &graph2));

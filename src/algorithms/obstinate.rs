@@ -176,8 +176,9 @@ mod tests {
             map_length: int,
             map_max: int,
             list: Vec<VNodeInfo>,
+            rng: &mut impl Rng,
         ) -> (Graph, RandomMap) {
-            let map = RandomMap::new(map_length, map_max);
+            let map = RandomMap::new(map_length, map_max, rng);
             let graph =
                 Graph::from_adjacencies(test_utils::adj_hash_hash(&map, list)).unwrap();
             (graph, map)
@@ -215,12 +216,18 @@ mod tests {
 
         macro_rules! graph {
             (
-                $max_list:expr, $max_rand:expr,
+                $max_list:expr, $max_rand:expr, $rng:expr;
                 $(($vertex:expr, [$($neighbor:expr),*]),)*
             ) => {
                 create_graph(
-                    $max_list, $max_rand, vec![$(($vertex, vec![$($neighbor),*]),)*]
+                    $max_list, $max_rand, vec![$(($vertex, vec![$($neighbor),*]),)*], $rng
                 )
+            };
+            (
+                $max_list:expr, $max_rand:expr;
+                $($adj_elem:tt,)*
+            ) => {
+                graph!($max_list, $max_rand, &mut Pcg64::from_entropy(); $($adj_elem,)*)
             };
         }
         pub(super) use graph;
@@ -232,7 +239,10 @@ mod tests {
             };
         }
         pub(super) use expected;
+        use rand::Rng;
     }
+    use rand::{Rng, SeedableRng};
+    use rand_pcg::Pcg64;
     pub use utils::*;
 
     #[test]
@@ -240,7 +250,7 @@ mod tests {
     // a) I don't want to introduce special logic in the loops in the true_all test
     // b) I'm not sure yet, whether we want the empty graph to be obstinate or not
     fn true_empty() {
-        let (graph, map) = graph!(0, 0,);
+        let (graph, map) = graph!(0, 0, &mut Pcg64::from_entropy(););
         assert_eq!(graph.obstinate(), expected!(Itself, [], [], map)[0]);
     }
 
@@ -256,6 +266,7 @@ mod tests {
             kind: ObstinateKind,
             a_part_full: Vec<(Node, VNodes)>,
             b_part_full: Vec<(Node, VNodes)>,
+            rng: &mut impl Rng,
         ) {
             let size = partition_size * 2 - 1;
 
@@ -269,7 +280,7 @@ mod tests {
                 list.push(b);
             }
 
-            let (graph, map) = create_graph(size, size + 42, list);
+            let (graph, map) = create_graph(size, size + 42, list, rng);
             let mut result = graph.obstinate();
             if let Obstinate::True(_, (a, b)) = &mut result {
                 a.iter_mut().for_each(|node| *node = graph.get_label(*node).unwrap());
@@ -283,6 +294,8 @@ mod tests {
                 );
             }
         }
+
+        let rng = &mut Pcg64::from_entropy();
 
         // create the obstinate bi-partitions; co_* is for the cases when the complement
         // of the graph is obstinate
@@ -312,9 +325,9 @@ mod tests {
                 co_b_part.push((2 * i + 1, co_b_neighbourhood));
             }
 
-            test(part_size, ObstinateKind::Itself, a_part, b_part);
+            test(part_size, ObstinateKind::Itself, a_part, b_part, rng);
             if part_size != 2 {
-                test(part_size, ObstinateKind::Complement, co_a_part, co_b_part);
+                test(part_size, ObstinateKind::Complement, co_a_part, co_b_part, rng);
             } else {
                 // in that case, the graph itself is obstinate (as well as the
                 // complement), but our algorithm goes down the Itself path, so we wont
@@ -322,7 +335,7 @@ mod tests {
                 // important here!
                 let b_part = vec![co_b_part.pop().unwrap(), co_a_part.pop().unwrap()];
                 let a_part = vec![co_b_part.pop().unwrap(), co_a_part.pop().unwrap()];
-                test(part_size, ObstinateKind::Itself, a_part, b_part);
+                test(part_size, ObstinateKind::Itself, a_part, b_part, rng);
             }
         }
     }
@@ -331,34 +344,35 @@ mod tests {
     // no need to do many tests for that, since this check is very simple and we just
     // ensure that it is there
     fn false_odd() {
-        let (graph, _) = graph!(2, 2, (0, [1]), (1, [0]), (2, []),);
+        let (graph, _) = graph!(2, 2; (0, [1]), (1, [0]), (2, []),);
         assert_eq!(graph.obstinate(), Obstinate::False);
     }
 
     #[test]
     // only test graphs that have an even number of vertices
     fn false_other() {
+        let rng = &mut Pcg64::from_entropy();
+
         // cycle
         let (graph, _) =
-            graph!(3, 7, (0, [3, 1]), (1, [0, 2]), (2, [1, 3]), (3, [2, 0]),);
+            graph!(3, 7, rng; (0, [3, 1]), (1, [0, 2]), (2, [1, 3]), (3, [2, 0]),);
         assert_eq!(graph.obstinate(), Obstinate::False);
 
         // same as above but with one additional edge
         let (graph, _) =
-            graph!(3, 7, (0, [3, 1, 2]), (1, [0, 2]), (2, [1, 3, 0]), (3, [2, 0]),);
+            graph!(3, 7, rng; (0, [3, 1, 2]), (1, [0, 2]), (2, [1, 3, 0]), (3, [2, 0]),);
         assert_eq!(graph.obstinate(), Obstinate::False);
 
         // all-to-all
-        let (graph, _) =
-            graph!(3, 7, (0, [1, 2, 3]), (1, [0, 2, 3]), (2, [0, 1, 3]), (3, [0, 1, 2]),);
+        let (graph, _) = graph!(3, 7, rng; (0, [1, 2, 3]), (1, [0, 2, 3]), (2, [0, 1, 3]), (3, [0, 1, 2]),);
         assert_eq!(graph.obstinate(), Obstinate::False);
 
         // completely independent
-        let (graph, _) = graph!(3, 7, (0, []), (1, []), (2, []), (3, []),);
+        let (graph, _) = graph!(3, 7, rng; (0, []), (1, []), (2, []), (3, []),);
         assert_eq!(graph.obstinate(), Obstinate::False);
 
         // two disconnected paths
-        let (graph, _) = graph!(3, 7, (0, [1]), (1, [0]), (2, [3]), (3, [2]),);
+        let (graph, _) = graph!(3, 7, rng; (0, [1]), (1, [0]), (2, [3]), (3, [2]),);
         assert_eq!(graph.obstinate(), Obstinate::False);
 
         // TODO: more negative tests

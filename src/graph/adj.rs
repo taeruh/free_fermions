@@ -152,6 +152,9 @@ fn insert(
 
 #[cfg(test)]
 mod tests {
+    use rand::SeedableRng;
+    use rand_pcg::Pcg64;
+
     use super::*;
     use crate::graph::{test_utils::*, InvalidGraph};
 
@@ -213,7 +216,7 @@ mod tests {
         // map_to_labels, but instead creating the expected graph with the graph
         // constructor (therefore we cannot allow any randomness on the order of
         // insertion)
-        let map = RandomMap::new(5, 42);
+        let map = RandomMap::new(5, 42, &mut Pcg64::from_entropy());
         let correct = AdjGraph::from_adjacencies(collect!(vv, map;
                 (0, [2, 4]),
                 (1, [2, 3, 4]),
