@@ -8,11 +8,11 @@ use crate::{
     graph::{Graph, ImplGraph, Node, NodeIndex},
 };
 
-pub type TreeData = DiGraph<ModuleKind<Node>, ()>;
+pub type TreeGraph = DiGraph<ModuleKind<Node>, ()>;
 
 #[derive(Debug, Clone, Default)]
 pub struct Tree {
-    pub data: TreeData,
+    pub graph: TreeGraph,
     pub root: NodeIndex,
 }
 
@@ -21,7 +21,7 @@ impl<G: ImplGraph> Graph<G> {
         let md_tree = modular_decomposition::modular_decomposition(&self).unwrap();
         Tree {
             root: NodeIndex::from(md_tree.root().index() as Node),
-            data: md_tree.into_digraph(),
+            graph: md_tree.into_digraph(),
         }
     }
 }
@@ -94,8 +94,8 @@ impl Tree {
         left_graph: &impl ImplGraph,
         right_graph: &impl ImplGraph,
     ) -> bool {
-        if left_tree.data.node_weight(left_tree.root)
-            != right_tree.data.node_weight(right_tree.root)
+        if left_tree.graph.node_weight(left_tree.root)
+            != right_tree.graph.node_weight(right_tree.root)
         {
             return false;
         }
@@ -142,8 +142,8 @@ impl Tree {
 
         if (true_left_leaf_siblings != true_right_leaf_siblings)
             || !compare_module_kind_mapped(
-                &left_tree.data[left_parent],
-                &right_tree.data[right_parent],
+                &left_tree.graph[left_parent],
+                &right_tree.graph[right_parent],
                 left_graph,
                 right_graph,
             )
@@ -169,7 +169,7 @@ impl Tree {
     }
 
     fn get_parent(&self, node: NodeIndex) -> NodeIndex {
-        self.data
+        self.graph
             .neighbors_directed(node, Direction::Incoming)
             .next()
             .unwrap()
@@ -180,10 +180,10 @@ impl Tree {
         graph: &'a impl ImplGraph,
         node: NodeIndex,
     ) -> impl Iterator<Item = int> + 'a {
-        self.data
+        self.graph
             .neighbors_directed(node, Direction::Outgoing)
             .filter_map(|child| {
-                if let ModuleKind::Node(weight) = self.data[child] {
+                if let ModuleKind::Node(weight) = self.graph[child] {
                     Some(graph.get_label(weight).unwrap())
                 } else {
                     None
@@ -195,10 +195,10 @@ impl Tree {
         &self,
         graph: &impl ImplGraph,
     ) -> HashMap<int, NodeIndex> {
-        self.data
+        self.graph
             .node_indices()
             .filter_map(|node| {
-                if let ModuleKind::Node(weight) = self.data.node_weight(node).unwrap() {
+                if let ModuleKind::Node(weight) = self.graph.node_weight(node).unwrap() {
                     Some((graph.get_label(*weight).unwrap(), node))
                 } else {
                     None

@@ -1,7 +1,7 @@
 use modular_decomposition::ModuleKind;
 use petgraph::Direction;
 
-use super::modular_decomposition::{Tree, TreeData};
+use super::modular_decomposition::{Tree, TreeGraph};
 use crate::{
     fix_int::int,
     graph::{Graph, ImplGraph, NodeIndex, SwapRemoveMap},
@@ -10,9 +10,9 @@ use crate::{
 impl<G: ImplGraph> Graph<G> {
     pub fn twin_collapse(&mut self, tree: &mut Tree) {
         let mut graph_map = SwapRemoveMap::new(self.len());
-        let mut tree_map = SwapRemoveMap::new(tree.data.node_count());
-        self.recurse_collapse(&mut tree.data, tree.root, &mut graph_map, &mut tree_map);
-        for weight in tree.data.node_weights_mut() {
+        let mut tree_map = SwapRemoveMap::new(tree.graph.node_count());
+        self.recurse_collapse(&mut tree.graph, tree.root, &mut graph_map, &mut tree_map);
+        for weight in tree.graph.node_weights_mut() {
             if let ModuleKind::Node(node) = weight {
                 *node = graph_map.map(*node);
             }
@@ -22,24 +22,24 @@ impl<G: ImplGraph> Graph<G> {
 
     fn recurse_collapse(
         &mut self,
-        data: &mut TreeData,
+        tree: &mut TreeGraph,
         root: NodeIndex,
         graph_map: &mut SwapRemoveMap,
         tree_map: &mut SwapRemoveMap,
     ) {
         let new_root = tree_map.map(root.index() as u32).into();
-        if let ModuleKind::Node(_) = data.node_weight(new_root).unwrap() {
+        if let ModuleKind::Node(_) = tree.node_weight(new_root).unwrap() {
             return;
         }
 
         // PERF: collect because of borrow rules -> improve somehow
         // edit: actually, probably fine, since we use it twice ...
         let children: Vec<NodeIndex> =
-            data.neighbors_directed(new_root, Direction::Outgoing).collect();
+            tree.neighbors_directed(new_root, Direction::Outgoing).collect();
 
-        if *data.node_weight(new_root).unwrap() == ModuleKind::Prime {
+        if *tree.node_weight(new_root).unwrap() == ModuleKind::Prime {
             for child in children {
-                self.recurse_collapse(data, child, graph_map, tree_map);
+                self.recurse_collapse(tree, child, graph_map, tree_map);
             }
             return;
         }
@@ -49,29 +49,34 @@ impl<G: ImplGraph> Graph<G> {
 
         let mut children = children.into_iter();
         for child in children.by_ref() {
-            self.recurse_collapse(data, child, graph_map, tree_map);
-            if let ModuleKind::Node(node) = data.node_weight(child).unwrap() {
+            self.recurse_collapse(tree, child, graph_map, tree_map);
+            if let ModuleKind::Node(node) =
+                tree.node_weight(tree_map.map(child.index() as int).into()).unwrap()
+            {
                 remaining_leaf = Some(*node);
-                data.remove_node(tree_map.swap_remove(child.index() as u32).into());
+                tree.remove_node(tree_map.swap_remove_unchecked(child.index() as u32).into());
                 num_children -= 1;
                 break;
             }
         }
+        // continue with the rest of the children
         for child in children {
-            self.recurse_collapse(data, child, graph_map, tree_map);
-            if let ModuleKind::Node(node) = data.node_weight(child).unwrap() {
-                self.remove_node(graph_map.swap_remove(*node));
-                data.remove_node(tree_map.swap_remove(child.index() as u32).into());
+            self.recurse_collapse(tree, child, graph_map, tree_map);
+            if let ModuleKind::Node(node) =
+                tree.node_weight(tree_map.map(child.index() as int).into()).unwrap()
+            {
+                self.remove_node(graph_map.swap_remove_unchecked(*node));
+                tree.remove_node(tree_map.swap_remove_unchecked(child.index() as u32).into());
                 num_children -= 1;
             }
         }
 
         let new_root = tree_map.map(root.index() as u32).into();
         if num_children == 0 {
-            *data.node_weight_mut(new_root).unwrap() =
+            *tree.node_weight_mut(new_root).unwrap() =
                 ModuleKind::Node(remaining_leaf.unwrap());
         } else {
-            self.remove_node(graph_map.swap_remove(remaining_leaf.unwrap()));
+            self.remove_node(graph_map.swap_remove_unchecked(remaining_leaf.unwrap()));
         }
     }
 }
@@ -101,7 +106,7 @@ mod tests {
         let mut map = SwapRemoveMap::new(NUM_NODES);
 
         for node in to_remove.into_iter() {
-            let removed = pseudo_graph.swap_remove(map.swap_remove(node as u32) as usize);
+            let removed = pseudo_graph.swap_remove(map.swap_remove_unchecked(node as u32) as usize);
             assert_eq!(removed, node);
         }
     }

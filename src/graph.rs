@@ -59,7 +59,7 @@ pub trait CompactNodes {}
 pub struct SwapRemoveMap {
     map: Vec<int>,
     position: Vec<int>,
-    end: usize,
+    len: usize,
 }
 
 impl SwapRemoveMap {
@@ -68,7 +68,7 @@ impl SwapRemoveMap {
         Self {
             map: (0..len as int).collect(),
             position: (0..len as int).collect(),
-            end: len - 1, // assert above len > 0
+            len,
         }
     }
 
@@ -76,11 +76,14 @@ impl SwapRemoveMap {
         self.map[node as usize]
     }
 
-    pub fn swap_remove(&mut self, node: int) -> int {
+    // assert above len > 0
+    /// No bounds checking (usually automatically done since this type only accompanies
+    /// some other indexing type which defines the indices which should be valid).
+    pub fn swap_remove_unchecked(&mut self, node: int) -> int {
+        self.len -= 1;
         let mapped = self.map[node as usize];
-        self.map[self.position[self.end] as usize] = mapped;
-        self.position.swap(mapped as usize, self.end);
-        self.end -= 1;
+        self.map[self.position[self.len] as usize] = mapped;
+        self.position.swap(mapped as usize, self.len);
         mapped
     }
 }
@@ -158,7 +161,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug {
         let mut graph_map = SwapRemoveMap::new(self.len());
         for node in self.iter_nodes() {
             if !f(node) {
-                self.remove_node(graph_map.swap_remove(node));
+                self.remove_node(graph_map.swap_remove_unchecked(node));
             }
         }
     }
