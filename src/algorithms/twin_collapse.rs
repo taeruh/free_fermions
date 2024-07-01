@@ -4,7 +4,7 @@ use petgraph::Direction;
 use super::modular_decomposition::{Tree, TreeData};
 use crate::{
     fix_int::int,
-    graph::{Graph, ImplGraph, NodeIndex},
+    graph::{Graph, ImplGraph, NodeIndex, SwapRemoveMap},
 };
 
 impl<G: ImplGraph> Graph<G> {
@@ -76,36 +76,6 @@ impl<G: ImplGraph> Graph<G> {
     }
 }
 
-#[derive(Debug)]
-struct SwapRemoveMap {
-    map: Vec<int>,
-    position: Vec<int>,
-    end: usize,
-}
-
-impl SwapRemoveMap {
-    fn new(len: usize) -> Self {
-        assert!(len > 0);
-        Self {
-            map: (0..len as int).collect(),
-            position: (0..len as int).collect(),
-            end: len - 1, // assert above len > 0
-        }
-    }
-
-    fn map(&self, node: int) -> int {
-        self.map[node as usize]
-    }
-
-    fn swap_remove(&mut self, node: int) -> int {
-        let mapped = self.map[node as usize];
-        self.map[self.position[self.end] as usize] = mapped;
-        self.position.swap(mapped as usize, self.end);
-        self.end -= 1;
-        mapped
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use rand::{seq::SliceRandom, SeedableRng};
@@ -142,10 +112,10 @@ mod tests {
         N: IntoIterator<Item = int>,
     {
         let mut graph = Graph::<AdjGraph>::from_adjacencies(input).unwrap();
-        let expected = collapsed
+        let expected: Vec<Graph> = collapsed
             .into_iter()
-            .map(|adj| Graph::<AdjGraph>::from_adjacencies(adj).unwrap())
-            .collect::<Vec<_>>();
+            .map(|adj| Graph::from_adjacencies(adj).unwrap())
+            .collect();
 
         let mut tree = graph.modular_decomposition();
         graph.twin_collapse(&mut tree);
@@ -154,7 +124,7 @@ mod tests {
         assert!(Tree::is_equivalent(&tree, &sanity_tree, &graph, &graph));
 
         let mapped_graph = graph.map_to_labels();
-        let equivalent_graph = expected
+        let equivalent_graph: &Graph = expected
             .iter()
             .find(|graph| graph.map_to_labels() == mapped_graph)
             .unwrap();

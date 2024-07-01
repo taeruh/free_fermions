@@ -22,7 +22,7 @@ impl CompactNodes for AdjGraph {}
 impl ImplGraph for AdjGraph {
     // TODO: implement a bunch of default methods more efficiently (if possible)
 
-    type NodeCollection = HNodes;
+    type Nodes = HNodes;
 
     fn from_edges_unchecked(edges: impl IntoIterator<Item = Edge>) -> Self
     where
@@ -91,6 +91,7 @@ impl ImplGraph for AdjGraph {
         // if last node, we can simply pop it
         if node == last_node {
             let neighbours = self.nodes.pop().unwrap();
+            self.labels.pop().unwrap();
             for neighbour in neighbours {
                 self.nodes[neighbour as usize].remove(&node);
             }
@@ -270,7 +271,7 @@ mod tests {
             (3, []),
         ))
         .map_to_labels();
-        assert_eq!(graph.subgraph(nodes).map_to_labels(), expected);
+        assert_eq!(graph.subgraph(&nodes).map_to_labels(), expected);
         assert_eq!(expected, collect!(hh; (1, []), (3, []),));
     }
 }
