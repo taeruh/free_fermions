@@ -15,6 +15,7 @@ pub struct AdjGraph {
     // reading the graph
     pub nodes: Vec<Neighbourhood>,
     pub labels: Vec<Label>,
+    pub invert_labels: HashMap<Label, usize>,
 }
 
 impl CompactNodes for AdjGraph {}
@@ -24,43 +25,20 @@ impl ImplGraph for AdjGraph {
 
     type Nodes = HNodes;
 
-    fn from_edges_unchecked(edges: impl IntoIterator<Item = Edge>) -> Self
-    where
-        Self: Sized,
-    {
-        let mut nodes: Vec<Neighbourhood> = Vec::new();
-        let mut labels: Vec<Label> = Vec::new();
-        let mut invert_labels: HashMap<Label, usize> = HashMap::new();
-
-        for (a, b) in edges {
-            let idxa = insert(&mut nodes, &mut labels, &mut invert_labels, a);
-            let idxb = insert(&mut nodes, &mut labels, &mut invert_labels, b);
-            nodes[idxa].insert(idxb as int);
-            nodes[idxb].insert(idxa as int);
-        }
-
-        AdjGraph { nodes, labels }
+    fn add_labeled_edge(&mut self, (a, b): Edge) {
+        let idxa = self.insert(a);
+        let idxb = self.insert(b);
+        self.nodes[idxa].insert(idxb as int);
+        self.nodes[idxb].insert(idxa as int);
     }
 
-    fn from_adjacencies_unchecked<A, N>(adj: A) -> Self
-    where
-        A: IntoIterator<Item = (int, N)>,
-        N: IntoIterator<Item = int>,
-    {
-        let mut nodes: Vec<Neighbourhood> = Vec::new();
-        let mut labels: Vec<Label> = Vec::new();
-        let mut invert_labels: HashMap<int, usize> = HashMap::new();
-
-        for (label, neighbours) in adj {
-            let idx = insert(&mut nodes, &mut labels, &mut invert_labels, label);
-            for neighbour in neighbours {
-                let idx_neighbour =
-                    insert(&mut nodes, &mut labels, &mut invert_labels, neighbour);
-                nodes[idx].insert(idx_neighbour as int);
-            }
+    fn add_labeled_node<N: IntoIterator<Item = int>>(&mut self, (node, adj): (int, N)) {
+        let idx = self.insert(node);
+        for neighbour in adj {
+            let idx_neighbour = self.insert(neighbour);
+            self.nodes[idx].insert(idx_neighbour as int);
+            self.nodes[idx_neighbour].insert(idx as int);
         }
-
-        AdjGraph { nodes, labels }
     }
 
     fn len(&self) -> usize {
@@ -88,6 +66,8 @@ impl ImplGraph for AdjGraph {
         assert!(len > 0, "cannot remove from empty graph");
         let last_node = len as int - 1;
 
+        self.invert_labels.remove(&self.labels[node as usize]).unwrap();
+
         // if last node, we can simply pop it
         if node == last_node {
             let neighbours = self.nodes.pop().unwrap();
@@ -113,6 +93,8 @@ impl ImplGraph for AdjGraph {
             neighbours.remove(&last_node);
         }
         self.nodes.swap_remove(node as usize);
+        *self.invert_labels.get_mut(&self.labels[last_node as usize]).unwrap() =
+            node as usize;
         self.labels.swap_remove(node as usize);
     }
 
@@ -138,17 +120,20 @@ impl ImplGraph for AdjGraph {
     }
 }
 
-fn insert(
-    nodes: &mut Vec<Neighbourhood>,
-    labels: &mut Vec<Label>,
-    invert_labels: &mut HashMap<Label, usize>,
-    node: Node,
-) -> usize {
-    *invert_labels.entry(node).or_insert_with(|| {
-        nodes.push(HashSet::new());
-        labels.push(node);
-        nodes.len() - 1
-    })
+impl AdjGraph {
+    fn insert(
+        &mut self,
+        // nodes: &mut Vec<Neighbourhood>,
+        // labels: &mut Vec<Label>,
+        // invert_labels: &mut HashMap<Label, usize>,
+        node: Node,
+    ) -> usize {
+        *self.invert_labels.entry(node).or_insert_with(|| {
+            self.nodes.push(HashSet::new());
+            self.labels.push(node);
+            self.nodes.len() - 1
+        })
+    }
 }
 
 #[cfg(test)]
@@ -163,7 +148,7 @@ mod tests {
     fn from_adj() {
         let list = collect!(vv; (1, [2, 3]), (2, [1, 3]), (3, [1, 2]),);
         let expected_nodes = collect!(vh; [1, 2], [0, 2], [0, 1],);
-        let graph = AdjGraph::from_adjacencies(list).unwrap();
+        let graph = AdjGraph::from_adjacency_labels(list).unwrap();
         assert_eq!(
             graph.iter_neighbourhoods().cloned().collect::<Vec<_>>(),
             expected_nodes
@@ -180,7 +165,7 @@ mod tests {
             HashSet::from_iter(vec![1]),    // label 1
         ];
 
-        let graph = AdjGraph::from_adjacencies(list).unwrap();
+        let graph = AdjGraph::from_adjacency_labels(list).unwrap();
         assert_eq!(
             graph.iter_neighbourhoods().cloned().collect::<Vec<_>>(),
             expected_nodes
@@ -191,10 +176,11 @@ mod tests {
     #[test]
     fn invalid_graphs() {
         let correct =
-            AdjGraph::from_adjacencies_unchecked(collect!(vh; (1, [2]), (2, [1]),));
+            AdjGraph::from_adjacency_labels_unchecked(collect!(vh; (1, [2]), (2, [1]),));
 
         let (mut self_looped, self_looped_err) =
-            AdjGraph::from_adjacencies(collect!(vh; (1, [1, 2]), (2, [1]),)).unwrap_err();
+            AdjGraph::from_adjacency_labels(collect!(vh; (1, [1, 2]), (2, [1]),))
+                .unwrap_err();
         assert_eq!(
             self_looped_err.map_to_labels(&self_looped),
             InvalidGraph::SelfLoop(1)
@@ -203,7 +189,7 @@ mod tests {
         assert_eq!(self_looped, correct);
 
         let mut incompatible_neighbourhoods =
-            AdjGraph::from_adjacencies_unchecked(collect!(vh; (1, [2]), (2, []),));
+            AdjGraph::from_adjacency_labels_unchecked(collect!(vh; (1, [2]), (2, []),));
         assert_eq!(
             incompatible_neighbourhoods
                 .check()
@@ -218,7 +204,7 @@ mod tests {
         // constructor (therefore we cannot allow any randomness on the order of
         // insertion)
         let map = RandomMap::new(5, 42, &mut Pcg64::from_entropy());
-        let correct = AdjGraph::from_adjacencies(collect!(vv, map;
+        let correct = AdjGraph::from_adjacency_labels(collect!(vv, map;
                 (0, [2, 4]),
                 (1, [2, 3, 4]),
                 (2, [0, 1, 4]),
@@ -226,7 +212,7 @@ mod tests {
                 (4, [0, 1, 2]),
         ))
         .unwrap(); // insert order 0, 2, 4, 1, 3
-        let (mut wrong, _) = AdjGraph::from_adjacencies(collect!(vv, map;
+        let (mut wrong, _) = AdjGraph::from_adjacency_labels(collect!(vv, map;
                 // importantly, the same insert order
                 (0, [2, 4]),
                 (4, [1]),
@@ -242,7 +228,7 @@ mod tests {
 
     #[test]
     fn from_edges() {
-        let graph = AdjGraph::from_edges(collect!(v; (1, 2), (2, 3), (3, 4), (4,
+        let graph = AdjGraph::from_edge_labels(collect!(v; (1, 2), (2, 3), (3, 4), (4,
                     1),))
         .unwrap();
         let labelled_graph = graph.map_to_labels();
@@ -258,7 +244,7 @@ mod tests {
 
     #[test]
     fn subgraph() {
-        let graph = AdjGraph::from_adjacencies(collect!(hh;
+        let graph = AdjGraph::from_adjacency_labels(collect!(hh;
             (1, [2]),
             (2, [1, 3]),
             (3, [2]),
@@ -266,7 +252,7 @@ mod tests {
         .unwrap();
         let nodes =
             HNodes::from_iter([1, 3].into_iter().map(|e| graph.find_node(e).unwrap()));
-        let expected = AdjGraph::from_adjacencies_unchecked(collect!(hh;
+        let expected = AdjGraph::from_adjacency_labels_unchecked(collect!(hh;
             (1, []),
             (3, []),
         ))
@@ -274,4 +260,22 @@ mod tests {
         assert_eq!(graph.subgraph(&nodes).map_to_labels(), expected);
         assert_eq!(expected, collect!(hh; (1, []), (3, []),));
     }
+
+    // #[test]
+    // fn foo() {
+    //     let mut graph = AdjGraph::default();
+    //     println!("{:?}", graph);
+    //     graph.add_labeled_node((1, [2, 3]));
+    //     println!("{:?}", graph);
+    //     graph.remove_node(1);
+    //     println!("{:?}", graph);
+    //     graph.add_node((2, [1].into()));
+    //     println!("{:?}", graph);
+    //     graph.add_labeled_edge((1, 2));
+    //     println!("{:?}", graph);
+    //     graph.remove_edge((0, 1));
+    //     println!("{:?}", graph);
+    //     graph.remove_labeled_edge((1, 2));
+    //     println!("{:?}", graph);
+    // }
 }

@@ -54,7 +54,9 @@ impl<G: ImplGraph> Graph<G> {
                 tree.node_weight(tree_map.map(child.index() as int).into()).unwrap()
             {
                 remaining_leaf = Some(*node);
-                tree.remove_node(tree_map.swap_remove_unchecked(child.index() as u32).into());
+                tree.remove_node(
+                    tree_map.swap_remove_unchecked(child.index() as u32).into(),
+                );
                 num_children -= 1;
                 break;
             }
@@ -66,7 +68,9 @@ impl<G: ImplGraph> Graph<G> {
                 tree.node_weight(tree_map.map(child.index() as int).into()).unwrap()
             {
                 self.remove_node(graph_map.swap_remove_unchecked(*node));
-                tree.remove_node(tree_map.swap_remove_unchecked(child.index() as u32).into());
+                tree.remove_node(
+                    tree_map.swap_remove_unchecked(child.index() as u32).into(),
+                );
                 num_children -= 1;
             }
         }
@@ -106,7 +110,8 @@ mod tests {
         let mut map = SwapRemoveMap::new(NUM_NODES);
 
         for node in to_remove.into_iter() {
-            let removed = pseudo_graph.swap_remove(map.swap_remove_unchecked(node as u32) as usize);
+            let removed =
+                pseudo_graph.swap_remove(map.swap_remove_unchecked(node as u32) as usize);
             assert_eq!(removed, node);
         }
     }
@@ -116,10 +121,10 @@ mod tests {
         A: IntoIterator<Item = (int, N)>,
         N: IntoIterator<Item = int>,
     {
-        let mut graph = Graph::<AdjGraph>::from_adjacencies(input).unwrap();
+        let mut graph = Graph::<AdjGraph>::from_adjacency_labels(input).unwrap();
         let expected: Vec<Graph> = collapsed
             .into_iter()
-            .map(|adj| Graph::from_adjacencies(adj).unwrap())
+            .map(|adj| Graph::from_adjacency_labels(adj).unwrap())
             .collect();
 
         let mut tree = graph.modular_decomposition();

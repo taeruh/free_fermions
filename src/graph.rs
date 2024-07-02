@@ -2,6 +2,7 @@ use std::{
     collections::{hash_set, HashMap, HashSet},
     fmt::Debug,
     iter::{self, Copied},
+    mem,
     ops::{Index, IndexMut, Range},
     ptr, slice,
 };
@@ -102,42 +103,89 @@ impl SwapRemoveMap {
 // representation; that's why we have additional from_* methods, so that they are are
 // cheaper (instead of always using the iterator-based from_ methods)
 // pub trait ImplGraph: CompactNodes + Clone {
-pub trait ImplGraph: CompactNodes + Clone + Debug {
-    type Nodes: NodeCollectionMut + IntoIterator<Item = int>;
+pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
+    type Nodes: NodeCollectionMut + IntoIterator<Item = int> + FromIterator<int>;
 
-    fn from_edges_unchecked(edges: impl IntoIterator<Item = Edge>) -> Self
+    // for adding and removing there are labelled and unlabelled versions; the unlabelled
+    // versions directly work with the indices, while the labelled versions first do the
+    // conversion from the label to the index; for the methods that create things, we
+    // usually require the labelled versions, since we do not know how the conversion
+    // works, but for the methods that remove things, we usually require the unlabelled
+    // because they are more intuitive once the graph is created (the labelled version can
+    // then be simply implement with the find_node method)
+
+    fn add_labeled_edge(&mut self, edge: Edge);
+
+    fn add_labeled_node<N: IntoIterator<Item = int>>(&mut self, node_adj: (int, N));
+
+    fn from_edge_labels_unchecked(edges: impl IntoIterator<Item = Edge>) -> Self
     where
-        Self: Sized;
+        Self: Sized,
+    {
+        let mut ret = Self::default();
+        for edge in edges {
+            ret.add_labeled_edge(edge);
+        }
+        ret
+    }
 
-    fn from_adjacencies_unchecked<A, N>(adj: A) -> Self
+    fn from_adjacency_labels_unchecked<A, N>(adj: A) -> Self
     where
         A: IntoIterator<Item = (int, N)>,
-        N: IntoIterator<Item = int>;
+        N: IntoIterator<Item = int>,
+    {
+        let mut ret = Self::default();
+        for node_adj in adj {
+            ret.add_labeled_node(node_adj);
+        }
+        ret
+    }
 
-    fn from_edges(
+    fn from_edge_labels(
         edges: impl IntoIterator<Item = Edge>,
     ) -> Result<Self, (Self, InvalidGraph)>
     where
         Self: Sized,
     {
-        let graph = Self::from_edges_unchecked(edges);
+        let graph = Self::from_edge_labels_unchecked(edges);
         match graph.check() {
             Ok(()) => Ok(graph),
             Err(err) => Err((graph, err)),
         }
     }
 
-    fn from_adjacencies<A, N>(adj: A) -> Result<Self, (Self, InvalidGraph)>
+    fn from_adjacency_labels<A, N>(adj: A) -> Result<Self, (Self, InvalidGraph)>
     where
         A: IntoIterator<Item = (int, N)>,
         N: IntoIterator<Item = int>,
         Self: Sized,
     {
-        let graph = Self::from_adjacencies_unchecked(adj);
+        let graph = Self::from_adjacency_labels_unchecked(adj);
         match graph.check() {
             Ok(()) => Ok(graph),
             Err(err) => Err((graph, err)),
         }
+    }
+
+    // adding edge based on the indices
+    fn add_edge(&mut self, (a, b): Edge) {
+        self.get_neighbours_mut(a).unwrap().insert(b);
+        self.get_neighbours_mut(b).unwrap().insert(a);
+    }
+
+    /// Probably want to override this for performance reasons
+    fn add_node(&mut self, (label, neighbours): (Label, Self::Nodes)) {
+        assert!(self.get_label(label).is_none());
+        self.add_labeled_node((label, []));
+        // new_node is probably usually self.len() - 1, but we cannot be sure
+        let new_node = self.find_node(label).unwrap();
+        neighbours.iter().for_each(|n| {
+            self.get_neighbours_mut(n).unwrap().insert(new_node);
+        });
+        debug_assert!(
+            mem::replace(self.get_neighbours_mut(new_node).unwrap(), neighbours)
+                .is_empty()
+        );
     }
 
     fn len(&self) -> usize;
@@ -156,6 +204,19 @@ pub trait ImplGraph: CompactNodes + Clone + Debug {
 
     fn remove_node(&mut self, node: int);
 
+    fn remove_labeled_node(&mut self, label: int) {
+        self.remove_node(self.find_node(label).unwrap());
+    }
+
+    fn remove_edge(&mut self, (a, b): Edge) {
+        self.get_neighbours_mut(a).unwrap().remove(b);
+        self.get_neighbours_mut(b).unwrap().remove(a);
+    }
+
+    fn remove_labeled_edge(&mut self, (a, b): Edge) {
+        self.remove_edge((self.find_node(a).unwrap(), self.find_node(b).unwrap()));
+    }
+
     /// Default implementation uses [Self::remove_node]
     fn retain_nodes(&mut self, f: impl Fn(int) -> bool) {
         let mut graph_map = SwapRemoveMap::new(self.len());
@@ -166,7 +227,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug {
         }
     }
 
-    /// Default implementation: Calls filter_nodes. You may want to override this.
+    /// Default implementation: Calls retain_nodes. You may want to override this.
     fn into_subgraph(mut self, nodes: &impl NodeCollection) -> Self
     where
         Self: Sized,
@@ -315,19 +376,27 @@ impl<G: CompactNodes> CompactNodes for Graph<G> {}
 impl<G: ImplGraph> ImplGraph for Graph<G> {
     type Nodes = G::Nodes;
     #[inline]
-    fn from_edges_unchecked(edges: impl IntoIterator<Item = Edge>) -> Self
+    fn add_labeled_edge(&mut self, edge: Edge) {
+        self.0.add_labeled_edge(edge)
+    }
+    #[inline]
+    fn add_labeled_node<N: IntoIterator<Item = int>>(&mut self, node_adj: (int, N)) {
+        self.0.add_labeled_node(node_adj)
+    }
+    #[inline]
+    fn from_edge_labels_unchecked(edges: impl IntoIterator<Item = Edge>) -> Self
     where
         Self: Sized,
     {
-        Self(G::from_edges_unchecked(edges))
+        Self(G::from_edge_labels_unchecked(edges))
     }
     #[inline]
-    fn from_adjacencies_unchecked<A, N>(adj: A) -> Self
+    fn from_adjacency_labels_unchecked<A, N>(adj: A) -> Self
     where
         A: IntoIterator<Item = (int, N)>,
         N: IntoIterator<Item = int>,
     {
-        Self(G::from_adjacencies_unchecked(adj))
+        Self(G::from_adjacency_labels_unchecked(adj))
     }
     #[inline]
     fn len(&self) -> usize {

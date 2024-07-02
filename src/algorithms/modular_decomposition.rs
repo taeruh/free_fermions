@@ -260,10 +260,10 @@ mod tests {
             (0, 1), (1, 2), (2, 3), (3, 4), (3, 5), (3, 6), (3, 7), (4, 5), (6, 7),);
 
         edges.shuffle(rng);
-        let graph1 = Graph::<AdjGraph>::from_edges(edges.clone()).unwrap();
+        let graph1 = Graph::<AdjGraph>::from_edge_labels(edges.clone()).unwrap();
         let tree1 = graph1.modular_decomposition();
         edges.shuffle(rng);
-        let graph2 = Graph::<AdjGraph>::from_edges(edges).unwrap();
+        let graph2 = Graph::<AdjGraph>::from_edge_labels(edges).unwrap();
         let tree2 = graph2.modular_decomposition();
         assert!(Tree::is_equivalent(&tree1, &tree2, &graph1, &graph2));
 
@@ -271,7 +271,7 @@ mod tests {
         let other_edges = collect!(v, map;
             (0, 1), (1, 2), (2, 3), (3, 4), (3, 5), (3, 6), (3, 7), (4, 5), (5, 6), (6, 7),
         );
-        let graph3 = Graph::<AdjGraph>::from_edges(other_edges).unwrap();
+        let graph3 = Graph::<AdjGraph>::from_edge_labels(other_edges).unwrap();
         let tree3 = graph3.modular_decomposition();
         assert!(!Tree::is_equivalent(&tree1, &tree3, &graph1, &graph3));
     }

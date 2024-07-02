@@ -18,6 +18,10 @@ pub enum ClawFree {
 // impl<G: ImplGraph> Graph<G> {
 impl<G: ImplGraph + std::fmt::Debug> Graph<G> {
     pub fn is_claw_free(&self, tree: &Tree) -> ClawFree {
+        if !self.has_right_structure(tree) {
+            return ClawFree::No;
+        }
+
         todo!()
     }
 
@@ -47,6 +51,9 @@ impl<G: ImplGraph + std::fmt::Debug> Graph<G> {
                             return false;
                         }
                     },
+                    ModuleKind::Series => {
+                        unreachable!("series node in series node")
+                    },
                     ModuleKind::Parallel => {
                         let mut count = 0;
                         for child in tree.neighbors_directed(child, Direction::Outgoing) {
@@ -57,9 +64,6 @@ impl<G: ImplGraph + std::fmt::Debug> Graph<G> {
                         }
                     },
                     ModuleKind::Node(_) => {},
-                    ModuleKind::Series => {
-                        unreachable!("series node in series node")
-                    },
                 };
             }
             true
@@ -141,7 +145,7 @@ mod tests {
         // 0 -- 2
         //  \
         //    - 3
-        let mut graph: Graph = Graph::from_adjacencies(collect!(vv;
+        let mut graph: Graph = Graph::from_adjacency_labels(collect!(vv;
                 (0, [1, 2, 3]),
                 (1, [0]),
                 (2, [0]),
@@ -165,7 +169,7 @@ mod tests {
         // 0 -- 2 -- 5
         //  \
         //    - 3 -- 6
-        let mut graph: Graph = Graph::from_adjacencies(collect!(vv;
+        let mut graph: Graph = Graph::from_adjacency_labels(collect!(vv;
             (0, [1, 2, 3]),
             (1, [0, 4]),
             (2, [0, 5]),
@@ -189,7 +193,7 @@ mod tests {
         // 11 -- 8 -- 0 -- 2 -- 5
         //           / \
         // 13 -- 9 -     - 3 -- 6
-        let graph: Graph = Graph::from_adjacencies(collect!(vv;
+        let graph: Graph = Graph::from_adjacency_labels(collect!(vv;
                 (0, [1, 2, 3, 7, 8, 9]),
                 (1, [0, 4]),
                 (2, [0, 5]),
@@ -213,7 +217,7 @@ mod tests {
         // 0 -- 2 -- 4
         //  \
         //    - 3
-        let mut graph: Graph = Graph::from_adjacencies(collect!(vv;
+        let mut graph: Graph = Graph::from_adjacency_labels(collect!(vv;
                 (0, [1, 2, 3]),
                 (1, [0, 4]),
                 (2, [0, 4]),
@@ -237,7 +241,7 @@ mod tests {
         // 0 -- 2
         //  \   |
         //    - 3
-        let graph: Graph = Graph::from_adjacencies(collect!(vv;
+        let graph: Graph = Graph::from_adjacency_labels(collect!(vv;
                 (0, [1, 2, 3]),
                 (1, [0]),
                 (2, [0, 3]),
@@ -251,7 +255,7 @@ mod tests {
         // 8 -- 0 -- 2 -- 5
         // |     \
         // 9 --10  - 3 -- 6
-        let mut graph: Graph = Graph::from_adjacencies(collect!(vv;
+        let mut graph: Graph = Graph::from_adjacency_labels(collect!(vv;
                 (0, [1, 2, 3, 8]),
                 (1, [0, 4]),
                 (2, [0, 5]),
@@ -274,7 +278,7 @@ mod tests {
         // 8 -- 0 -- 2 -- 5
         //       \
         //         - 3 -- 6
-        let graph: Graph = Graph::from_adjacencies(collect!(vv;
+        let graph: Graph = Graph::from_adjacency_labels(collect!(vv;
                 (0, [1, 2, 3, 7, 8]),
                 (1, [0, 4]),
                 (2, [0, 5]),

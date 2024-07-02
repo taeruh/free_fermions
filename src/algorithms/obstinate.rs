@@ -180,7 +180,8 @@ mod tests {
         ) -> (Graph, RandomMap) {
             let map = RandomMap::new(map_length, map_max, rng);
             let graph =
-                Graph::from_adjacencies(test_utils::adj_hash_hash(&map, list)).unwrap();
+                Graph::from_adjacency_labels(test_utils::adj_hash_hash(&map, list))
+                    .unwrap();
             (graph, map)
         }
 
