@@ -114,9 +114,9 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
     // because they are more intuitive once the graph is created (the labelled version can
     // then be simply implement with the find_node method)
 
-    fn add_labeled_edge(&mut self, edge: Edge);
+    fn add_labelled_edge(&mut self, edge: Edge);
 
-    fn add_labeled_node<N: IntoIterator<Item = int>>(&mut self, node_adj: (int, N));
+    fn add_labelled_node<N: IntoIterator<Item = int>>(&mut self, node_adj: (int, N));
 
     fn from_edge_labels_unchecked(edges: impl IntoIterator<Item = Edge>) -> Self
     where
@@ -124,7 +124,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
     {
         let mut ret = Self::default();
         for edge in edges {
-            ret.add_labeled_edge(edge);
+            ret.add_labelled_edge(edge);
         }
         ret
     }
@@ -136,9 +136,17 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
     {
         let mut ret = Self::default();
         for node_adj in adj {
-            ret.add_labeled_node(node_adj);
+            ret.add_labelled_node(node_adj);
         }
         ret
+    }
+
+    fn from_symmetric_adjacency_labels_unchecked<A, N>(adj: A) -> Self
+    where
+        A: IntoIterator<Item = (int, N)>,
+        N: IntoIterator<Item = int>,
+    {
+        Self::from_adjacency_labels_unchecked(adj)
     }
 
     fn from_edge_labels(
@@ -167,6 +175,19 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
         }
     }
 
+    fn from_symmetric_adjacency_labels<A, N>(adj: A) -> Result<Self, (Self, InvalidGraph)>
+    where
+        A: IntoIterator<Item = (int, N)>,
+        N: IntoIterator<Item = int>,
+        Self: Sized,
+    {
+        let graph = Self::from_symmetric_adjacency_labels_unchecked(adj);
+        match graph.check() {
+            Ok(()) => Ok(graph),
+            Err(err) => Err((graph, err)),
+        }
+    }
+
     // adding edge based on the indices
     fn add_edge(&mut self, (a, b): Edge) {
         self.get_neighbours_mut(a).unwrap().insert(b);
@@ -176,7 +197,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
     /// Probably want to override this for performance reasons
     fn add_node(&mut self, (label, neighbours): (Label, Self::Nodes)) {
         assert!(self.get_label(label).is_none());
-        self.add_labeled_node((label, []));
+        self.add_labelled_node((label, []));
         // new_node is probably usually self.len() - 1, but we cannot be sure
         let new_node = self.find_node(label).unwrap();
         neighbours.iter().for_each(|n| {
@@ -204,7 +225,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
 
     fn remove_node(&mut self, node: int);
 
-    fn remove_labeled_node(&mut self, label: int) {
+    fn remove_labelled_node(&mut self, label: int) {
         self.remove_node(self.find_node(label).unwrap());
     }
 
@@ -213,7 +234,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
         self.get_neighbours_mut(b).unwrap().remove(a);
     }
 
-    fn remove_labeled_edge(&mut self, (a, b): Edge) {
+    fn remove_labelled_edge(&mut self, (a, b): Edge) {
         self.remove_edge((self.find_node(a).unwrap(), self.find_node(b).unwrap()));
     }
 
@@ -376,12 +397,12 @@ impl<G: CompactNodes> CompactNodes for Graph<G> {}
 impl<G: ImplGraph> ImplGraph for Graph<G> {
     type Nodes = G::Nodes;
     #[inline]
-    fn add_labeled_edge(&mut self, edge: Edge) {
-        self.0.add_labeled_edge(edge)
+    fn add_labelled_edge(&mut self, edge: Edge) {
+        self.0.add_labelled_edge(edge)
     }
     #[inline]
-    fn add_labeled_node<N: IntoIterator<Item = int>>(&mut self, node_adj: (int, N)) {
-        self.0.add_labeled_node(node_adj)
+    fn add_labelled_node<N: IntoIterator<Item = int>>(&mut self, node_adj: (int, N)) {
+        self.0.add_labelled_node(node_adj)
     }
     #[inline]
     fn from_edge_labels_unchecked(edges: impl IntoIterator<Item = Edge>) -> Self

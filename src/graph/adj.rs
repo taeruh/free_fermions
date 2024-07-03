@@ -25,20 +25,38 @@ impl ImplGraph for AdjGraph {
 
     type Nodes = HNodes;
 
-    fn add_labeled_edge(&mut self, (a, b): Edge) {
+    fn add_labelled_edge(&mut self, (a, b): Edge) {
         let idxa = self.insert(a);
         let idxb = self.insert(b);
         self.nodes[idxa].insert(idxb as int);
         self.nodes[idxb].insert(idxa as int);
     }
 
-    fn add_labeled_node<N: IntoIterator<Item = int>>(&mut self, (node, adj): (int, N)) {
+    fn add_labelled_node<N: IntoIterator<Item = int>>(&mut self, (node, adj): (int, N)) {
         let idx = self.insert(node);
         for neighbour in adj {
             let idx_neighbour = self.insert(neighbour);
             self.nodes[idx].insert(idx_neighbour as int);
             self.nodes[idx_neighbour].insert(idx as int);
         }
+    }
+
+    fn from_symmetric_adjacency_labels_unchecked<A, N>(adj: A) -> Self
+    where
+        A: IntoIterator<Item = (int, N)>,
+        N: IntoIterator<Item = int>,
+    {
+        let mut ret = Self::default();
+        for (node, neighbourhood) in adj {
+            // just like add_labelled_node, but without
+            // ret.nodes[idx_neighbour].insert(idx as int);
+            let idx = ret.insert(node);
+            for neighbour in neighbourhood {
+                let idx_neighbour = ret.insert(neighbour);
+                ret.nodes[idx].insert(idx_neighbour as int);
+            }
+        }
+        ret
     }
 
     fn len(&self) -> usize {
@@ -189,7 +207,9 @@ mod tests {
         assert_eq!(self_looped, correct);
 
         let mut incompatible_neighbourhoods =
-            AdjGraph::from_adjacency_labels_unchecked(collect!(vh; (1, [2]), (2, []),));
+            AdjGraph::from_symmetric_adjacency_labels_unchecked(
+                collect!(vh; (1, [2]), (2, []),),
+            );
         assert_eq!(
             incompatible_neighbourhoods
                 .check()
@@ -265,17 +285,17 @@ mod tests {
     // fn foo() {
     //     let mut graph = AdjGraph::default();
     //     println!("{:?}", graph);
-    //     graph.add_labeled_node((1, [2, 3]));
+    //     graph.add_labelled_node((1, [2, 3]));
     //     println!("{:?}", graph);
     //     graph.remove_node(1);
     //     println!("{:?}", graph);
     //     graph.add_node((2, [1].into()));
     //     println!("{:?}", graph);
-    //     graph.add_labeled_edge((1, 2));
+    //     graph.add_labelled_edge((1, 2));
     //     println!("{:?}", graph);
     //     graph.remove_edge((0, 1));
     //     println!("{:?}", graph);
-    //     graph.remove_labeled_edge((1, 2));
+    //     graph.remove_labelled_edge((1, 2));
     //     println!("{:?}", graph);
     // }
 }
