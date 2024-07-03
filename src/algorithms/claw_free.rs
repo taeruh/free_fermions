@@ -5,11 +5,13 @@ use super::modular_decomposition::Tree;
 use crate::{
     algorithms::modular_decomposition::TreeGraph,
     enumerate_offset::Enumerate,
+    fix_int::int,
     graph::{Graph, ImplGraph, Node, NodeCollection, NodeIndex},
     mat_mul::Matrix,
 };
 
 // No might get some data in the future
+#[derive(Debug, Clone)]
 pub enum ClawFree {
     Yes,
     No,
@@ -21,8 +23,51 @@ impl<G: ImplGraph + std::fmt::Debug> Graph<G> {
         if !self.has_right_structure(tree) {
             return ClawFree::No;
         }
+        match tree.graph.node_weight(tree.root).unwrap() {
+            ModuleKind::Prime => self.prime_claw_check(tree, tree.root),
+            ModuleKind::Series => self.series_claw_check(tree, tree.root),
+            ModuleKind::Parallel => self.parallel_claw_check(tree),
+            ModuleKind::Node(_) => ClawFree::Yes,
+        }
+    }
 
-        todo!()
+    fn prime_claw_check(&self, tree: &Tree, node: NodeIndex) -> ClawFree {
+        let reprs = tree.module_representatives(node);
+        let representative_graph = self.subgraph(&reprs);
+        representative_graph.is_claw_free_naive()
+    }
+
+    fn series_claw_check(&self, tree: &Tree, node: NodeIndex) -> ClawFree {
+        for child in tree.graph.neighbors_directed(node, Direction::Outgoing) {
+            if let ModuleKind::Prime = tree.graph.node_weight(child).unwrap() {
+                let reprs = tree.module_representatives(child);
+                let mut complement_representative_graph = self.subgraph(&reprs);
+                complement_representative_graph.complement();
+                let (indices, matrix) = to_matrix(&complement_representative_graph);
+                let count = matrix.diag_cube();
+                if count.iter().sum::<u32>() != 0 {
+                    println!("{:?}", self.get_label(node.index() as int));
+                    println!("{:?}", self.get_label(child.index() as int));
+                    println!("{:?}", (indices, count));
+                    return ClawFree::No;
+                }
+            }
+        }
+        ClawFree::Yes
+    }
+
+    fn parallel_claw_check(&self, tree: &Tree) -> ClawFree {
+        for child in tree.graph.neighbors_directed(tree.root, Direction::Outgoing) {
+            if let ClawFree::No = match tree.graph.node_weight(child).unwrap() {
+                ModuleKind::Prime => self.prime_claw_check(tree, child),
+                ModuleKind::Series => self.series_claw_check(tree, child),
+                ModuleKind::Parallel => unreachable!("parallel node in parallel node"),
+                ModuleKind::Node(_) => ClawFree::Yes,
+            } {
+                return ClawFree::No;
+            }
+        }
+        ClawFree::Yes
     }
 
     fn has_right_structure(&self, tree: &Tree) -> bool {
@@ -156,6 +201,7 @@ mod tests {
         // println!("{:?}", graph);
         // println!("{:?}", tree);
         // graph.is_claw_free_naive();
+        // println!("real: {:?}", graph.is_claw_free(&tree));
         // // // #claws = 1
         // println!("structure: {:?}", graph.has_right_structure(&tree));
         // graph.twin_collapse(&mut tree);
@@ -163,6 +209,7 @@ mod tests {
         // println!("{:?}", tree);
         // graph.is_claw_free_naive();
         // println!("structure: {:?}", graph.has_right_structure(&tree));
+        // println!("real: {:?}", graph.is_claw_free(&tree));
 
         //    - 1 -- 4
         //  /
@@ -229,12 +276,12 @@ mod tests {
         println!("{:?}", graph);
         println!("{:?}", tree);
         graph.is_claw_free_naive();
-        println!("structure: {:?}", graph.has_right_structure(&tree));
+        println!("real: {:?}", graph.is_claw_free(&tree));
         graph.twin_collapse(&mut tree);
         println!("{:?}", graph);
         println!("{:?}", tree);
         graph.is_claw_free_naive();
-        println!("structure: {:?}", graph.has_right_structure(&tree));
+        println!("real: {:?}", graph.is_claw_free(&tree));
 
         //    - 1
         //  /

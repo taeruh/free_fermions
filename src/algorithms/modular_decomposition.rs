@@ -240,6 +240,34 @@ pub fn compare_module_kind_mapped(
     }
 }
 
+impl Tree {
+    pub fn module_representatives(&self, module: NodeIndex) -> Vec<Node> {
+        let mut ret = Vec::new();
+
+        for mut child in self.graph.neighbors_directed(module, Direction::Outgoing) {
+            loop {
+                child = if let Some(c) =
+                    self.graph.neighbors_directed(child, Direction::Outgoing).next()
+                {
+                    c
+                } else {
+                    break; // child is a leaf
+                };
+            }
+
+            ret.push(
+                if let ModuleKind::Node(idx) = self.graph.node_weight(child).unwrap() {
+                    *idx
+                } else {
+                    unreachable!()
+                },
+            );
+        }
+
+        ret
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand::{seq::SliceRandom, SeedableRng};
@@ -274,5 +302,12 @@ mod tests {
         let graph3 = Graph::<AdjGraph>::from_edge_labels(other_edges).unwrap();
         let tree3 = graph3.modular_decomposition();
         assert!(!Tree::is_equivalent(&tree1, &tree3, &graph1, &graph3));
+
+        let graph = graph1;
+        let tree = tree1;
+        let reprs = tree.module_representatives(tree.root);
+        let repr_graph = graph.subgraph(&reprs);
+        println!("{:?}", graph);
+        println!("{:?}", repr_graph);
     }
 }

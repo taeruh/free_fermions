@@ -32,7 +32,10 @@ impl ImplGraph for AdjGraph {
         self.nodes[idxb].insert(idxa as int);
     }
 
-    fn add_labelled_node<N: IntoIterator<Item = int>>(&mut self, (node, adj): (int, N)) {
+    fn add_labelled_node_symmetrically<N: IntoIterator<Item = int>>(
+        &mut self,
+        (node, adj): (int, N),
+    ) {
         let idx = self.insert(node);
         for neighbour in adj {
             let idx_neighbour = self.insert(neighbour);
@@ -48,7 +51,7 @@ impl ImplGraph for AdjGraph {
     {
         let mut ret = Self::default();
         for (node, neighbourhood) in adj {
-            // just like add_labelled_node, but without
+            // just like add_labelled_node_symmetrically, but without
             // ret.nodes[idx_neighbour].insert(idx as int);
             let idx = ret.insert(node);
             for neighbour in neighbourhood {
