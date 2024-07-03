@@ -61,6 +61,11 @@ pub mod fix_int {
         };
     }
     pub(crate) use enumerate;
+
+    pub fn to_float(x: int) -> f64 {
+        // int=u32::MAX = 4294967295 < 1.7976931348623157e308 = f64::MAX
+        x as f64
+    }
 }
 
 pub mod algorithms;

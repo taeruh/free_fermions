@@ -16,7 +16,7 @@ use petgraph::{
     Undirected,
 };
 
-use crate::fix_int::{enumerate, int};
+use crate::fix_int::{self, enumerate, int};
 
 // some of the following type aliases are not used, but they serve as documentation and
 // orientation for variable names
@@ -248,8 +248,34 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
         }
     }
 
-    /// Default implementation: Calls retain_nodes. You may want to override this.
-    fn into_subgraph(mut self, nodes: &impl NodeCollection) -> Self
+    fn subgraph_by_adding(&self, nodes: &impl NodeCollection) -> Self
+    where
+        Self: Sized,
+    {
+        let mut ret = Self::default();
+        println!("{:?}", nodes.iter().collect::<Vec<_>>());
+        println!("ret: {:?}", ret);
+        for node in nodes.iter() {
+            let neighbours: Vec<_> = self
+                .get_neighbours(node)
+                .unwrap()
+                .iter()
+                .filter_map(|n| {
+                    let label = self.get_label(n).unwrap();
+                    if ret.find_node(label).is_some() {
+                        Some(label)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            ret.add_labelled_node((self.get_label(node).unwrap(), neighbours));
+            println!("ret: {:?}", ret);
+        }
+        ret
+    }
+
+    fn subgraph_by_removing(mut self, nodes: &impl NodeCollection) -> Self
     where
         Self: Sized,
     {
@@ -257,12 +283,32 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
         self
     }
 
-    /// Default implementation: Clones self and calls into_subgraph.
+    fn into_subgraph(self, nodes: &impl NodeCollection) -> Self
+    where
+        Self: Sized,
+    {
+        if fix_int::to_float(nodes.len() as int)
+            < 0.6 * fix_int::to_float(self.len() as int)
+        {
+            self.subgraph_by_adding(nodes)
+        } else {
+            self.subgraph_by_removing(nodes)
+        }
+    }
+
     fn subgraph(&self, nodes: &impl NodeCollection) -> Self
     where
         Self: Sized,
     {
-        self.clone().into_subgraph(nodes)
+        if fix_int::to_float(nodes.len() as int)
+            < 0.6 * fix_int::to_float(self.len() as int)
+        {
+            println!("add");
+            self.subgraph_by_adding(nodes)
+        } else {
+            println!("remove");
+            self.clone().subgraph_by_removing(nodes)
+        }
     }
 
     fn complement(&mut self);

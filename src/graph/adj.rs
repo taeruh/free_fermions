@@ -277,8 +277,25 @@ mod tests {
             (3, []),
         ))
         .map_to_labels();
-        assert_eq!(graph.subgraph(&nodes).map_to_labels(), expected);
+        let subgraph = graph.subgraph(&nodes);
+        assert_eq!(subgraph.map_to_labels(), expected);
         assert_eq!(expected, collect!(hh; (1, []), (3, []),));
+
+        let graph = AdjGraph::from_adjacency_labels(collect!(hh;
+            (1, [2]),
+            (2, [1, 3]),
+            (3, [2]),
+        ))
+        .unwrap();
+        let nodes =
+            HNodes::from_iter([1].into_iter().map(|e| graph.find_node(e).unwrap()));
+        let expected = AdjGraph::from_adjacency_labels_unchecked(collect!(hh;
+            (1, []),
+        ))
+        .map_to_labels();
+        let subgraph = graph.subgraph(&nodes);
+        assert_eq!(subgraph.map_to_labels(), expected);
+        assert_eq!(expected, collect!(hh; (1, []),));
     }
 
     // #[test]
