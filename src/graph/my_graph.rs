@@ -219,7 +219,7 @@ impl MySGraph {
         // - counting claws is the same as counting triangles in the complementary
         // graph;
         // - for each i, each single summand a_ik * a_kj * a_ji is only 1 if i,
-        // k, j build a triangle
+        // k, j form a triangle
         // - when calculating the trace and if we have a triangle r, s, t, then there
         // are 3! = 6 terms in the sum that represent the triangle
         // - regarding the single diag entries:

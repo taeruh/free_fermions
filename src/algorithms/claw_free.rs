@@ -4,25 +4,68 @@ use petgraph::Direction;
 use super::modular_decomposition::Tree;
 use crate::{
     algorithms::modular_decomposition::TreeGraph,
-    enumerate_offset::Enumerate,
     fix_int::int,
     graph::{Graph, ImplGraph, Node, NodeCollection, NodeIndex},
     mat_mul::Matrix,
 };
 
-// No might get some data in the future
 #[derive(Debug, Clone)]
 pub enum ClawFree {
     Yes,
-    No,
+    No(FailKind),
+}
+
+#[derive(Debug, Clone)]
+pub enum ClawFreeNaive {
+    Yes,
+    No(Claw),
+}
+
+#[derive(Debug, Clone)]
+pub enum FailKind {
+    Structure(StructureFail),
+    PrimeCase(Claw),
+    SeriesCase(Triangles),
+}
+
+#[derive(Debug, Clone)]
+pub enum Structure {
+    Yes,
+    No(StructureFail),
+}
+
+#[derive(Debug, Clone)]
+pub enum StructureFail {
+    PrimeNonClique(NodeIndex),
+    SeriesPrimeNonClique(NodeIndex, NodeIndex),
+    SeriesParallelNonClique(NodeIndex, NodeIndex),
+    SeriesParallelCount(NodeIndex, int),
+    ParallelPrimeNonClique(NodeIndex, NodeIndex),
+    ParallelSeriesPrimeNonClique(NodeIndex, NodeIndex, NodeIndex),
+    ParallelSeriesParallelNonClique(NodeIndex, NodeIndex, NodeIndex),
+    ParallelSeriesParallelCount(NodeIndex, NodeIndex, int),
+}
+
+#[derive(Debug, Clone)]
+pub struct Triangles {
+    pub indices: Vec<Node>,
+    pub counts: Vec<int>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Claw {
+    pub center: Node,
+    pub leaves: Triangles,
 }
 
 // impl<G: ImplGraph> Graph<G> {
-impl<G: ImplGraph + std::fmt::Debug> Graph<G> {
+impl<G: ImplGraph> Graph<G> {
     pub fn is_claw_free(&self, tree: &Tree) -> ClawFree {
-        if !self.has_right_structure(tree) {
-            return ClawFree::No;
+        match self.has_right_structure(tree) {
+            Structure::No(fail) => return ClawFree::No(FailKind::Structure(fail)),
+            Structure::Yes => {},
         }
+
         match tree.graph.node_weight(tree.root).unwrap() {
             ModuleKind::Prime => self.prime_claw_check(tree, tree.root),
             ModuleKind::Series => self.series_claw_check(tree, tree.root),
@@ -34,7 +77,11 @@ impl<G: ImplGraph + std::fmt::Debug> Graph<G> {
     fn prime_claw_check(&self, tree: &Tree, node: NodeIndex) -> ClawFree {
         let reprs = tree.module_representatives(node);
         let representative_graph = self.subgraph(&reprs);
-        representative_graph.is_claw_free_naive()
+        // TODO: replace with a little bit more efficient matrix algorithm
+        match representative_graph.is_claw_free_naive() {
+            ClawFreeNaive::Yes => ClawFree::Yes,
+            ClawFreeNaive::No(claw) => ClawFree::No(FailKind::PrimeCase(claw)),
+        }
     }
 
     fn series_claw_check(&self, tree: &Tree, node: NodeIndex) -> ClawFree {
@@ -44,12 +91,14 @@ impl<G: ImplGraph + std::fmt::Debug> Graph<G> {
                 let mut complement_representative_graph = self.subgraph(&reprs);
                 complement_representative_graph.complement();
                 let (indices, matrix) = to_matrix(&complement_representative_graph);
-                let count = matrix.diag_cube();
-                if count.iter().sum::<u32>() != 0 {
-                    println!("{:?}", self.get_label(node.index() as int));
-                    println!("{:?}", self.get_label(child.index() as int));
-                    println!("{:?}", (indices, count));
-                    return ClawFree::No;
+                let counts = matrix.diag_cube();
+                for c in counts.iter() {
+                    if c != 0 {
+                        return ClawFree::No(FailKind::SeriesCase(Triangles {
+                            indices,
+                            counts,
+                        }));
+                    }
                 }
             }
         }
@@ -58,42 +107,61 @@ impl<G: ImplGraph + std::fmt::Debug> Graph<G> {
 
     fn parallel_claw_check(&self, tree: &Tree) -> ClawFree {
         for child in tree.graph.neighbors_directed(tree.root, Direction::Outgoing) {
-            if let ClawFree::No = match tree.graph.node_weight(child).unwrap() {
+            if let ClawFree::No(fail) = match tree.graph.node_weight(child).unwrap() {
                 ModuleKind::Prime => self.prime_claw_check(tree, child),
                 ModuleKind::Series => self.series_claw_check(tree, child),
                 ModuleKind::Parallel => unreachable!("parallel node in parallel node"),
                 ModuleKind::Node(_) => ClawFree::Yes,
             } {
-                return ClawFree::No;
+                return ClawFree::No(fail);
             }
         }
         ClawFree::Yes
     }
 
-    fn has_right_structure(&self, tree: &Tree) -> bool {
-        fn some_non_clique_children(tree: &TreeGraph, node: NodeIndex) -> bool {
-            for child in tree.neighbors_directed(node, Direction::Outgoing) {
-                match tree.node_weight(child).unwrap() {
-                    ModuleKind::Prime => return true,
-                    ModuleKind::Parallel => return true,
-                    _ => {},
-                }
+    fn has_right_structure(&self, tree: &Tree) -> Structure {
+        fn is_clique(tree: &TreeGraph, node: NodeIndex) -> bool {
+            match tree.node_weight(node).unwrap() {
+                ModuleKind::Prime => return false,
+                ModuleKind::Series => {
+                    for child in tree.neighbors_directed(node, Direction::Outgoing) {
+                        match tree.node_weight(child).unwrap() {
+                            ModuleKind::Node(_) => {},
+                            _ => return false,
+                        }
+                    }
+                },
+                ModuleKind::Parallel => return false,
+                _ => {},
             }
-            false
+            true
+        }
+
+        fn some_non_clique_children(
+            tree: &TreeGraph,
+            node: NodeIndex,
+        ) -> Option<NodeIndex> {
+            tree.neighbors_directed(node, Direction::Outgoing)
+                .find(|&child| !is_clique(tree, child))
         }
 
         #[inline]
-        fn prime_check(tree: &TreeGraph, node: NodeIndex) -> bool {
-            !some_non_clique_children(tree, node)
+        fn prime_check(tree: &TreeGraph, root: NodeIndex) -> Structure {
+            match some_non_clique_children(tree, root) {
+                Some(child) => Structure::No(StructureFail::PrimeNonClique(child)),
+                None => Structure::Yes,
+            }
         }
 
         #[inline]
-        fn series_check(tree: &TreeGraph, node: NodeIndex) -> bool {
+        fn series_check(tree: &TreeGraph, node: NodeIndex) -> Structure {
             for child in tree.neighbors_directed(node, Direction::Outgoing) {
                 match tree.node_weight(child).unwrap() {
                     ModuleKind::Prime => {
-                        if some_non_clique_children(tree, child) {
-                            return false;
+                        if let Some(grandchild) = some_non_clique_children(tree, child) {
+                            return Structure::No(StructureFail::SeriesPrimeNonClique(
+                                child, grandchild,
+                            ));
                         }
                     },
                     ModuleKind::Series => {
@@ -101,32 +169,83 @@ impl<G: ImplGraph + std::fmt::Debug> Graph<G> {
                     },
                     ModuleKind::Parallel => {
                         let mut count = 0;
-                        for child in tree.neighbors_directed(child, Direction::Outgoing) {
+                        for grandchild in
+                            tree.neighbors_directed(child, Direction::Outgoing)
+                        {
                             count += 1;
-                            if (count > 2) || some_non_clique_children(tree, child) {
-                                return false;
+                            if count > 2 {
+                                return Structure::No(
+                                    StructureFail::SeriesParallelCount(child, count),
+                                );
+                            }
+                            if !is_clique(tree, grandchild) {
+                                return Structure::No(
+                                    StructureFail::SeriesParallelNonClique(
+                                        child, grandchild,
+                                    ),
+                                );
                             }
                         }
                     },
                     ModuleKind::Node(_) => {},
                 };
             }
-            true
+            Structure::Yes
         }
 
         #[inline]
-        fn parallel_check(tree: &TreeGraph, node: NodeIndex) -> bool {
-            for child in tree.neighbors_directed(node, Direction::Outgoing) {
+        fn parallel_check(tree: &TreeGraph, root: NodeIndex) -> Structure {
+            for child in tree.neighbors_directed(root, Direction::Outgoing) {
                 match tree.node_weight(child).unwrap() {
                     ModuleKind::Prime => {
-                        if some_non_clique_children(tree, child) {
-                            return false;
+                        // if some_non_clique_children(tree, child) {
+                        //     return false;
+                        // }
+                        match prime_check(tree, child) {
+                            Structure::Yes => {},
+                            Structure::No(StructureFail::PrimeNonClique(grandchild)) => {
+                                return Structure::No(
+                                    StructureFail::ParallelPrimeNonClique(
+                                        child, grandchild,
+                                    ),
+                                );
+                            },
+                            _ => unreachable!(),
                         }
                     },
-                    ModuleKind::Series => {
-                        if !series_check(tree, child) {
-                            return false;
-                        }
+                    ModuleKind::Series => match series_check(tree, child) {
+                        Structure::Yes => {},
+                        Structure::No(StructureFail::SeriesPrimeNonClique(
+                            grandchild,
+                            ggchild,
+                        )) => {
+                            return Structure::No(
+                                StructureFail::ParallelSeriesPrimeNonClique(
+                                    child, grandchild, ggchild,
+                                ),
+                            );
+                        },
+                        Structure::No(StructureFail::SeriesParallelNonClique(
+                            grandchild,
+                            ggchild,
+                        )) => {
+                            return Structure::No(
+                                StructureFail::ParallelSeriesParallelNonClique(
+                                    child, grandchild, ggchild,
+                                ),
+                            );
+                        },
+                        Structure::No(StructureFail::SeriesParallelCount(
+                            grandchild,
+                            count,
+                        )) => {
+                            return Structure::No(
+                                StructureFail::ParallelSeriesParallelCount(
+                                    child, grandchild, count,
+                                ),
+                            );
+                        },
+                        _ => unreachable!(),
                     },
                     ModuleKind::Parallel => {
                         unreachable!("parallel node in parallel node")
@@ -134,30 +253,34 @@ impl<G: ImplGraph + std::fmt::Debug> Graph<G> {
                     ModuleKind::Node(_) => {},
                 }
             }
-            true
+            Structure::Yes
         }
 
         match tree.graph.node_weight(tree.root).unwrap() {
             ModuleKind::Prime => prime_check(&tree.graph, tree.root),
             ModuleKind::Series => series_check(&tree.graph, tree.root),
             ModuleKind::Parallel => parallel_check(&tree.graph, tree.root),
-            ModuleKind::Node(_) => true,
+            ModuleKind::Node(_) => Structure::Yes,
         }
     }
 
     // the simplest algorithm without (trying to) doing any smart things
-    pub fn is_claw_free_naive(&self) -> ClawFree {
+    pub fn is_claw_free_naive(&self) -> ClawFreeNaive {
         for (node, neighbourhood) in self.iter_with_neighbourhoods() {
             let mut graph = self.subgraph(neighbourhood);
             graph.complement();
             let (indices, matrix) = to_matrix(&graph);
-            let count = matrix.diag_cube();
-            println!(
-                "node {}:\nidcs: {indices:?}\ncnt:  {count:?}\n",
-                self.get_label(node).unwrap()
-            );
+            let counts = matrix.diag_cube();
+            for c in counts.iter() {
+                if c != 0 {
+                    return ClawFreeNaive::No(Claw {
+                        center: node,
+                        leaves: Triangles { indices, counts },
+                    });
+                }
+            }
         }
-        ClawFree::Yes
+        ClawFreeNaive::Yes
     }
 }
 
@@ -197,19 +320,17 @@ mod tests {
                 (3, [0]),
         ))
         .unwrap();
-        // let mut tree = graph.modular_decomposition();
-        // println!("{:?}", graph);
-        // println!("{:?}", tree);
-        // graph.is_claw_free_naive();
-        // println!("real: {:?}", graph.is_claw_free(&tree));
-        // // // #claws = 1
-        // println!("structure: {:?}", graph.has_right_structure(&tree));
-        // graph.twin_collapse(&mut tree);
-        // println!("{:?}", graph);
-        // println!("{:?}", tree);
-        // graph.is_claw_free_naive();
-        // println!("structure: {:?}", graph.has_right_structure(&tree));
-        // println!("real: {:?}", graph.is_claw_free(&tree));
+        let mut tree = graph.modular_decomposition();
+        println!("{:?}", graph);
+        println!("{:?}", tree);
+        println!("naive: {:?}", graph.is_claw_free_naive());
+        println!("real: {:?}\n", graph.is_claw_free(&tree));
+        // // #claws = 1
+        graph.twin_collapse(&mut tree);
+        println!("{:?}", graph);
+        println!("{:?}", tree);
+        println!("naive: {:?}", graph.is_claw_free_naive());
+        println!("real: {:?}\n", graph.is_claw_free(&tree));
 
         //    - 1 -- 4
         //  /
@@ -226,14 +347,14 @@ mod tests {
             (6, [3]),
         ))
         .unwrap();
-        // let mut tree = graph.modular_decomposition();
-        // println!("{:?}", graph);
-        // println!("{:?}", tree);
-        // graph.is_claw_free_naive();
-        // println!("structure: {:?}", graph.has_right_structure(&tree));
-        // let clone = graph.clone();
-        // graph.twin_collapse(&mut tree);
-        // assert_eq!(clone.map_to_labels(), graph.map_to_labels());
+        let mut tree = graph.modular_decomposition();
+        println!("{:?}", graph);
+        println!("{:?}", tree);
+        println!("naive: {:?}", graph.is_claw_free_naive());
+        println!("real: {:?}\n", graph.is_claw_free(&tree));
+        let clone = graph.clone();
+        graph.twin_collapse(&mut tree);
+        assert_eq!(clone.map_to_labels(), graph.map_to_labels());
 
         // 10 -- 7 -     - 1 -- 4
         //           \ /
@@ -256,7 +377,11 @@ mod tests {
                 (12, [9]),
         ))
         .unwrap();
-        // graph.is_claw_free_naive();
+        let tree = graph.modular_decomposition();
+        println!("{:?}", graph);
+        println!("{:?}", tree);
+        println!("naive: {:?}", graph.is_claw_free_naive());
+        println!("real: {:?}\n", graph.is_claw_free(&tree));
         // #claws = binom(6, 3) = 20
 
         //    - 1 -
@@ -275,13 +400,13 @@ mod tests {
         let mut tree = graph.modular_decomposition();
         println!("{:?}", graph);
         println!("{:?}", tree);
-        graph.is_claw_free_naive();
-        println!("real: {:?}", graph.is_claw_free(&tree));
+        println!("naive: {:?}", graph.is_claw_free_naive());
+        println!("real: {:?}\n", graph.is_claw_free(&tree));
         graph.twin_collapse(&mut tree);
         println!("{:?}", graph);
         println!("{:?}", tree);
-        graph.is_claw_free_naive();
-        println!("real: {:?}", graph.is_claw_free(&tree));
+        println!("naive: {:?}", graph.is_claw_free_naive());
+        println!("real: {:?}\n", graph.is_claw_free(&tree));
 
         //    - 1
         //  /
@@ -295,14 +420,17 @@ mod tests {
                 (3, [0, 2]),
         ))
         .unwrap();
-        // graph.is_claw_free_naive();
+        let tree = graph.modular_decomposition();
+        println!("naive: {:?}", graph.is_claw_free_naive());
+        println!("real: {:?}\n", graph.is_claw_free(&tree));
 
         // 7       - 1 -- 4
         // |     /
         // 8 -- 0 -- 2 -- 5
         // |     \
         // 9 --10  - 3 -- 6
-        let mut graph: Graph = Graph::from_adjacency_labels(collect!(vv;
+        // note that we collect here with hh
+        let graph: Graph = Graph::from_adjacency_labels(collect!(hh;
                 (0, [1, 2, 3, 8]),
                 (1, [0, 4]),
                 (2, [0, 5]),
@@ -316,16 +444,19 @@ mod tests {
                 (10, [9]),
         ))
         .unwrap();
-        // graph.is_claw_free_naive();
-        // graph.remove_node(graph.find_node(0).unwrap());
-        // graph.is_claw_free_naive();
+        let tree = graph.modular_decomposition();
+        println!("{:?}", graph);
+        println!("{:?}", tree);
+        println!("naive: {:?}", graph.is_claw_free_naive());
+        println!("real: {:?}\n", graph.is_claw_free(&tree));
 
         // 7 -     - 1 -- 4
         // |   \ /
         // 8 -- 0 -- 2 -- 5
         //       \
         //         - 3 -- 6
-        let graph: Graph = Graph::from_adjacency_labels(collect!(vv;
+        // note that we collect here with hh
+        let graph: Graph = Graph::from_adjacency_labels(collect!(hh;
                 (0, [1, 2, 3, 7, 8]),
                 (1, [0, 4]),
                 (2, [0, 5]),
@@ -337,7 +468,9 @@ mod tests {
                 (8, [0, 7]),
         ))
         .unwrap();
-        // graph.is_claw_free_naive();
-        // #claws = binom(6, 3) = 20
+        println!("{:?}", graph);
+        println!("{:?}", tree);
+        println!("naive: {:?}", graph.is_claw_free_naive());
+        println!("real: {:?}\n", graph.is_claw_free(&tree));
     }
 }
