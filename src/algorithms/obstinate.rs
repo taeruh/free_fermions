@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use crate::{
     fix_int::enumerate,
-    graph::{Graph, ImplGraph, Node, NodeCollection, VNodes},
+    graph::{Graph, ImplGraph, Node, NodeCollection, NodeCollectionRef, VNodes},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,7 +68,9 @@ impl<G: ImplGraph + Clone> Graph<G> {
         let kind = if check_degree_sequence(1, len2, &degrees) {
             ObstinateKind::Itself
         } else if check_degree_sequence(len2 - 1, len - 2, &degrees) {
+            println!("\ncomplement before: {:?}", graph);
             graph.to_mut().complement();
+            println!("complement after: {:?}\n", graph);
             // no need to update the `degrees`, since we can get the right (a_end,
             // b_start) nodes with some basic logic below
             ObstinateKind::Complement
@@ -84,12 +86,12 @@ impl<G: ImplGraph + Clone> Graph<G> {
             // since len2 = len - (len2 - 1) - 1   (last -1 is for the node itself)
             (degrees[0].0, degrees[1].0)
         };
-        let a_part = graph[b_start].clone();
-        let b_part = graph[a_end].clone();
+        let a_part = graph.get_neighbours(b_start).unwrap().clone();
+        let b_part = graph.get_neighbours(a_end).unwrap().clone();
 
         if (a_part.intersection(&b_part).count() != 0)
-            || !graph.set_is_independent(&a_part)
-            || !graph.set_is_independent(&b_part)
+            || !graph.set_is_independent(a_part.iter())
+            || !graph.set_is_independent(b_part.iter())
         {
             return Obstinate::False;
         }
@@ -110,8 +112,8 @@ impl<G: ImplGraph + Clone> Graph<G> {
         }
 
         let mut a_degrees = a_part
-            .iter()
-            .map(|vertex| (vertex, graph[vertex].len()))
+            .iter_ref()
+            .map(|vertex| (vertex, graph.get_neighbours(vertex).unwrap().len()))
             .collect::<Vec<_>>();
         a_degrees.sort_unstable_by_key(|(_, degree)| *degree);
         if !check_part_degree_sequence(1, len2, &a_degrees) {
@@ -119,8 +121,8 @@ impl<G: ImplGraph + Clone> Graph<G> {
         }
 
         let mut b_degrees = b_part
-            .iter()
-            .map(|vertex| (vertex, graph[vertex].len()))
+            .iter_ref()
+            .map(|vertex| (vertex, graph.get_neighbours(vertex).unwrap().len()))
             .collect::<Vec<_>>();
         b_degrees.sort_unstable_by(|(_, degree1), (_, degree2)| degree2.cmp(degree1));
         if !check_part_degree_sequence(len2, 1, &b_degrees) {
@@ -136,12 +138,12 @@ impl<G: ImplGraph + Clone> Graph<G> {
         for (mut i, (a, _)) in a_degrees.iter().enumerate() {
             i += 1;
             for b in b_degrees.iter().take(i) {
-                if !graph[*a].contains(b.0) {
+                if !graph.get_neighbours(*a).unwrap().contains(b.0) {
                     return Obstinate::False;
                 }
             }
             for b in b_degrees.iter().skip(i) {
-                if graph[*a].contains(b.0) {
+                if graph.get_neighbours(*a).unwrap().contains(b.0) {
                     return Obstinate::False;
                 }
             }
@@ -160,7 +162,12 @@ impl<G: ImplGraph + Clone> Graph<G> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fix_int::int, graph::Graph};
+    use crate::{
+        fix_int::int,
+        graph::{adj::AdjGraph, impl_petgraph::PetGraph},
+    };
+
+    type Graph = super::Graph<PetGraph>;
 
     mod utils {
         use super::*;
@@ -282,6 +289,7 @@ mod tests {
             }
 
             let (graph, map) = create_graph(size, size + 42, list, rng);
+            println!("{partition_size}: {:?}", graph);
             let mut result = graph.obstinate();
             if let Obstinate::True(_, (a, b)) = &mut result {
                 a.iter_mut().for_each(|node| *node = graph.get_label(*node).unwrap());

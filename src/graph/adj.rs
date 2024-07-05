@@ -24,6 +24,7 @@ impl ImplGraph for AdjGraph {
     // TODO: implement a bunch of default methods more efficiently (if possible)
 
     type Nodes = HNodes;
+    type Neighbours<'a> = &'a Self::Nodes where Self: 'a;
 
     fn add_labelled_edge(&mut self, (a, b): Edge) {
         let idxa = self.insert(a);
@@ -78,9 +79,9 @@ impl ImplGraph for AdjGraph {
         self.nodes.get(node as usize)
     }
 
-    fn get_neighbours_mut(&mut self, node: int) -> Option<&mut Neighbourhood> {
-        self.nodes.get_mut(node as usize)
-    }
+    // fn get_neighbours_mut(&mut self, node: int) -> Option<&mut Neighbourhood> {
+    //     self.nodes.get_mut(node as usize)
+    // }
 
     fn remove_node(&mut self, node: int) {
         let len = self.nodes.len() as int;
@@ -136,9 +137,9 @@ impl ImplGraph for AdjGraph {
         self.labels.iter_mut()
     }
 
-    fn iter_neighbourhoods_mut(&mut self) -> impl Iterator<Item = &mut Neighbourhood> {
-        self.nodes.iter_mut()
-    }
+    // fn iter_with_labels_mut(&mut self) -> impl Iterator<Item = (Node, &mut Node)> {
+    //     enumerate!(self.iter_labels_mut())
+    // }
 }
 
 impl AdjGraph {
@@ -154,6 +155,23 @@ impl AdjGraph {
             self.labels.push(node);
             self.nodes.len() - 1
         })
+    }
+
+    /// Correct (potentially) invalid graph description.
+    fn correct(&mut self) {
+        // PERF: safety bounds us here to first collect the keys, instead of doing things
+        // in one loop
+        let nodes = self.iter_nodes().collect::<Vec<_>>();
+        for node in nodes {
+            let neighbours = self.nodes.get_mut(node as usize).unwrap();
+            neighbours.remove(&node);
+            // PERF: have to clone here
+            for neighbour in neighbours.clone() {
+                if !self.nodes.get(neighbour as usize).unwrap().contains(&node) {
+                    self.nodes.get_mut(neighbour as usize).unwrap().insert(node);
+                }
+            }
+        }
     }
 }
 

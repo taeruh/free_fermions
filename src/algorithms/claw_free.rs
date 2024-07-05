@@ -267,7 +267,7 @@ impl<G: ImplGraph> Graph<G> {
     // the simplest algorithm without (trying to) doing any smart things
     pub fn is_claw_free_naive(&self) -> ClawFreeNaive {
         for (node, neighbourhood) in self.iter_with_neighbourhoods() {
-            let mut graph = self.subgraph(neighbourhood);
+            let mut graph = self.subgraph(&neighbourhood);
             graph.complement();
             let (indices, matrix) = to_matrix(&graph);
             let counts = matrix.diag_cube();
@@ -304,7 +304,23 @@ fn to_matrix<G: ImplGraph>(graph: &Graph<G>) -> (Vec<Node>, Matrix) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::test_utils::collect;
+    use crate::graph::{adj, impl_petgraph, test_utils::collect};
+
+    type AdjGraph = Graph<adj::AdjGraph>;
+    type PetGraph = Graph<impl_petgraph::PetGraph>;
+
+    fn check(a: ClawFree, b: ClawFree) {
+        match (a, b) {
+            (ClawFree::Yes, ClawFree::Yes) => {},
+            (ClawFree::No(a), ClawFree::No(b)) => match (a, b) {
+                (FailKind::Structure(_), FailKind::Structure(_)) => {},
+                (FailKind::PrimeCase(_), FailKind::PrimeCase(_)) => {},
+                (FailKind::SeriesCase(_), FailKind::SeriesCase(_)) => {},
+                _ => panic!("not equal"),
+            },
+            _ => panic!("not equal"),
+        }
+    }
 
     #[test]
     fn test() {
@@ -313,31 +329,40 @@ mod tests {
         // 0 -- 2
         //  \
         //    - 3
-        let mut graph: Graph = Graph::from_adjacency_labels(collect!(vv;
+        let data = collect!(vv;
                 (0, [1, 2, 3]),
                 (1, [0]),
                 (2, [0]),
                 (3, [0]),
-        ))
-        .unwrap();
+        );
+        let mut graph = AdjGraph::from_adjacency_labels(data.clone()).unwrap();
         let mut tree = graph.modular_decomposition();
+        let mut pgraph = PetGraph::from_adjacency_labels(data).unwrap();
+        let mut ptree = pgraph.modular_decomposition();
         println!("{:?}", graph);
         println!("{:?}", tree);
         println!("naive: {:?}", graph.is_claw_free_naive());
-        println!("real: {:?}\n", graph.is_claw_free(&tree));
+        let ret = graph.is_claw_free(&tree);
+        let pret = pgraph.is_claw_free(&ptree);
+        println!("real: {:?}\n", ret);
+        check(ret, pret);
         // // #claws = 1
         graph.twin_collapse(&mut tree);
+        pgraph.twin_collapse(&mut ptree);
         println!("{:?}", graph);
         println!("{:?}", tree);
         println!("naive: {:?}", graph.is_claw_free_naive());
-        println!("real: {:?}\n", graph.is_claw_free(&tree));
+        let ret = graph.is_claw_free(&tree);
+        let pret = pgraph.is_claw_free(&ptree);
+        println!("real: {:?}\n", ret);
+        check(ret, pret);
 
         //    - 1 -- 4
         //  /
         // 0 -- 2 -- 5
         //  \
         //    - 3 -- 6
-        let mut graph: Graph = Graph::from_adjacency_labels(collect!(vv;
+        let data = collect!(vv;
             (0, [1, 2, 3]),
             (1, [0, 4]),
             (2, [0, 5]),
@@ -345,23 +370,27 @@ mod tests {
             (4, [1]),
             (5, [2]),
             (6, [3]),
-        ))
-        .unwrap();
+        );
+        let mut graph = AdjGraph::from_adjacency_labels(data.clone()).unwrap();
         let mut tree = graph.modular_decomposition();
+        let mut pgraph = PetGraph::from_adjacency_labels(data).unwrap();
+        let mut ptree = pgraph.modular_decomposition();
         println!("{:?}", graph);
         println!("{:?}", tree);
         println!("naive: {:?}", graph.is_claw_free_naive());
-        println!("real: {:?}\n", graph.is_claw_free(&tree));
-        let clone = graph.clone();
+        let ret = graph.is_claw_free(&tree);
+        let pret = pgraph.is_claw_free(&ptree);
+        println!("real: {:?}\n", ret);
+        check(ret, pret);
         graph.twin_collapse(&mut tree);
-        assert_eq!(clone.map_to_labels(), graph.map_to_labels());
+        assert_eq!(pgraph.map_to_labels(), graph.map_to_labels());
 
         // 10 -- 7 -     - 1 -- 4
         //           \ /
         // 11 -- 8 -- 0 -- 2 -- 5
         //           / \
         // 13 -- 9 -     - 3 -- 6
-        let graph: Graph = Graph::from_adjacency_labels(collect!(vv;
+        let data = collect!(vv;
                 (0, [1, 2, 3, 7, 8, 9]),
                 (1, [0, 4]),
                 (2, [0, 5]),
@@ -375,13 +404,18 @@ mod tests {
                 (10, [7]),
                 (11, [8]),
                 (12, [9]),
-        ))
-        .unwrap();
+        );
+        let graph = AdjGraph::from_adjacency_labels(data.clone()).unwrap();
         let tree = graph.modular_decomposition();
+        let pgraph = PetGraph::from_adjacency_labels(data.clone()).unwrap();
+        let ptree = pgraph.modular_decomposition();
         println!("{:?}", graph);
         println!("{:?}", tree);
         println!("naive: {:?}", graph.is_claw_free_naive());
-        println!("real: {:?}\n", graph.is_claw_free(&tree));
+        let ret = graph.is_claw_free(&tree);
+        let pret = pgraph.is_claw_free(&ptree);
+        println!("real: {:?}\n", ret);
+        check(ret, pret);
         // #claws = binom(6, 3) = 20
 
         //    - 1 -
@@ -389,40 +423,33 @@ mod tests {
         // 0 -- 2 -- 4
         //  \
         //    - 3
-        let mut graph: Graph = Graph::from_adjacency_labels(collect!(vv;
+        let data = collect!(vv;
                 (0, [1, 2, 3]),
                 (1, [0, 4]),
                 (2, [0, 4]),
                 (3, [0]),
                 (4, [1, 2]),
-        ))
-        .unwrap();
+        );
+        let mut graph = AdjGraph::from_adjacency_labels(data.clone()).unwrap();
         let mut tree = graph.modular_decomposition();
+        let mut pgraph = PetGraph::from_adjacency_labels(data.clone()).unwrap();
+        let mut ptree = pgraph.modular_decomposition();
         println!("{:?}", graph);
         println!("{:?}", tree);
         println!("naive: {:?}", graph.is_claw_free_naive());
-        println!("real: {:?}\n", graph.is_claw_free(&tree));
+        let ret = graph.is_claw_free(&tree);
+        let pret = pgraph.is_claw_free(&ptree);
+        println!("real: {:?}\n", ret);
+        check(ret, pret);
         graph.twin_collapse(&mut tree);
+        pgraph.twin_collapse(&mut ptree);
         println!("{:?}", graph);
         println!("{:?}", tree);
         println!("naive: {:?}", graph.is_claw_free_naive());
-        println!("real: {:?}\n", graph.is_claw_free(&tree));
-
-        //    - 1
-        //  /
-        // 0 -- 2
-        //  \   |
-        //    - 3
-        let graph: Graph = Graph::from_adjacency_labels(collect!(vv;
-                (0, [1, 2, 3]),
-                (1, [0]),
-                (2, [0, 3]),
-                (3, [0, 2]),
-        ))
-        .unwrap();
-        let tree = graph.modular_decomposition();
-        println!("naive: {:?}", graph.is_claw_free_naive());
-        println!("real: {:?}\n", graph.is_claw_free(&tree));
+        let ret = graph.is_claw_free(&tree);
+        let pret = pgraph.is_claw_free(&ptree);
+        println!("real: {:?}\n", ret);
+        check(ret, pret);
 
         // 7       - 1 -- 4
         // |     /
@@ -430,7 +457,7 @@ mod tests {
         // |     \
         // 9 --10  - 3 -- 6
         // note that we collect here with hh
-        let graph: Graph = Graph::from_adjacency_labels(collect!(hh;
+        let data = collect!(hh;
                 (0, [1, 2, 3, 8]),
                 (1, [0, 4]),
                 (2, [0, 5]),
@@ -442,13 +469,39 @@ mod tests {
                 (8, [0, 7, 9]),
                 (9, [8, 10]),
                 (10, [9]),
-        ))
-        .unwrap();
+        );
+        let graph = AdjGraph::from_adjacency_labels(data.clone()).unwrap();
         let tree = graph.modular_decomposition();
+        let pgraph = PetGraph::from_adjacency_labels(data).unwrap();
+        let ptree = pgraph.modular_decomposition();
         println!("{:?}", graph);
         println!("{:?}", tree);
         println!("naive: {:?}", graph.is_claw_free_naive());
-        println!("real: {:?}\n", graph.is_claw_free(&tree));
+        let ret = graph.is_claw_free(&tree);
+        let pret = pgraph.is_claw_free(&ptree);
+        println!("real: {:?}\n", ret);
+        check(ret, pret);
+
+        //    - 1
+        //  /
+        // 0 -- 2
+        //  \   |
+        //    - 3
+        let data = collect!(vv;
+                (0, [1, 2, 3]),
+                (1, [0]),
+                (2, [0, 3]),
+                (3, [0, 2]),
+        );
+        let graph = AdjGraph::from_adjacency_labels(data.clone()).unwrap();
+        let tree = graph.modular_decomposition();
+        let pgraph = PetGraph::from_adjacency_labels(data.clone()).unwrap();
+        let ptree = graph.modular_decomposition();
+        println!("naive: {:?}", graph.is_claw_free_naive());
+        let ret = graph.is_claw_free(&tree);
+        let pret = pgraph.is_claw_free(&ptree);
+        println!("real: {:?}\n", ret);
+        check(ret, pret);
 
         // 7 -     - 1 -- 4
         // |   \ /
@@ -456,7 +509,7 @@ mod tests {
         //       \
         //         - 3 -- 6
         // note that we collect here with hh
-        let graph: Graph = Graph::from_adjacency_labels(collect!(hh;
+        let data = collect!(hh;
                 (0, [1, 2, 3, 7, 8]),
                 (1, [0, 4]),
                 (2, [0, 5]),
@@ -466,11 +519,17 @@ mod tests {
                 (6, [3]),
                 (7, [0, 8]),
                 (8, [0, 7]),
-        ))
-        .unwrap();
+        );
+        let graph = AdjGraph::from_adjacency_labels(data.clone()).unwrap();
+        let tree = graph.modular_decomposition();
+        let pgraph = PetGraph::from_adjacency_labels(data).unwrap();
+        let ptree = pgraph.modular_decomposition();
         println!("{:?}", graph);
         println!("{:?}", tree);
         println!("naive: {:?}", graph.is_claw_free_naive());
-        println!("real: {:?}\n", graph.is_claw_free(&tree));
+        let ret = graph.is_claw_free(&tree);
+        let pret = pgraph.is_claw_free(&ptree);
+        println!("real: {:?}\n", ret);
+        check(ret, pret);
     }
 }
