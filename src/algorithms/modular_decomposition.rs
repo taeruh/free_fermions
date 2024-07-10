@@ -241,30 +241,67 @@ pub fn compare_module_kind_mapped(
 }
 
 impl Tree {
-    pub fn module_representatives(&self, module: NodeIndex) -> Vec<Node> {
-        let mut ret = Vec::new();
-
-        for mut child in self.graph.neighbors_directed(module, Direction::Outgoing) {
-            loop {
-                child = if let Some(c) =
-                    self.graph.neighbors_directed(child, Direction::Outgoing).next()
-                {
-                    c
-                } else {
-                    break; // child is a leaf
-                };
-            }
-
-            ret.push(
-                if let ModuleKind::Node(idx) = self.graph.node_weight(child).unwrap() {
-                    *idx
-                } else {
-                    unreachable!()
-                },
-            );
+    pub fn reduced_module(&self, module: NodeIndex) -> Vec<Node> {
+        if let ModuleKind::Node(idx) = self.graph.node_weight(module).unwrap() {
+            return vec![*idx];
         }
 
+        let mut ret = Vec::new();
+        for child in self.graph.neighbors_directed(module, Direction::Outgoing) {
+            ret.push(self.module_representative(child));
+        }
         ret
+    }
+
+    pub fn module_representative(&self, mut module: NodeIndex) -> Node {
+        loop {
+            module = if let Some(m) =
+                self.graph.neighbors_directed(module, Direction::Outgoing).next()
+            {
+                m
+            } else {
+                break; // child is a leaf
+            };
+        }
+
+        if let ModuleKind::Node(idx) = self.graph.node_weight(module).unwrap() {
+            *idx
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn module_nodes(&self, module: NodeIndex) -> Vec<Node> {
+        if let ModuleKind::Node(idx) = self.graph.node_weight(module).unwrap() {
+            return vec![*idx];
+        }
+
+        let mut ret = Vec::new();
+
+        // PERF: tail recursion ...
+        fn recurse(tree: &TreeGraph, module: NodeIndex, ret: &mut Vec<Node>) {
+            for child in tree.neighbors_directed(module, Direction::Outgoing) {
+                match tree.node_weight(child).unwrap() {
+                    ModuleKind::Node(idx) => ret.push(*idx),
+                    _ => recurse(tree, child, ret),
+                }
+            }
+        }
+
+        recurse(&self.graph, module, &mut ret);
+        ret
+    }
+
+    pub fn graph_is_really_prime(&self) -> bool {
+        if !matches!(self.graph.node_weight(self.root).unwrap(), ModuleKind::Prime) {
+            return false;
+        }
+        for child in self.graph.neighbors_directed(self.root, Direction::Outgoing) {
+            if !matches!(self.graph.node_weight(child).unwrap(), ModuleKind::Node(_)) {
+                return false;
+            }
+        }
+        true
     }
 }
 
@@ -305,7 +342,7 @@ mod tests {
 
         let graph = graph1;
         let tree = tree1;
-        let reprs = tree.module_representatives(tree.root);
+        let reprs = tree.reduced_module(tree.root);
         let repr_graph = graph.subgraph(&reprs);
         println!("{:?}", graph);
         println!("{:?}", repr_graph);

@@ -74,8 +74,8 @@ impl<G: ImplGraph> Graph<G> {
         }
     }
 
-    fn prime_claw_check(&self, tree: &Tree, node: NodeIndex) -> ClawFree {
-        let reprs = tree.module_representatives(node);
+    fn prime_claw_check(&self, tree: &Tree, module: NodeIndex) -> ClawFree {
+        let reprs = tree.reduced_module(module);
         let representative_graph = self.subgraph(&reprs);
         // TODO: replace with a little bit more efficient matrix algorithm
         match representative_graph.is_claw_free_naive() {
@@ -84,10 +84,10 @@ impl<G: ImplGraph> Graph<G> {
         }
     }
 
-    fn series_claw_check(&self, tree: &Tree, node: NodeIndex) -> ClawFree {
-        for child in tree.graph.neighbors_directed(node, Direction::Outgoing) {
+    fn series_claw_check(&self, tree: &Tree, module: NodeIndex) -> ClawFree {
+        for child in tree.graph.neighbors_directed(module, Direction::Outgoing) {
             if let ModuleKind::Prime = tree.graph.node_weight(child).unwrap() {
-                let reprs = tree.module_representatives(child);
+                let reprs = tree.reduced_module(child);
                 let mut complement_representative_graph = self.subgraph(&reprs);
                 complement_representative_graph.complement();
                 let (indices, matrix) = to_matrix(&complement_representative_graph);

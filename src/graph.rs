@@ -105,7 +105,7 @@ impl SwapRemoveMap {
 // pub trait ImplGraph: CompactNodes + Clone {
 pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
     type Nodes: NodeCollectionMut + IntoIterator<Item = int> + FromIterator<int>;
-    type Neighbours<'a>: NodeCollectionRef + NodeCollection
+    type Neighbours<'a>: NodeCollectionRef + NodeCollection<Collected = Self::Nodes>
     where
         Self: 'a;
 
@@ -619,6 +619,8 @@ impl<G: ImplGraph> GraphProp for Graph<G> {
 // }}}
 
 pub trait NodeCollection: Clone + Debug {
+    type Collected: NodeCollectionMut;
+
     type Iter<'a>: Iterator<Item = int> + Clone
     where
         Self: 'a;
@@ -638,6 +640,8 @@ pub trait NodeCollection: Clone + Debug {
     fn intersection<'a>(&'a self, other: &'a Self) -> impl Iterator<Item = int> + 'a {
         self.iter_ref().filter(|n| other.contains(*n))
     }
+
+    fn collect(self) -> Self::Collected;
 }
 
 pub trait NodeCollectionRef {
@@ -655,6 +659,7 @@ impl<'a, T: NodeCollection> NodeCollectionRef for &'a T {
 }
 
 impl<'a, T: NodeCollection> NodeCollection for &'a T {
+    type Collected = T::Collected;
     type Iter<'b> = T::Iter<'b> where Self: 'b;
     #[inline]
     fn contains(&self, e: int) -> bool {
@@ -676,6 +681,10 @@ impl<'a, T: NodeCollection> NodeCollection for &'a T {
     fn intersection<'b>(&'b self, other: &'b Self) -> impl Iterator<Item = int> + 'b {
         (*self).intersection(other)
     }
+    #[inline]
+    fn collect(self) -> Self::Collected {
+        self.clone().collect()
+    }
 }
 
 // split mut stuff (and also do not require IntoIterator as a supertrait, but instead do
@@ -688,6 +697,7 @@ pub trait NodeCollectionMut: NodeCollection {
 }
 
 impl NodeCollection for VNodes {
+    type Collected = VNodes;
     type Iter<'a> = iter::Copied<slice::Iter<'a, int>>;
     fn contains(&self, e: int) -> bool {
         <[int]>::contains(self, &e)
@@ -697,6 +707,9 @@ impl NodeCollection for VNodes {
     }
     fn len(&self) -> usize {
         <[int]>::len(self)
+    }
+    fn collect(self) -> Self::Collected {
+        self
     }
 }
 
@@ -721,6 +734,7 @@ impl NodeCollectionMut for VNodes {
 }
 
 impl NodeCollection for HNodes {
+    type Collected = HNodes;
     type Iter<'a> = Copied<hash_set::Iter<'a, int>>;
     fn contains(&self, e: int) -> bool {
         HashSet::contains(self, &e)
@@ -733,6 +747,9 @@ impl NodeCollection for HNodes {
     }
     fn intersection<'a>(&'a self, other: &'a Self) -> impl Iterator<Item = int> + 'a {
         HashSet::intersection(self, other).copied()
+    }
+    fn collect(self) -> Self::Collected {
+        self
     }
 }
 impl NodeCollectionMut for HNodes {

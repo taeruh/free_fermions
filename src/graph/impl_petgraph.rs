@@ -99,6 +99,7 @@ fn insert_node(graph: &mut PetGraph, node: int) -> NodeIndex {
 }
 
 impl NodeCollection for Neighbors<'_, ()> {
+    type Collected = HNodes;
     type Iter<'a> = Map<Self, fn(NodeIndex) -> int>
     where
         Self: 'a;
@@ -109,6 +110,9 @@ impl NodeCollection for Neighbors<'_, ()> {
 
     fn iter(&self) -> Self::Iter<'_> {
         self.clone().map((|e| e.index() as int) as fn(NodeIndex) -> int)
+    }
+    fn collect(self) -> Self::Collected {
+        self.iter().collect()
     }
 }
 
