@@ -5,7 +5,7 @@ use petgraph::{graph::Neighbors, operator, Undirected};
 use super::{
     CompactNodes, HNodes, ImplGraph, Node, NodeCollection, NodeCollectionRef, NodeIndex,
 };
-use crate::fix_int::{self, int};
+use crate::fix_int::int;
 
 pub type PetGraph = petgraph::Graph<Node, (), Undirected>;
 

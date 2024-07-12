@@ -4,7 +4,7 @@ use petgraph::Direction;
 use super::modular_decomposition::{Tree, TreeGraph};
 use crate::{
     fix_int::int,
-    graph::{Graph, ImplGraph, NodeIndex, SwapRemoveMap},
+    graph::generic::{Graph, ImplGraph, NodeIndex, SwapRemoveMap},
 };
 
 impl<G: ImplGraph> Graph<G> {
@@ -13,7 +13,7 @@ impl<G: ImplGraph> Graph<G> {
         let mut tree_map = SwapRemoveMap::new(tree.graph.node_count());
         self.recurse_collapse(&mut tree.graph, tree.root, &mut graph_map, &mut tree_map);
         for weight in tree.graph.node_weights_mut() {
-            if let ModuleKind::Node(node) = weight {
+            if let ModuleKind::Node(ref mut node) = weight {
                 *node = graph_map.map(*node);
             }
         }
@@ -92,7 +92,7 @@ mod tests {
 
     use super::*;
     use crate::graph::{
-        adj::AdjGraph,
+        generic::adj::AdjGraph,
         test_utils::{collect, RandomMap},
     };
 

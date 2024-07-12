@@ -5,7 +5,10 @@ use petgraph::{graph::DiGraph, Direction};
 
 use crate::{
     fix_int::int,
-    graph::{Graph, ImplGraph, Node, NodeIndex},
+    graph::{
+        generic::{Graph, ImplGraph, NodeIndex},
+        Node,
+    },
 };
 
 pub type TreeGraph = DiGraph<ModuleKind<Node>, ()>;
@@ -312,7 +315,7 @@ mod tests {
 
     use super::*;
     use crate::graph::{
-        adj::AdjGraph,
+        generic::adj::AdjGraph,
         test_utils::{collect, RandomMap},
     };
 

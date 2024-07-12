@@ -68,7 +68,6 @@ pub mod fix_int {
     }
 }
 
-pub mod algorithms;
 pub mod enumerate_offset;
 pub mod graph;
 pub mod hamiltonian;

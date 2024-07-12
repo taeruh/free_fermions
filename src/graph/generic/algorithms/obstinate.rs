@@ -2,7 +2,10 @@ use std::borrow::Cow;
 
 use crate::{
     fix_int::enumerate,
-    graph::{Graph, ImplGraph, Node, NodeCollection, NodeCollectionRef, VNodes},
+    graph::{
+        generic::{Graph, ImplGraph, NodeCollection, NodeCollectionRef},
+        Node, VNodes,
+    },
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -164,7 +167,7 @@ mod tests {
     use super::*;
     use crate::{
         fix_int::int,
-        graph::{adj::AdjGraph, impl_petgraph::PetGraph},
+        graph::generic::{adj::AdjGraph, impl_petgraph::PetGraph},
     };
 
     type Graph = super::Graph<PetGraph>;

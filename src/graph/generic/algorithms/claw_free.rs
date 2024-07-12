@@ -3,9 +3,14 @@ use petgraph::Direction;
 
 use super::modular_decomposition::Tree;
 use crate::{
-    algorithms::modular_decomposition::TreeGraph,
     fix_int::int,
-    graph::{Graph, ImplGraph, Node, NodeCollection, NodeIndex},
+    graph::{
+        generic::{
+            algorithms::modular_decomposition::TreeGraph, Graph, ImplGraph,
+            NodeCollection, NodeIndex,
+        },
+        Node,
+    },
     mat_mul::Matrix,
 };
 
@@ -304,7 +309,10 @@ fn to_matrix<G: ImplGraph>(graph: &Graph<G>) -> (Vec<Node>, Matrix) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::{adj, impl_petgraph, test_utils::collect};
+    use crate::graph::{
+        generic::{adj, impl_petgraph},
+        test_utils::collect,
+    };
 
     type AdjGraph = Graph<adj::AdjGraph>;
     type PetGraph = Graph<impl_petgraph::PetGraph>;

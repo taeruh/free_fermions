@@ -3,8 +3,11 @@ use std::{
     mem,
 };
 
-use super::{CompactNodes, Edge, HNodes, ImplGraph, Label, Node, NodeCollection};
-use crate::fix_int::{enumerate, int};
+use super::{CompactNodes, ImplGraph, NodeCollection};
+use crate::{
+    fix_int::{enumerate, int},
+    graph::{Edge, HNodes, Label, Node},
+};
 
 pub type Neighbourhood = HashSet<Node>;
 
@@ -158,7 +161,7 @@ impl AdjGraph {
     }
 
     /// Correct (potentially) invalid graph description.
-    fn correct(&mut self) {
+    pub fn correct(&mut self) {
         // PERF: safety bounds us here to first collect the keys, instead of doing things
         // in one loop
         let nodes = self.iter_nodes().collect::<Vec<_>>();
@@ -181,7 +184,7 @@ mod tests {
     use rand_pcg::Pcg64;
 
     use super::*;
-    use crate::graph::{test_utils::*, InvalidGraph};
+    use crate::graph::{generic::InvalidGraph, test_utils::*};
 
     #[test]
     fn from_adj() {

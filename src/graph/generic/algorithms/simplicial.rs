@@ -12,7 +12,8 @@ use super::{
     obstinate::{Obstinate, ObstinateKind},
 };
 use crate::graph::{
-    Graph, ImplGraph, Node, NodeCollection, NodeCollectionMut, NodeIndex, VNodes,
+    generic::{Graph, ImplGraph, NodeCollection, NodeCollectionMut, NodeIndex},
+    Node, VNodes,
 };
 
 impl<G: ImplGraph> Graph<G> {
@@ -348,7 +349,7 @@ impl<G: ImplGraph> Graph<G> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::{adj::AdjGraph, test_utils::collect};
+    use crate::graph::{generic::adj::AdjGraph, test_utils::collect};
 
     #[test]
     fn test() {
