@@ -1,13 +1,13 @@
 use modular_decomposition::ModuleKind;
 use petgraph::Direction;
 
-use super::modular_decomposition::Tree;
+use super::modular_decomposition::{NodeIndex, Tree};
 use crate::{
     fix_int::int,
     graph::{
         generic::{
             algorithms::modular_decomposition::TreeGraph, Graph, ImplGraph,
-            NodeCollection, NodeIndex,
+            NodeCollection,
         },
         Node,
     },

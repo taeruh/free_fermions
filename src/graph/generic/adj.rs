@@ -1,7 +1,6 @@
-use std::{
-    collections::{HashMap, HashSet},
-    mem,
-};
+use std::{collections::HashMap, mem};
+
+use hashbrown::HashSet;
 
 use super::{CompactNodes, ImplGraph, NodeCollection};
 use crate::{
@@ -224,7 +223,7 @@ mod tests {
             AdjGraph::from_adjacency_labels(collect!(vh; (1, [1, 2]), (2, [1]),))
                 .unwrap_err();
         assert_eq!(
-            self_looped_err.map_to_labels(&self_looped),
+            self_looped_err.map(|node| self_looped.get_label(node).unwrap()),
             InvalidGraph::SelfLoop(1)
         );
         self_looped.correct();
@@ -237,7 +236,8 @@ mod tests {
         assert_eq!(
             incompatible_neighbourhoods
                 .check()
-                .map_err(|e| e.map_to_labels(&incompatible_neighbourhoods)),
+                .map_err(|e| e
+                    .map(|node| incompatible_neighbourhoods.get_label(node).unwrap())),
             Err(InvalidGraph::IncompatibleNeighbourhoods(1, 2))
         );
         incompatible_neighbourhoods.correct();

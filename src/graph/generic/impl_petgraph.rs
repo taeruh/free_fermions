@@ -1,20 +1,21 @@
-use std::{collections::HashSet, iter::Map, mem};
+use std::{iter::Map, mem};
 
+use hashbrown::HashSet;
 use petgraph::{graph::Neighbors, operator, Undirected};
 
-use super::{
-    CompactNodes, HNodes, ImplGraph, Node, NodeCollection, NodeCollectionRef, NodeIndex,
-};
+use super::{CompactNodes, HNodes, ImplGraph, Node, NodeCollection, NodeCollectionRef};
 use crate::fix_int::int;
 
-pub type PetGraph = petgraph::Graph<Node, (), Undirected>;
+pub type NodeIndex = petgraph::graph::NodeIndex<int>; // = int
+
+pub type PetGraph = petgraph::Graph<Node, (), Undirected, int>;
 
 impl CompactNodes for PetGraph {}
 
 impl ImplGraph for PetGraph {
     type Nodes = HNodes;
 
-    type Neighbours<'a> = Neighbors<'a, ()>
+    type Neighbours<'a> = Neighbors<'a, (), int>
     where
         Self: 'a;
 
@@ -98,7 +99,7 @@ fn insert_node(graph: &mut PetGraph, node: int) -> NodeIndex {
     }
 }
 
-impl NodeCollection for Neighbors<'_, ()> {
+impl NodeCollection for Neighbors<'_, (), int> {
     type Collected = HNodes;
     type Iter<'a> = Map<Self, fn(NodeIndex) -> int>
     where
@@ -116,7 +117,7 @@ impl NodeCollection for Neighbors<'_, ()> {
     }
 }
 
-impl NodeCollectionRef for Neighbors<'_, ()> {
+impl NodeCollectionRef for Neighbors<'_, (), int> {
     type Iter = Map<Self, fn(NodeIndex) -> int>;
 
     fn iter_ref(self) -> Self::Iter {

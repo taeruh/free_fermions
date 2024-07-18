@@ -34,7 +34,8 @@ pub mod fix_int {
     ///
     /// This type is generally used in this library to represent node/vertex labels in
     /// graphs (and related stuff).
-    pub type int = u32;
+    // pub type int = u32;
+    pub type int = usize;
 
     /// Run this to check that we are on a 32bit platform.
     pub fn ensure_at_least_32bit_platform() {
@@ -57,7 +58,8 @@ pub mod fix_int {
     macro_rules! enumerate {
         ($iter:expr) => {
             // always make sure that we actually use the int type here
-            (0u32..).zip($iter)
+            // (0u32..).zip($iter)
+            (0usize..).zip($iter)
         };
     }
     pub(crate) use enumerate;

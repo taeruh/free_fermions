@@ -1,4 +1,5 @@
-use std::collections::HashSet;
+// use std::collections::HashSet;
+use hashbrown::HashSet;
 
 use crate::fix_int::int;
 
@@ -20,6 +21,25 @@ pub(crate) type HNodeInfo = (Node, HashSet<Node>);
 pub mod generic;
 pub mod specialised;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, thiserror::Error)]
+pub enum InvalidGraph {
+    #[error("Self loop detected on node {0}")]
+    SelfLoop(int),
+    #[error("Incompatible neighbourhoods between the nodes {0} and {1}")]
+    IncompatibleNeighbourhoods(int, int),
+}
+
+impl InvalidGraph {
+    pub fn map(&self, map: impl Fn(int) -> int) -> Self {
+        match self {
+            Self::SelfLoop(node) => Self::SelfLoop(map(*node)),
+            Self::IncompatibleNeighbourhoods(node, neighbour) => {
+                Self::IncompatibleNeighbourhoods(map(*node), map(*neighbour))
+            },
+        }
+    }
+}
+
 #[cfg(test)]
 pub mod test_utils {
 
@@ -39,7 +59,7 @@ pub mod test_utils {
     impl RandomMap {
         pub fn new(map_length: int, map_max: int, rng: &mut impl Rng) -> Self {
             assert!(map_max >= map_length);
-            Self::Random((0..=map_max).choose_multiple(rng, map_length as usize + 1))
+            Self::Random((0..=map_max).choose_multiple(rng, map_length + 1))
         }
 
         pub fn map(&self, node: int) -> int {

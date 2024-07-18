@@ -1,5 +1,5 @@
 use std::{
-    collections::{hash_set, HashMap, HashSet},
+    collections::HashMap,
     fmt::Debug,
     iter::{self, Copied},
     ops::Range,
@@ -7,6 +7,7 @@ use std::{
 };
 
 use adj::AdjGraph;
+use hashbrown::{hash_set, HashSet};
 use petgraph::{
     visit::{
         GraphBase, GraphProp, IntoNeighbors, NodeCompactIndexable, NodeCount,
@@ -15,13 +16,8 @@ use petgraph::{
     Undirected,
 };
 
-use super::{Edge, HNodes, Node, VNodes};
+use super::{Edge, HNodes, InvalidGraph, Node, VNodes};
 use crate::fix_int::{self, int};
-
-// // petgraph::petgraph::NodeIndex is per default already
-// petgraph::petgraph::NodeIndex<DefaultIx> // where DefaultIx is int; this is just to
-// makes things clear
-pub type NodeIndex = petgraph::graph::NodeIndex<int>; // = int
 
 /// Newtype around `impl `[ImplGraph] types that supports foreign traits.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -94,7 +90,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
     where
         Self: 'a;
 
-    // for adding and removing there are labelled and unlabelled versions; the unlabelled
+    // for adding and removing, there are labelled and unlabelled versions; the unlabelled
     // versions directly work with the indices, while the labelled versions first do the
     // conversion from the label to the index; for the methods that create things, we
     // usually require the labelled versions, since we do not know how the conversion
@@ -385,28 +381,6 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
     fn find_node(&self, label: int) -> Option<Node> {
         self.iter_with_labels()
             .find_map(|(n, l)| if l == label { Some(n) } else { None })
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, thiserror::Error)]
-pub enum InvalidGraph {
-    #[error("Self loop detected on node {0}")]
-    SelfLoop(Node),
-    #[error("Incompatible neighbourhoods between the nodes {0} and {1}")]
-    IncompatibleNeighbourhoods(Node, Node),
-}
-
-impl InvalidGraph {
-    pub fn map_to_labels(&self, graph: &impl ImplGraph) -> Self {
-        match self {
-            Self::SelfLoop(node) => Self::SelfLoop(graph.get_label(*node).unwrap()),
-            Self::IncompatibleNeighbourhoods(node, neighbour) => {
-                Self::IncompatibleNeighbourhoods(
-                    graph.get_label(*node).unwrap(),
-                    graph.get_label(*neighbour).unwrap(),
-                )
-            },
-        }
     }
 }
 

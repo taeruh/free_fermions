@@ -6,12 +6,13 @@ use petgraph::{graph::DiGraph, Direction};
 use crate::{
     fix_int::int,
     graph::{
-        generic::{Graph, ImplGraph, NodeIndex},
+        generic::{Graph, ImplGraph},
         Node,
     },
 };
 
-pub type TreeGraph = DiGraph<ModuleKind<Node>, ()>;
+pub type NodeIndex = petgraph::graph::NodeIndex<u32>; // = int
+pub type TreeGraph = DiGraph<ModuleKind<int>, ()>;
 
 #[derive(Debug, Clone, Default)]
 pub struct Tree {
@@ -23,7 +24,7 @@ impl<G: ImplGraph> Graph<G> {
     pub fn modular_decomposition(&self) -> Tree {
         let md_tree = modular_decomposition::modular_decomposition(&self).unwrap();
         Tree {
-            root: NodeIndex::from(md_tree.root().index() as Node),
+            root: NodeIndex::from(md_tree.root().index() as u32),
             graph: md_tree.into_digraph(),
         }
     }

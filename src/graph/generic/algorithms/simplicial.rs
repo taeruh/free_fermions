@@ -8,11 +8,11 @@ use petgraph::Direction;
 
 use super::{
     claw_free::ClawFree,
-    modular_decomposition::Tree,
+    modular_decomposition::{NodeIndex, Tree},
     obstinate::{Obstinate, ObstinateKind},
 };
 use crate::graph::{
-    generic::{Graph, ImplGraph, NodeCollection, NodeCollectionMut, NodeIndex},
+    generic::{Graph, ImplGraph, NodeCollection, NodeCollectionMut},
     Node, VNodes,
 };
 
