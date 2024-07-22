@@ -3,22 +3,11 @@ use std::borrow::Cow;
 use crate::{
     fix_int::enumerate,
     graph::{
+        algorithms::obstinate::{Obstinate, ObstinateKind},
         generic::{Graph, ImplGraph, NodeCollection, NodeCollectionRef},
         Node, VNodes,
     },
 };
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Obstinate {
-    True(ObstinateKind, (VNodes, VNodes)),
-    False,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ObstinateKind {
-    Itself,
-    Complement,
-}
 
 impl<G: ImplGraph + Clone> Graph<G> {
     // note that, if a graph is obstinate, then there are two expected results, since we
@@ -27,7 +16,7 @@ impl<G: ImplGraph + Clone> Graph<G> {
     // use unstable sorting in some places
     pub fn obstinate(&self) -> Obstinate {
         // directly alias self(: &Self) with graph, because we have to do it later anyways
-        // when I put into into a Cow (so that we don't confuse self/graph (for
+        // when we put into into a Cow (so that we don't confuse self/graph (for
         // consistencty))
         let graph = self;
 

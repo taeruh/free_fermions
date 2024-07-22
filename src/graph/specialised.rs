@@ -228,17 +228,31 @@ impl SwapRemoveMap {
 }
 
 impl<G: GraphData> Graph<G> {
-    #[inline]
+    #[inline(always)]
     pub fn get_index(&self, label: Label) -> Option<Label> {
         self.0.get_index(label)
     }
-    #[inline]
+    #[inline(always)]
     pub fn enumerate_neighbours(&self) -> impl Iterator<Item = (Label, &Neighbours)> {
         self.0.enumerate_neighbours()
     }
-    #[inline]
+    #[inline(always)]
     pub fn get_label(&self, node: Node) -> Option<Label> {
         self.0.get_label(node)
+    }
+    #[inline(always)]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+    #[inline(always)]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+    #[inline(always)]
+    /// # Safety
+    /// The node/index must be valid.
+    pub unsafe fn get_neighbours_unchecked(&self, node: Node) -> &Neighbours {
+        unsafe { self.0.get_neighbours_unchecked(node) }
     }
 
     /// # Safety
@@ -602,6 +616,7 @@ impl<G: GraphData> Debug for Graph<G> {
     }
 }
 
+pub mod algorithms;
 pub mod data;
 
 #[cfg(test)]

@@ -9,9 +9,9 @@ use petgraph::Direction;
 use super::{
     claw_free::ClawFree,
     modular_decomposition::{NodeIndex, Tree},
-    obstinate::{Obstinate, ObstinateKind},
 };
 use crate::graph::{
+    algorithms::obstinate::{Obstinate, ObstinateKind},
     generic::{Graph, ImplGraph, NodeCollection, NodeCollectionMut},
     Node, VNodes,
 };

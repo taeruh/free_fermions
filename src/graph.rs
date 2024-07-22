@@ -40,6 +40,7 @@ impl InvalidGraph {
 
 pub mod generic;
 pub mod specialised;
+pub mod algorithms;
 
 #[cfg(test)]
 pub mod test_utils {
