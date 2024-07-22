@@ -85,6 +85,10 @@ impl GraphData for Custom {
             .map(|((node, &label), neighbours)| (node, label, neighbours))
     }
 
+    fn iter_neighbours_mut(&mut self) -> impl Iterator<Item = &mut Neighbours> {
+        self.nodes.iter_mut()
+    }
+
     fn pop(&mut self) -> Option<Neighbours> {
         let label = self.labels.pop().unwrap();
         self.invert_labels.remove(&label);

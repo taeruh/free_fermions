@@ -18,8 +18,6 @@ pub(crate) type HNodes = HashSet<Node>;
 #[allow(unused)]
 pub(crate) type HNodeInfo = (Node, HashSet<Node>);
 
-pub mod generic;
-pub mod specialised;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, thiserror::Error)]
 pub enum InvalidGraph {
@@ -39,6 +37,9 @@ impl InvalidGraph {
         }
     }
 }
+
+pub mod generic;
+pub mod specialised;
 
 #[cfg(test)]
 pub mod test_utils {

@@ -19,21 +19,6 @@ use petgraph::{
 use super::{Edge, HNodes, InvalidGraph, Node, VNodes};
 use crate::fix_int::{self, int};
 
-/// Newtype around `impl `[ImplGraph] types that supports foreign traits.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Graph<G = AdjGraph>(G);
-
-impl<G> Graph<G> {
-    pub fn new(graph: G) -> Self {
-        Self(graph)
-    }
-}
-
-/// Marker trait, that promises that the nodes in the graph go from 0 to n-1 without
-/// skipping any values; and when a node is removed, its index place is reused by the last
-/// node (i.e., swap_removed)
-pub trait CompactNodes {}
-
 /// A helper to keep track of swap-removals. Basically has to be used when some nodes to
 /// remove are fixed and then we iterate over them and remove them one by one (cf. default
 /// implemenation of retain nodes).
@@ -55,7 +40,7 @@ impl SwapRemoveMap {
     }
 
     pub fn map(&self, node: int) -> int {
-        self.map[node as usize]
+        self.map[node]
     }
 
     // assert above len > 0
@@ -63,12 +48,28 @@ impl SwapRemoveMap {
     /// some other indexing type which defines the indices which should be valid).
     pub fn swap_remove_unchecked(&mut self, node: int) -> int {
         self.len -= 1;
-        let mapped = self.map[node as usize];
-        self.map[self.position[self.len] as usize] = mapped;
-        self.position.swap(mapped as usize, self.len);
+        let mapped = self.map[node];
+        let position_last = self.position[self.len];
+        self.map[position_last] = mapped;
+        self.position[mapped] = position_last;
         mapped
     }
 }
+
+/// Newtype around `impl `[ImplGraph] types that supports foreign traits.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Graph<G = AdjGraph>(G);
+
+impl<G> Graph<G> {
+    pub fn new(graph: G) -> Self {
+        Self(graph)
+    }
+}
+
+/// Marker trait, that promises that the nodes in the graph go from 0 to n-1 without
+/// skipping any values; and when a node is removed, its index place is reused by the last
+/// node (i.e., swap_removed)
+pub trait CompactNodes {}
 
 // TODO: maybe split this trait using some traits from petgraph (some of them I have to
 // implement anyways, so it might be a good idea to use them directly)
