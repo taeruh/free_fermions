@@ -2,20 +2,16 @@ use std::{
     fmt::{self, Debug},
     mem,
     ops::Range,
-    ptr,
 };
 
 use hashbrown::{HashMap, HashSet};
 
-use super::InvalidGraph;
-use crate::fix_int::int;
+use super::{InvalidGraph, Label, LabelEdge, Node};
 
-const DECIDER__SUBGRAPH_VIA_DELETION_IF_LESS: f64 = 0.5; // otherwise via creation
+const DECIDER_SUBGRAPH_VIA_DELETION_IF_LESS: f64 = 0.5; // otherwise via creation
 
-pub type Node = usize;
-pub type Label = usize;
-pub type Edge = (usize, usize);
 pub type Neighbours = HashSet<Node>;
+pub type LabelNeighbours = HashSet<Label>;
 
 #[derive(Clone)]
 pub struct GraphNode<'a> {
@@ -146,8 +142,8 @@ pub trait GraphDataSpecializerHelper {
 
 #[derive(Clone, Debug)]
 pub struct SwapRemoveMap {
-    map: Vec<int>,
-    position: Vec<int>,
+    map: Vec<Node>,
+    position: Vec<Node>,
     len: usize,
 }
 
@@ -155,7 +151,7 @@ impl SwapRemoveMap {
     #[inline]
     /// Same as `new`, but without the check that `len` is greater than 0.
     pub fn new_unchecked(len: usize) -> Self {
-        let position: Vec<_> = (0..len as int).collect();
+        let position: Vec<_> = (0..len).collect();
         Self {
             map: position.clone(),
             position,
@@ -221,7 +217,7 @@ impl SwapRemoveMap {
         mapped
     }
 
-    pub fn swap_remove(&mut self, node: int) -> int {
+    pub fn swap_remove(&mut self, node: Node) -> Node {
         assert!(node < self.len);
         unsafe { self.swap_remove_unchecked(node) }
     }
@@ -229,11 +225,11 @@ impl SwapRemoveMap {
 
 impl<G: GraphData> Graph<G> {
     #[inline(always)]
-    pub fn get_index(&self, label: Label) -> Option<Label> {
+    pub fn get_index(&self, label: Label) -> Option<Node> {
         self.0.get_index(label)
     }
     #[inline(always)]
-    pub fn enumerate_neighbours(&self) -> impl Iterator<Item = (Label, &Neighbours)> {
+    pub fn enumerate_neighbours(&self) -> impl Iterator<Item = (Node, &Neighbours)> {
         self.0.enumerate_neighbours()
     }
     #[inline(always)]
@@ -257,7 +253,7 @@ impl<G: GraphData> Graph<G> {
 
     /// # Safety
     /// Must not introduce a self-loop.
-    pub unsafe fn add_labelled_edge_unchecked(&mut self, (a, b): Edge) {
+    pub unsafe fn add_labelled_edge_unchecked(&mut self, (a, b): LabelEdge) {
         let a = self.0.get_index_or_insert(a);
         let b = self.0.get_index_or_insert(b);
         unsafe { self.0.get_neighbours_mut_unchecked(a) }.insert(b);
@@ -306,7 +302,7 @@ impl<G: GraphData> Graph<G> {
     /// # Safety
     /// Must not create a graph with self-loops.
     pub unsafe fn from_edge_labels_unchecked(
-        edges: impl IntoIterator<Item = Edge>,
+        edges: impl IntoIterator<Item = LabelEdge>,
     ) -> Self {
         let mut ret = Self::default();
         for edge in edges {
@@ -316,8 +312,8 @@ impl<G: GraphData> Graph<G> {
     }
 
     pub fn from_edge_labels(
-        edges: impl IntoIterator<Item = Edge>,
-    ) -> Result<Self, (UnsafeGraph<G>, InvalidGraph)> {
+        edges: impl IntoIterator<Item = LabelEdge>,
+    ) -> Result<Self, (UnsafeGraph<G>, InvalidGraph<Node>)> {
         // safety: checked below
         let graph = unsafe { Self::from_edge_labels_unchecked(edges) };
         match graph.check() {
@@ -342,7 +338,7 @@ impl<G: GraphData> Graph<G> {
 
     pub fn from_adjacency_labels<A, N>(
         adj: A,
-    ) -> Result<Self, (UnsafeGraph<G>, InvalidGraph)>
+    ) -> Result<Self, (UnsafeGraph<G>, InvalidGraph<Node>)>
     where
         A: IntoIterator<Item = (Label, N)>,
         N: IntoIterator<Item = Label>,
@@ -371,7 +367,7 @@ impl<G: GraphData> Graph<G> {
 
     pub fn from_symmetric_adjancency_labels<A, N>(
         adj: A,
-    ) -> Result<Self, (UnsafeGraph<G>, InvalidGraph)>
+    ) -> Result<Self, (UnsafeGraph<G>, InvalidGraph<Node>)>
     where
         A: IntoIterator<Item = (Label, N)>,
         N: IntoIterator<Item = Label>,
@@ -384,16 +380,15 @@ impl<G: GraphData> Graph<G> {
         }
     }
 
-    pub fn check(&self) -> Result<(), InvalidGraph> {
+    pub fn check(&self) -> Result<(), InvalidGraph<Node>> {
         for (node, neighbours) in self.0.enumerate_neighbours() {
             for &neighbour in neighbours.iter() {
                 if node == neighbour {
-                    return Err(InvalidGraph::SelfLoop(node as int));
+                    return Err(InvalidGraph::SelfLoop(node));
                 }
                 if !self.0.get_neighbours(neighbour).unwrap().contains(&node) {
                     return Err(InvalidGraph::IncompatibleNeighbourhoods(
-                        node as int,
-                        neighbour as int,
+                        node, neighbour,
                     ));
                 }
             }
@@ -469,7 +464,7 @@ impl<G: GraphData> Graph<G> {
         }
     }
 
-    pub fn retain_nodes(&mut self, f: impl Fn(int) -> bool) {
+    pub fn retain_nodes(&mut self, f: impl Fn(Node) -> bool) {
         let mut graph_map = SwapRemoveMap::new(self.0.len());
         for node in self.iter_nodes() {
             if !f(node) {
@@ -523,7 +518,7 @@ impl<G: GraphData> Graph<G> {
         nodes: impl IntoIterator<Item = Node>,
     ) -> Self {
         if subgraph_size as f64
-            <= self.0.len() as f64 * DECIDER__SUBGRAPH_VIA_DELETION_IF_LESS
+            <= self.0.len() as f64 * DECIDER_SUBGRAPH_VIA_DELETION_IF_LESS
         {
             unsafe { self.clone().subgraph_via_deletion(nodes) }
         } else {
@@ -578,7 +573,7 @@ impl<G: GraphData> Graph<G> {
         // }
     }
 
-    pub fn map_to_labels(&self) -> HashMap<Node, Neighbours> {
+    pub fn map_to_labels(&self) -> HashMap<Label, LabelNeighbours> {
         self.0
             .enumerate_neighbours()
             .map(|(node, neighbours)| {
@@ -634,7 +629,7 @@ mod tests {
             (1, [0, 2]),
             (2, [0, 1]),
         );
-        fn _test<G: GraphData>(input: Vec<(Label, Neighbours)>) {
+        fn _test<G: GraphData>(input: Vec<(Label, LabelNeighbours)>) {
             let mut graph = Graph::<G>::from_symmetric_adjancency_labels(input).unwrap();
             println!("{:?}", graph);
             let idx = graph.get_index(1).unwrap();

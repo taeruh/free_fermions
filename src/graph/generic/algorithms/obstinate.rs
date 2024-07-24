@@ -1,12 +1,9 @@
 use std::borrow::Cow;
 
-use crate::{
-    fix_int::enumerate,
-    graph::{
-        algorithms::obstinate::{Obstinate, ObstinateKind},
-        generic::{Graph, ImplGraph, NodeCollection, NodeCollectionRef},
-        Node, VNodes,
-    },
+use crate::graph::{
+    algorithms::obstinate::{Obstinate, ObstinateKind},
+    generic::{Graph, ImplGraph, NodeCollection, NodeCollectionRef},
+    Node,
 };
 
 impl<G: ImplGraph + Clone> Graph<G> {
@@ -29,7 +26,9 @@ impl<G: ImplGraph + Clone> Graph<G> {
         }
         let len2 = len / 2;
 
-        let mut degrees = enumerate!(graph.iter_neighbourhoods())
+        let mut degrees = graph
+            .iter_neighbourhoods()
+            .enumerate()
             .map(|(vertex, neighbours)| (vertex, neighbours.len()))
             .collect::<Vec<_>>();
         degrees.sort_unstable_by_key(|(_, degree)| *degree);
@@ -154,27 +153,22 @@ impl<G: ImplGraph + Clone> Graph<G> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        fix_int::int,
-        graph::generic::{adj::AdjGraph, impl_petgraph::PetGraph},
-    };
+    use crate::graph::{generic::impl_petgraph::PetGraph, int, Label, VLabels};
 
     type Graph = super::Graph<PetGraph>;
 
     mod utils {
         use super::*;
-        use crate::{
-            fix_int::int,
-            graph::{
-                test_utils::{self, RandomMap},
-                VNodeInfo, VNodes,
-            },
+        use crate::graph::{
+            algorithms::obstinate::ObstinateMapped,
+            test_utils::{self, RandomMap},
+            VLabelInfo,
         };
 
         pub fn create_graph(
             map_length: int,
             map_max: int,
-            list: Vec<VNodeInfo>,
+            list: Vec<VLabelInfo>,
             rng: &mut impl Rng,
         ) -> (Graph, RandomMap) {
             let map = RandomMap::new(map_length, map_max, rng);
@@ -186,26 +180,32 @@ mod tests {
 
         pub fn create_expected(
             kind: ObstinateKind,
-            a: VNodes,
-            b: VNodes,
+            a: VLabels,
+            b: VLabels,
             map: RandomMap,
-        ) -> [Obstinate; 2] /* [obstinate, complement obstinate] */ {
+        ) -> [ObstinateMapped; 2] /* [obstinate, complement obstinate] */ {
             // we will need to adjust the expected results to the randomized vertex labels
-            fn adjust_expected(expected: Obstinate, map: &RandomMap) -> Obstinate {
+            fn adjust_expected(
+                expected: ObstinateMapped,
+                map: &RandomMap,
+            ) -> ObstinateMapped {
                 match expected {
-                    Obstinate::True(kind, (mut a, mut b)) => {
+                    ObstinateMapped::True(kind, (mut a, mut b)) => {
                         a.iter_mut().for_each(|node| *node = map.map(*node));
                         b.iter_mut().for_each(|node| *node = map.map(*node));
-                        Obstinate::True(kind, (a, b))
+                        ObstinateMapped::True(kind, (a, b))
                     },
-                    Obstinate::False => Obstinate::False,
+                    ObstinateMapped::False => ObstinateMapped::False,
                 }
             }
 
             [
-                adjust_expected(Obstinate::True(kind, (a.clone(), b.clone())), &map),
                 adjust_expected(
-                    Obstinate::True(
+                    ObstinateMapped::True(kind, (a.clone(), b.clone())),
+                    &map,
+                ),
+                adjust_expected(
+                    ObstinateMapped::True(
                         kind,
                         (b.into_iter().rev().collect(), a.into_iter().rev().collect()),
                     ),
@@ -251,7 +251,10 @@ mod tests {
     // b) I'm not sure yet, whether we want the empty graph to be obstinate or not
     fn true_empty() {
         let (graph, map) = graph!(0, 0, &mut Pcg64::from_entropy(););
-        assert_eq!(graph.obstinate(), expected!(Itself, [], [], map)[0]);
+        assert_eq!(
+            graph.obstinate().map(|n| graph.get_label(n).unwrap()),
+            expected!(Itself, [], [], map)[0]
+        );
     }
 
     #[test]
@@ -264,15 +267,15 @@ mod tests {
         fn test(
             partition_size: int,
             kind: ObstinateKind,
-            a_part_full: Vec<(Node, VNodes)>,
-            b_part_full: Vec<(Node, VNodes)>,
+            a_part_full: Vec<(Label, VLabels)>,
+            b_part_full: Vec<(Label, VLabels)>,
             rng: &mut impl Rng,
         ) {
             let size = partition_size * 2 - 1;
 
-            let mut list: Vec<(Node, VNodes)> = Vec::with_capacity(size as usize);
-            let mut a_part: VNodes = Vec::with_capacity(partition_size as usize);
-            let mut b_part: VNodes = Vec::with_capacity(partition_size as usize);
+            let mut list: Vec<(Label, VLabels)> = Vec::with_capacity(size as usize);
+            let mut a_part: VLabels = Vec::with_capacity(partition_size as usize);
+            let mut b_part: VLabels = Vec::with_capacity(partition_size as usize);
             for (a, b) in a_part_full.into_iter().zip(b_part_full.into_iter()) {
                 a_part.push(a.0);
                 b_part.push(b.0);
@@ -282,11 +285,7 @@ mod tests {
 
             let (graph, map) = create_graph(size, size + 42, list, rng);
             println!("{partition_size}: {:?}", graph);
-            let mut result = graph.obstinate();
-            if let Obstinate::True(_, (a, b)) = &mut result {
-                a.iter_mut().for_each(|node| *node = graph.get_label(*node).unwrap());
-                b.iter_mut().for_each(|node| *node = graph.get_label(*node).unwrap());
-            }
+            let result = graph.obstinate().map(|n| graph.get_label(n).unwrap());
             let expected = create_expected(kind, a_part, b_part, map);
             if !expected.contains(&result) {
                 panic!(

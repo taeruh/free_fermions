@@ -3,17 +3,17 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-use modular_decomposition::{ModuleIndex, ModuleKind};
+use modular_decomposition::ModuleKind;
 use petgraph::Direction;
 
-use super::{
-    claw_free::ClawFree,
-    modular_decomposition::{NodeIndex, Tree},
-};
+use super::claw_free::ClawFree;
 use crate::graph::{
-    algorithms::obstinate::{Obstinate, ObstinateKind},
+    algorithms::{
+        modular_decomposition::{NodeIndex, Tree},
+        obstinate::{Obstinate, ObstinateKind},
+    },
     generic::{Graph, ImplGraph, NodeCollection, NodeCollectionMut},
-    Node, VNodes,
+    Node, VLabels, VNodes,
 };
 
 impl<G: ImplGraph> Graph<G> {
@@ -23,7 +23,7 @@ impl<G: ImplGraph> Graph<G> {
         &self,
         tree: &Tree,
         claw_free: Option<&ClawFree>,
-    ) -> Option<Vec<Vec<VNodes>>> {
+    ) -> Option<Vec<Vec<VLabels>>> {
         let check = if let Some(check) = claw_free {
             Cow::Borrowed(check)
         } else {
@@ -77,7 +77,7 @@ impl<G: ImplGraph> Graph<G> {
         }
     }
 
-    fn prime_simplicial(&self, tree: &Tree) -> Vec<VNodes> {
+    fn prime_simplicial(&self, tree: &Tree) -> Vec<VLabels> {
         // the flat_map onto the modules is unnecessary, because if we are claw-free,
         // these modules would have been cliques, so the twin_collapse would have removed
         // them; however, we keep it here for correctness
@@ -178,7 +178,7 @@ impl<G: ImplGraph> Graph<G> {
         true
     }
 
-    fn series_simplicial(&self, tree: &Tree) -> Vec<VNodes> {
+    fn series_simplicial(&self, tree: &Tree) -> Vec<VLabels> {
         let mut complement = self.clone();
         complement.complement();
         if let Some((a, b)) = complement.try_bipartition() {
@@ -195,7 +195,7 @@ impl<G: ImplGraph> Graph<G> {
                 false
             }
         };
-        let mut ret: Vec<VNodes> = Vec::new();
+        let mut ret: Vec<VLabels> = Vec::new();
         let mut non_trivial_child: Option<NodeIndex> = None;
 
         for child in tree.graph.neighbors_directed(tree.root, Direction::Outgoing) {
@@ -336,7 +336,7 @@ impl<G: ImplGraph> Graph<G> {
     fn map_simplicial_cliques(
         &self,
         cliques: impl IntoIterator<Item = impl IntoIterator<Item = Node>>,
-    ) -> Vec<VNodes> {
+    ) -> Vec<VLabels> {
         cliques
             .into_iter()
             .map(|clique| {

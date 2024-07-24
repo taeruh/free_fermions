@@ -4,31 +4,31 @@ use hashbrown::HashSet;
 use petgraph::{graph::Neighbors, operator, Undirected};
 
 use super::{CompactNodes, HNodes, ImplGraph, Node, NodeCollection, NodeCollectionRef};
-use crate::fix_int::int;
+use crate::graph::{Label, LabelEdge};
 
-pub type NodeIndex = petgraph::graph::NodeIndex<int>; // = int
+pub type NodeIndex = petgraph::graph::NodeIndex<Node>; // = int
 
-pub type PetGraph = petgraph::Graph<Node, (), Undirected, int>;
+pub type PetGraph = petgraph::Graph<Label, (), Undirected, Node>;
 
 impl CompactNodes for PetGraph {}
 
 impl ImplGraph for PetGraph {
     type Nodes = HNodes;
 
-    type Neighbours<'a> = Neighbors<'a, (), int>
+    type Neighbours<'a> = Neighbors<'a, (), Node>
     where
         Self: 'a;
 
-    fn add_labelled_edge(&mut self, (a, b): (Node, Node)) {
+    fn add_labelled_edge(&mut self, (a, b): LabelEdge) {
         let a_idx = insert_node(self, a);
         let b_idx = insert_node(self, b);
         self.update_edge(a_idx, b_idx, ());
         self.update_edge(b_idx, a_idx, ());
     }
 
-    fn add_labelled_node_symmetrically<N: IntoIterator<Item = int>>(
+    fn add_labelled_node_symmetrically<N: IntoIterator<Item = Label>>(
         &mut self,
-        (node, adj): (int, N),
+        (node, adj): (Label, N),
     ) {
         let node_idx = insert_node(self, node);
         for n in adj {
@@ -42,19 +42,19 @@ impl ImplGraph for PetGraph {
         self.node_count()
     }
 
-    fn get_label(&self, node: int) -> Option<int> {
+    fn get_label(&self, node: Node) -> Option<Label> {
         self.node_weight(node.into()).copied()
     }
 
-    fn get_label_mut(&mut self, node: int) -> Option<&mut int> {
+    fn get_label_mut(&mut self, node: Node) -> Option<&mut Label> {
         self.node_weight_mut(node.into())
     }
 
-    fn get_neighbours(&self, node: int) -> Option<Self::Neighbours<'_>> {
+    fn get_neighbours(&self, node: Node) -> Option<Self::Neighbours<'_>> {
         Some(self.neighbors(node.into()))
     }
 
-    fn remove_node(&mut self, node: int) {
+    fn remove_node(&mut self, node: Node) {
         self.remove_node(node.into());
     }
 
@@ -83,44 +83,44 @@ impl ImplGraph for PetGraph {
         self.extend_with_edges(single_edges);
     }
 
-    fn iter_labels_mut(&mut self) -> impl Iterator<Item = &mut Node> {
+    fn iter_labels_mut(&mut self) -> impl Iterator<Item = &mut Label> {
         self.node_weights_mut()
     }
 }
 
-fn insert_node(graph: &mut PetGraph, node: int) -> NodeIndex {
+fn insert_node(graph: &mut PetGraph, label: Label) -> NodeIndex {
     if let Some(idx) = graph
         .node_indices()
-        .find(|idx| *graph.node_weight(*idx).unwrap() == node)
+        .find(|idx| *graph.node_weight(*idx).unwrap() == label)
     {
         idx
     } else {
-        graph.add_node(node)
+        graph.add_node(label)
     }
 }
 
-impl NodeCollection for Neighbors<'_, (), int> {
+impl NodeCollection for Neighbors<'_, (), Node> {
     type Collected = HNodes;
-    type Iter<'a> = Map<Self, fn(NodeIndex) -> int>
+    type Iter<'a> = Map<Self, fn(NodeIndex) -> Node>
     where
         Self: 'a;
 
-    fn contains(&self, e: int) -> bool {
-        self.clone().any(|n| n.index() as int == e)
+    fn contains(&self, e: Node) -> bool {
+        self.clone().any(|n| n.index() == e)
     }
 
     fn iter(&self) -> Self::Iter<'_> {
-        self.clone().map((|e| e.index() as int) as fn(NodeIndex) -> int)
+        self.clone().map((|e| e.index()) as fn(NodeIndex) -> Node)
     }
     fn collect(self) -> Self::Collected {
         self.iter().collect()
     }
 }
 
-impl NodeCollectionRef for Neighbors<'_, (), int> {
-    type Iter = Map<Self, fn(NodeIndex) -> int>;
+impl NodeCollectionRef for Neighbors<'_, (), Node> {
+    type Iter = Map<Self, fn(NodeIndex) -> Node>;
 
     fn iter_ref(self) -> Self::Iter {
-        self.clone().map((|e| e.index() as int) as fn(NodeIndex) -> int)
+        self.clone().map((|e| e.index()) as fn(NodeIndex) -> Node)
     }
 }

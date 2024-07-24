@@ -5,42 +5,48 @@ use crate::fix_int::int;
 
 // some of the following type aliases are not used, but they serve as documentation and
 // orientation for variable names
-pub type Node = int;
+pub type Node = usize;
 pub type Edge = (Node, Node);
 pub type Label = int; // i.e, the weight which is in our case just the label
+pub type LabelEdge = (Label, Label); // i.e, the weight which is in our case just the label
 
 // V for vector
 pub(crate) type VNodes = Vec<Node>;
+pub(crate) type VLabels = Vec<Label>;
 #[allow(unused)]
-pub(crate) type VNodeInfo = (int, Vec<Node>);
+pub(crate) type VNodeInfo = (Node, Vec<Node>);
+#[allow(unused)]
+pub(crate) type VLabelInfo = (Label, Vec<Label>);
 // H for hash
 pub(crate) type HNodes = HashSet<Node>;
 #[allow(unused)]
 pub(crate) type HNodeInfo = (Node, HashSet<Node>);
-
+pub(crate) type HLabels = HashSet<Label>;
+#[allow(unused)]
+pub(crate) type HLabelInfo = (Label, HashSet<Label>);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, thiserror::Error)]
-pub enum InvalidGraph {
+pub enum InvalidGraph<T> {
     #[error("Self loop detected on node {0}")]
-    SelfLoop(int),
+    SelfLoop(T),
     #[error("Incompatible neighbourhoods between the nodes {0} and {1}")]
-    IncompatibleNeighbourhoods(int, int),
+    IncompatibleNeighbourhoods(T, T),
 }
 
-impl InvalidGraph {
-    pub fn map(&self, map: impl Fn(int) -> int) -> Self {
+impl InvalidGraph<Node> {
+    pub fn map(&self, map: impl Fn(Node) -> Label) -> InvalidGraph<Label> {
         match self {
-            Self::SelfLoop(node) => Self::SelfLoop(map(*node)),
+            Self::SelfLoop(node) => InvalidGraph::SelfLoop(map(*node)),
             Self::IncompatibleNeighbourhoods(node, neighbour) => {
-                Self::IncompatibleNeighbourhoods(map(*node), map(*neighbour))
+                InvalidGraph::IncompatibleNeighbourhoods(map(*node), map(*neighbour))
             },
         }
     }
 }
 
+pub mod algorithms;
 pub mod generic;
 pub mod specialised;
-pub mod algorithms;
 
 #[cfg(test)]
 pub mod test_utils {
@@ -54,20 +60,20 @@ pub mod test_utils {
 
     #[derive(Debug, Clone)]
     pub enum RandomMap {
-        Random(Vec<int>),
+        Random(Vec<Label>),
         Identity,
     }
 
     impl RandomMap {
         pub fn new(map_length: int, map_max: int, rng: &mut impl Rng) -> Self {
             assert!(map_max >= map_length);
-            Self::Random((0..=map_max).choose_multiple(rng, map_length + 1))
+            Self::Random((0..=map_max).choose_multiple(rng, map_length as usize + 1))
         }
 
-        pub fn map(&self, node: int) -> int {
+        pub fn map(&self, label: Label) -> Label {
             match self {
-                RandomMap::Random(v) => v[node as usize],
-                RandomMap::Identity => node,
+                RandomMap::Random(v) => v[label as usize],
+                RandomMap::Identity => label,
             }
         }
     }
@@ -89,35 +95,37 @@ pub mod test_utils {
         };
     }
 
-    pub fn adj_hash_hash(map: &RandomMap, list: Vec<VNodeInfo>) -> HashMap<int, HNodes> {
+    pub fn adj_hash_hash(
+        map: &RandomMap,
+        list: Vec<VLabelInfo>,
+    ) -> HashMap<Label, HLabels> {
         adj_map!(map, list)
     }
 
-    pub fn adj_hash_vec(map: &RandomMap, list: Vec<VNodeInfo>) -> HashMap<int, VNodes> {
+    pub fn adj_hash_vec(
+        map: &RandomMap,
+        list: Vec<VLabelInfo>,
+    ) -> HashMap<Label, VLabels> {
         adj_map!(map, list)
     }
 
-    pub fn adj_vec_hash(map: &RandomMap, list: Vec<VNodeInfo>) -> Vec<(int, HNodes)> {
+    pub fn adj_vec_hash(map: &RandomMap, list: Vec<VLabelInfo>) -> Vec<(Label, HLabels)> {
         adj_map!(map, list)
     }
 
-    pub fn adj_vec_vec(map: &RandomMap, list: Vec<VNodeInfo>) -> Vec<(int, VNodes)> {
+    pub fn adj_vec_vec(map: &RandomMap, list: Vec<VLabelInfo>) -> Vec<(Label, VLabels)> {
         adj_map!(map, list)
     }
 
-    // pub fn col_hash_hash(map: &RandomMap, list: Vec<VNodes>) -> HashSet<HNodes> {
-    //     col_map!(map, list)
-    // }
-
-    pub fn col_hash_vec(map: &RandomMap, list: Vec<VNodes>) -> HashSet<VNodes> {
+    pub fn col_hash_vec(map: &RandomMap, list: Vec<VLabels>) -> HashSet<VLabels> {
         col_map!(map, list)
     }
 
-    pub fn col_vec_hash(map: &RandomMap, list: Vec<VNodes>) -> Vec<HNodes> {
+    pub fn col_vec_hash(map: &RandomMap, list: Vec<VLabels>) -> Vec<HLabels> {
         col_map!(map, list)
     }
 
-    pub fn col_vec_vec(map: &RandomMap, list: Vec<VNodes>) -> Vec<VNodes> {
+    pub fn col_vec_vec(map: &RandomMap, list: Vec<VLabels>) -> Vec<VLabels> {
         col_map!(map, list)
     }
 
@@ -142,11 +150,11 @@ pub mod test_utils {
         };
     }
 
-    pub fn edge_hash(map: &RandomMap, list: Vec<(int, int)>) -> HashSet<(int, int)> {
+    pub fn edge_hash(map: &RandomMap, list: Vec<LabelEdge>) -> HashSet<LabelEdge> {
         edge_map!(map, list)
     }
 
-    pub fn edge_vec(map: &RandomMap, list: Vec<(int, int)>) -> Vec<(int, int)> {
+    pub fn edge_vec(map: &RandomMap, list: Vec<LabelEdge>) -> Vec<LabelEdge> {
         edge_map!(map, list)
     }
 
@@ -157,11 +165,13 @@ pub mod test_utils {
     }
     pub(crate) use collect_adj;
 
+    #[allow(unused)]
     macro_rules! collect_col {
         ($([$($neighbor:expr),*],)*) => {
             vec![$(vec![$($neighbor),*],)*]
         };
     }
+    #[allow(unused)]
     pub(crate) use collect_col;
 
     macro_rules! collect {

@@ -16,16 +16,15 @@ use petgraph::{
     Undirected,
 };
 
-use super::{Edge, HNodes, InvalidGraph, Node, VNodes};
-use crate::fix_int::{self, int};
+use super::{Edge, HLabels, HNodes, InvalidGraph, Label, LabelEdge, Node, VNodes};
 
 /// A helper to keep track of swap-removals. Basically has to be used when some nodes to
 /// remove are fixed and then we iterate over them and remove them one by one (cf. default
 /// implemenation of retain nodes).
 #[derive(Clone, Debug)]
 pub struct SwapRemoveMap {
-    map: Vec<int>,
-    position: Vec<int>,
+    map: Vec<Node>,
+    position: Vec<Node>,
     len: usize,
 }
 
@@ -33,20 +32,20 @@ impl SwapRemoveMap {
     pub fn new(len: usize) -> Self {
         assert!(len > 0);
         Self {
-            map: (0..len as int).collect(),
-            position: (0..len as int).collect(),
+            map: (0..len).collect(),
+            position: (0..len).collect(),
             len,
         }
     }
 
-    pub fn map(&self, node: int) -> int {
+    pub fn map(&self, node: Node) -> Node {
         self.map[node]
     }
 
     // assert above len > 0
     /// No bounds checking (usually automatically done since this type only accompanies
     /// some other indexing type which defines the indices which should be valid).
-    pub fn swap_remove_unchecked(&mut self, node: int) -> int {
+    pub fn swap_remove_unchecked(&mut self, node: Node) -> Node {
         self.len -= 1;
         let mapped = self.map[node];
         let position_last = self.position[self.len];
@@ -86,7 +85,7 @@ pub trait CompactNodes {}
 // cheaper (instead of always using the iterator-based from_ methods)
 // pub trait ImplGraph: CompactNodes + Clone {
 pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
-    type Nodes: NodeCollectionMut + IntoIterator<Item = int> + FromIterator<int>;
+    type Nodes: NodeCollectionMut + IntoIterator<Item = Node> + FromIterator<Node>;
     type Neighbours<'a>: NodeCollectionRef + NodeCollection<Collected = Self::Nodes>
     where
         Self: 'a;
@@ -99,14 +98,14 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
     // because they are more intuitive once the graph is created (the labelled version can
     // then be simply implement with the find_node method)
 
-    fn add_labelled_edge(&mut self, edge: Edge);
+    fn add_labelled_edge(&mut self, edge: LabelEdge);
 
-    fn add_labelled_node_symmetrically<N: IntoIterator<Item = int>>(
+    fn add_labelled_node_symmetrically<N: IntoIterator<Item = Label>>(
         &mut self,
-        node_adj: (int, N),
+        node_adj: (Label, N),
     );
 
-    fn from_edge_labels_unchecked(edges: impl IntoIterator<Item = Edge>) -> Self
+    fn from_edge_labels_unchecked(edges: impl IntoIterator<Item = LabelEdge>) -> Self
     where
         Self: Sized,
     {
@@ -119,8 +118,8 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
 
     fn from_adjacency_labels_unchecked<A, N>(adj: A) -> Self
     where
-        A: IntoIterator<Item = (int, N)>,
-        N: IntoIterator<Item = int>,
+        A: IntoIterator<Item = (Label, N)>,
+        N: IntoIterator<Item = Label>,
     {
         let mut ret = Self::default();
         for node_adj in adj {
@@ -131,15 +130,15 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
 
     fn from_symmetric_adjacency_labels_unchecked<A, N>(adj: A) -> Self
     where
-        A: IntoIterator<Item = (int, N)>,
-        N: IntoIterator<Item = int>,
+        A: IntoIterator<Item = (Label, N)>,
+        N: IntoIterator<Item = Label>,
     {
         Self::from_adjacency_labels_unchecked(adj)
     }
 
     fn from_edge_labels(
-        edges: impl IntoIterator<Item = Edge>,
-    ) -> Result<Self, (Self, InvalidGraph)>
+        edges: impl IntoIterator<Item = LabelEdge>,
+    ) -> Result<Self, (Self, InvalidGraph<Node>)>
     where
         Self: Sized,
     {
@@ -150,10 +149,10 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
         }
     }
 
-    fn from_adjacency_labels<A, N>(adj: A) -> Result<Self, (Self, InvalidGraph)>
+    fn from_adjacency_labels<A, N>(adj: A) -> Result<Self, (Self, InvalidGraph<Node>)>
     where
-        A: IntoIterator<Item = (int, N)>,
-        N: IntoIterator<Item = int>,
+        A: IntoIterator<Item = (Label, N)>,
+        N: IntoIterator<Item = Label>,
         Self: Sized,
     {
         let graph = Self::from_adjacency_labels_unchecked(adj);
@@ -163,10 +162,12 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
         }
     }
 
-    fn from_symmetric_adjacency_labels<A, N>(adj: A) -> Result<Self, (Self, InvalidGraph)>
+    fn from_symmetric_adjacency_labels<A, N>(
+        adj: A,
+    ) -> Result<Self, (Self, InvalidGraph<Node>)>
     where
-        A: IntoIterator<Item = (int, N)>,
-        N: IntoIterator<Item = int>,
+        A: IntoIterator<Item = (Label, N)>,
+        N: IntoIterator<Item = Label>,
         Self: Sized,
     {
         let graph = Self::from_symmetric_adjacency_labels_unchecked(adj);
@@ -203,17 +204,17 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
         self.len() == 0
     }
 
-    fn get_label(&self, node: int) -> Option<int>;
+    fn get_label(&self, node: Node) -> Option<Label>;
 
-    fn get_label_mut(&mut self, node: int) -> Option<&mut int>;
+    fn get_label_mut(&mut self, node: Node) -> Option<&mut Label>;
 
-    fn get_neighbours(&self, node: int) -> Option<Self::Neighbours<'_>>;
+    fn get_neighbours(&self, node: Node) -> Option<Self::Neighbours<'_>>;
 
     // fn get_neighbours_mut(&mut self, node: int) -> Option<&mut Self::Nodes>;
 
-    fn remove_node(&mut self, node: int);
+    fn remove_node(&mut self, node: Node);
 
-    fn remove_labelled_node(&mut self, label: int) {
+    fn remove_labelled_node(&mut self, label: Label) {
         self.remove_node(self.find_node(label).unwrap());
     }
 
@@ -227,7 +228,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
     // }
 
     /// Default implementation uses [Self::remove_node]
-    fn retain_nodes(&mut self, f: impl Fn(int) -> bool) {
+    fn retain_nodes(&mut self, f: impl Fn(Node) -> bool) {
         let mut graph_map = SwapRemoveMap::new(self.len());
         for node in self.iter_nodes() {
             if !f(node) {
@@ -278,9 +279,8 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
     where
         Self: Sized,
     {
-        if fix_int::to_float(nodes.len() as int)
-            < 0.6 * fix_int::to_float(self.len() as int)
-        {
+        // int=u32::MAX = 4294967295 < 1.7976931348623157e308 = f64::MAX
+        if (nodes.len() as f64) < (0.6 * self.len() as f64) {
             self.subgraph_by_adding(nodes)
         } else {
             self.subgraph_by_removing(nodes)
@@ -291,9 +291,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
     where
         Self: Sized,
     {
-        if fix_int::to_float(nodes.len() as int)
-            < 0.6 * fix_int::to_float(self.len() as int)
-        {
+        if (nodes.len() as f64) < (0.6 * self.len() as f64) {
             self.subgraph_by_adding(nodes)
         } else {
             self.clone().subgraph_by_removing(nodes)
@@ -317,14 +315,14 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
         0..self.len() as Node
     }
 
-    fn iter_labels(&self) -> impl Iterator<Item = Node> + Clone {
+    fn iter_labels(&self) -> impl Iterator<Item = Label> + Clone {
         self.iter_nodes()
             .map(|node| self.get_label(node).expect("invalid node"))
     }
 
-    fn iter_labels_mut(&mut self) -> impl Iterator<Item = &mut Node>;
+    fn iter_labels_mut(&mut self) -> impl Iterator<Item = &mut Label>;
 
-    fn iter_with_labels(&self) -> impl Iterator<Item = (Node, Node)> + Clone {
+    fn iter_with_labels(&self) -> impl Iterator<Item = (Node, Label)> + Clone {
         self.iter_nodes()
             .map(|node| (node, self.get_label(node).expect("invalid node")))
     }
@@ -352,7 +350,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
     // }
 
     /// Check whether it is a valid graph description.
-    fn check(&self) -> Result<(), InvalidGraph> {
+    fn check(&self) -> Result<(), InvalidGraph<Node>> {
         for (node, neighbours) in self.iter_with_neighbourhoods() {
             for neighbour in neighbours.iter_ref() {
                 if node == neighbour {
@@ -368,7 +366,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
         Ok(())
     }
 
-    fn map_to_labels(&self) -> HashMap<Node, HNodes> {
+    fn map_to_labels(&self) -> HashMap<Label, HLabels> {
         self.iter_with_neighbourhoods()
             .map(|(node, neighbours)| {
                 (
@@ -379,7 +377,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
             .collect()
     }
 
-    fn find_node(&self, label: int) -> Option<Node> {
+    fn find_node(&self, label: Label) -> Option<Node> {
         self.iter_with_labels()
             .find_map(|(n, l)| if l == label { Some(n) } else { None })
     }
@@ -391,18 +389,18 @@ impl<G: ImplGraph> ImplGraph for Graph<G> {
     type Nodes = G::Nodes;
     type Neighbours<'a> = G::Neighbours<'a> where Self: 'a;
     #[inline]
-    fn add_labelled_edge(&mut self, edge: Edge) {
+    fn add_labelled_edge(&mut self, edge: LabelEdge) {
         self.0.add_labelled_edge(edge)
     }
     #[inline]
-    fn add_labelled_node_symmetrically<N: IntoIterator<Item = int>>(
+    fn add_labelled_node_symmetrically<N: IntoIterator<Item = Label>>(
         &mut self,
-        node_adj: (int, N),
+        node_adj: (Label, N),
     ) {
         self.0.add_labelled_node_symmetrically(node_adj)
     }
     #[inline]
-    fn from_edge_labels_unchecked(edges: impl IntoIterator<Item = Edge>) -> Self
+    fn from_edge_labels_unchecked(edges: impl IntoIterator<Item = LabelEdge>) -> Self
     where
         Self: Sized,
     {
@@ -411,8 +409,8 @@ impl<G: ImplGraph> ImplGraph for Graph<G> {
     #[inline]
     fn from_adjacency_labels_unchecked<A, N>(adj: A) -> Self
     where
-        A: IntoIterator<Item = (int, N)>,
-        N: IntoIterator<Item = int>,
+        A: IntoIterator<Item = (Label, N)>,
+        N: IntoIterator<Item = Label>,
     {
         Self(G::from_adjacency_labels_unchecked(adj))
     }
@@ -425,15 +423,15 @@ impl<G: ImplGraph> ImplGraph for Graph<G> {
         self.0.is_empty()
     }
     #[inline]
-    fn get_label(&self, node: int) -> Option<int> {
+    fn get_label(&self, node: Node) -> Option<Label> {
         self.0.get_label(node)
     }
     #[inline]
-    fn get_label_mut(&mut self, node: int) -> Option<&mut int> {
+    fn get_label_mut(&mut self, node: Node) -> Option<&mut Label> {
         self.0.get_label_mut(node)
     }
     #[inline]
-    fn get_neighbours(&self, node: int) -> Option<Self::Neighbours<'_>> {
+    fn get_neighbours(&self, node: Node) -> Option<Self::Neighbours<'_>> {
         self.0.get_neighbours(node)
     }
     // #[inline]
@@ -441,11 +439,11 @@ impl<G: ImplGraph> ImplGraph for Graph<G> {
     //     self.0.get_neighbours_mut(node)
     // }
     #[inline]
-    fn remove_node(&mut self, node: int) {
+    fn remove_node(&mut self, node: Node) {
         self.0.remove_node(node);
     }
     #[inline]
-    fn retain_nodes(&mut self, f: impl Fn(int) -> bool) {
+    fn retain_nodes(&mut self, f: impl Fn(Node) -> bool) {
         self.0.retain_nodes(f)
     }
     #[inline]
@@ -471,19 +469,19 @@ impl<G: ImplGraph> ImplGraph for Graph<G> {
         self.0.set_is_independent(subset)
     }
     #[inline]
-    fn iter_nodes(&self) -> Range<int> {
+    fn iter_nodes(&self) -> Range<Node> {
         self.0.iter_nodes()
     }
     #[inline]
-    fn iter_labels(&self) -> impl Iterator<Item = int> + Clone {
+    fn iter_labels(&self) -> impl Iterator<Item = Label> + Clone {
         self.0.iter_labels()
     }
     #[inline]
-    fn iter_labels_mut(&mut self) -> impl Iterator<Item = &mut int> {
+    fn iter_labels_mut(&mut self) -> impl Iterator<Item = &mut Label> {
         self.0.iter_labels_mut()
     }
     #[inline]
-    fn iter_with_labels(&self) -> impl Iterator<Item = (int, int)> + Clone {
+    fn iter_with_labels(&self) -> impl Iterator<Item = (Node, Label)> + Clone {
         self.0.iter_with_labels()
     }
     // #[inline]
@@ -501,7 +499,7 @@ impl<G: ImplGraph> ImplGraph for Graph<G> {
     #[inline]
     fn iter_with_neighbourhoods(
         &self,
-    ) -> impl Iterator<Item = (int, Self::Neighbours<'_>)> + Clone {
+    ) -> impl Iterator<Item = (Node, Self::Neighbours<'_>)> + Clone {
         self.0.iter_with_neighbourhoods()
     }
     // #[inline]
@@ -538,7 +536,7 @@ impl<G: ImplGraph> ImplGraph for Graph<G> {
 
 // needed for modular-decomposition: {{{
 impl<G: ImplGraph> GraphBase for Graph<G> {
-    type NodeId = int;
+    type NodeId = Node;
     type EdgeId = Edge;
 }
 
@@ -555,11 +553,11 @@ impl<G: ImplGraph> NodeIndexable for Graph<G> {
     }
 
     fn to_index(&self, a: Self::NodeId) -> usize {
-        a as usize
+        a
     }
 
     fn from_index(&self, i: usize) -> Self::NodeId {
-        i.try_into().expect("index out of bounds")
+        i
     }
 }
 
@@ -581,11 +579,11 @@ impl<G: ImplGraph> GraphProp for Graph<G> {
 pub trait NodeCollection: Clone + Debug {
     type Collected: NodeCollectionMut;
 
-    type Iter<'a>: Iterator<Item = int> + Clone
+    type Iter<'a>: Iterator<Item = Node> + Clone
     where
         Self: 'a;
 
-    fn contains(&self, e: int) -> bool;
+    fn contains(&self, e: Node) -> bool;
 
     fn iter(&self) -> Self::Iter<'_>;
 
@@ -597,7 +595,7 @@ pub trait NodeCollection: Clone + Debug {
         self.len() == 0
     }
 
-    fn intersection<'a>(&'a self, other: &'a Self) -> impl Iterator<Item = int> + 'a {
+    fn intersection<'a>(&'a self, other: &'a Self) -> impl Iterator<Item = Node> + 'a {
         self.iter_ref().filter(|n| other.contains(*n))
     }
 
@@ -605,7 +603,7 @@ pub trait NodeCollection: Clone + Debug {
 }
 
 pub trait NodeCollectionRef {
-    type Iter: Iterator<Item = int> + Clone;
+    type Iter: Iterator<Item = Node> + Clone;
 
     fn iter_ref(self) -> Self::Iter;
 }
@@ -622,7 +620,7 @@ impl<'a, T: NodeCollection> NodeCollection for &'a T {
     type Collected = T::Collected;
     type Iter<'b> = T::Iter<'b> where Self: 'b;
     #[inline]
-    fn contains(&self, e: int) -> bool {
+    fn contains(&self, e: Node) -> bool {
         (*self).contains(e)
     }
     #[inline]
@@ -638,7 +636,7 @@ impl<'a, T: NodeCollection> NodeCollection for &'a T {
         (*self).is_empty()
     }
     #[inline]
-    fn intersection<'b>(&'b self, other: &'b Self) -> impl Iterator<Item = int> + 'b {
+    fn intersection<'b>(&'b self, other: &'b Self) -> impl Iterator<Item = Node> + 'b {
         (*self).intersection(other)
     }
     #[inline]
@@ -651,22 +649,22 @@ impl<'a, T: NodeCollection> NodeCollection for &'a T {
 // this in the associated type of Graph), so that I could implement it for (mut)
 // references if needed
 pub trait NodeCollectionMut: NodeCollection {
-    fn remove(&mut self, e: int) -> Option<int>;
+    fn remove(&mut self, e: Node) -> Option<Node>;
 
-    fn insert(&mut self, e: int);
+    fn insert(&mut self, e: Node);
 }
 
 impl NodeCollection for VNodes {
     type Collected = VNodes;
-    type Iter<'a> = iter::Copied<slice::Iter<'a, int>>;
-    fn contains(&self, e: int) -> bool {
-        <[int]>::contains(self, &e)
+    type Iter<'a> = iter::Copied<slice::Iter<'a, Node>>;
+    fn contains(&self, e: Node) -> bool {
+        <[Node]>::contains(self, &e)
     }
     fn iter(&self) -> Self::Iter<'_> {
-        <[int]>::iter(self).copied()
+        <[Node]>::iter(self).copied()
     }
     fn len(&self) -> usize {
-        <[int]>::len(self)
+        <[Node]>::len(self)
     }
     fn collect(self) -> Self::Collected {
         self
@@ -674,29 +672,29 @@ impl NodeCollection for VNodes {
 }
 
 impl NodeCollectionMut for VNodes {
-    fn remove(&mut self, e: int) -> Option<int> {
+    fn remove(&mut self, e: Node) -> Option<Node> {
         let len = self.len();
-        if e >= len as int {
+        if e >= len as Node {
             return None;
         }
         // copy-paste code from Vec::swap_remove
         unsafe {
-            let value = ptr::read(self.as_ptr().add(e as usize));
+            let value = ptr::read(self.as_ptr().add(e));
             let base_ptr = self.as_mut_ptr();
-            ptr::copy(base_ptr.add(len - 1), base_ptr.add(e as usize), 1);
+            ptr::copy(base_ptr.add(len - 1), base_ptr.add(e), 1);
             self.set_len(len - 1);
             Some(value)
         }
     }
-    fn insert(&mut self, e: int) {
+    fn insert(&mut self, e: Node) {
         self.push(e);
     }
 }
 
 impl NodeCollection for HNodes {
     type Collected = HNodes;
-    type Iter<'a> = Copied<hash_set::Iter<'a, int>>;
-    fn contains(&self, e: int) -> bool {
+    type Iter<'a> = Copied<hash_set::Iter<'a, Node>>;
+    fn contains(&self, e: Node) -> bool {
         HashSet::contains(self, &e)
     }
     fn iter(&self) -> Self::Iter<'_> {
@@ -705,7 +703,7 @@ impl NodeCollection for HNodes {
     fn len(&self) -> usize {
         HashSet::len(self)
     }
-    fn intersection<'a>(&'a self, other: &'a Self) -> impl Iterator<Item = int> + 'a {
+    fn intersection<'a>(&'a self, other: &'a Self) -> impl Iterator<Item = Node> + 'a {
         HashSet::intersection(self, other).copied()
     }
     fn collect(self) -> Self::Collected {
@@ -713,10 +711,10 @@ impl NodeCollection for HNodes {
     }
 }
 impl NodeCollectionMut for HNodes {
-    fn remove(&mut self, e: int) -> Option<int> {
+    fn remove(&mut self, e: Node) -> Option<Node> {
         HashSet::take(self, &e)
     }
-    fn insert(&mut self, e: int) {
+    fn insert(&mut self, e: Node) {
         HashSet::insert(self, e);
     }
 }

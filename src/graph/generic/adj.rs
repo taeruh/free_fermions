@@ -3,10 +3,7 @@ use std::{collections::HashMap, mem};
 use hashbrown::HashSet;
 
 use super::{CompactNodes, ImplGraph, NodeCollection};
-use crate::{
-    fix_int::{enumerate, int},
-    graph::{Edge, HNodes, Label, Node},
-};
+use crate::graph::{HNodes, Label, LabelEdge, Node};
 
 pub type Neighbourhood = HashSet<Node>;
 
@@ -17,7 +14,7 @@ pub struct AdjGraph {
     // reading the graph
     pub nodes: Vec<Neighbourhood>,
     pub labels: Vec<Label>,
-    pub invert_labels: HashMap<Label, usize>,
+    pub invert_labels: HashMap<Label, Node>,
 }
 
 impl CompactNodes for AdjGraph {}
@@ -28,29 +25,29 @@ impl ImplGraph for AdjGraph {
     type Nodes = HNodes;
     type Neighbours<'a> = &'a Self::Nodes where Self: 'a;
 
-    fn add_labelled_edge(&mut self, (a, b): Edge) {
+    fn add_labelled_edge(&mut self, (a, b): LabelEdge) {
         let idxa = self.insert(a);
         let idxb = self.insert(b);
-        self.nodes[idxa].insert(idxb as int);
-        self.nodes[idxb].insert(idxa as int);
+        self.nodes[idxa].insert(idxb);
+        self.nodes[idxb].insert(idxa);
     }
 
-    fn add_labelled_node_symmetrically<N: IntoIterator<Item = int>>(
+    fn add_labelled_node_symmetrically<N: IntoIterator<Item = Label>>(
         &mut self,
-        (node, adj): (int, N),
+        (node, adj): (Label, N),
     ) {
         let idx = self.insert(node);
         for neighbour in adj {
             let idx_neighbour = self.insert(neighbour);
-            self.nodes[idx].insert(idx_neighbour as int);
-            self.nodes[idx_neighbour].insert(idx as int);
+            self.nodes[idx].insert(idx_neighbour);
+            self.nodes[idx_neighbour].insert(idx);
         }
     }
 
     fn from_symmetric_adjacency_labels_unchecked<A, N>(adj: A) -> Self
     where
-        A: IntoIterator<Item = (int, N)>,
-        N: IntoIterator<Item = int>,
+        A: IntoIterator<Item = (Label, N)>,
+        N: IntoIterator<Item = Label>,
     {
         let mut ret = Self::default();
         for (node, neighbourhood) in adj {
@@ -59,7 +56,7 @@ impl ImplGraph for AdjGraph {
             let idx = ret.insert(node);
             for neighbour in neighbourhood {
                 let idx_neighbour = ret.insert(neighbour);
-                ret.nodes[idx].insert(idx_neighbour as int);
+                ret.nodes[idx].insert(idx_neighbour);
             }
         }
         ret
@@ -69,35 +66,35 @@ impl ImplGraph for AdjGraph {
         self.nodes.len()
     }
 
-    fn get_label(&self, node: int) -> Option<int> {
-        self.labels.get(node as usize).copied()
+    fn get_label(&self, node: Node) -> Option<Label> {
+        self.labels.get(node).copied()
     }
 
-    fn get_label_mut(&mut self, node: int) -> Option<&mut int> {
-        self.labels.get_mut(node as usize)
+    fn get_label_mut(&mut self, node: Node) -> Option<&mut Label> {
+        self.labels.get_mut(node)
     }
 
-    fn get_neighbours(&self, node: int) -> Option<&Neighbourhood> {
-        self.nodes.get(node as usize)
+    fn get_neighbours(&self, node: Node) -> Option<&Neighbourhood> {
+        self.nodes.get(node)
     }
 
     // fn get_neighbours_mut(&mut self, node: int) -> Option<&mut Neighbourhood> {
     //     self.nodes.get_mut(node as usize)
     // }
 
-    fn remove_node(&mut self, node: int) {
-        let len = self.nodes.len() as int;
+    fn remove_node(&mut self, node: Node) {
+        let len = self.nodes.len();
         assert!(len > 0, "cannot remove from empty graph");
-        let last_node = len as int - 1;
+        let last_node = len - 1;
 
-        self.invert_labels.remove(&self.labels[node as usize]).unwrap();
+        self.invert_labels.remove(&self.labels[node]).unwrap();
 
         // if last node, we can simply pop it
         if node == last_node {
             let neighbours = self.nodes.pop().unwrap();
             self.labels.pop().unwrap();
             for neighbour in neighbours {
-                self.nodes[neighbour as usize].remove(&node);
+                self.nodes[neighbour].remove(&node);
             }
             return;
         }
@@ -106,25 +103,24 @@ impl ImplGraph for AdjGraph {
         //
         // do not swap_remove yet, because the node might have a neighbour in the last
         // node
-        let node_neighbours = mem::take(self.nodes.get_mut(node as usize).unwrap());
+        let node_neighbours = mem::take(self.nodes.get_mut(node).unwrap());
         for neighbour in node_neighbours {
-            self.nodes[neighbour as usize].remove(&node);
+            self.nodes[neighbour].remove(&node);
         }
-        let last_node_neighbours = self.nodes[last_node as usize].clone();
+        let last_node_neighbours = self.nodes[last_node].clone();
         for neighbour in last_node_neighbours.iter() {
-            let neighbours = &mut self.nodes[*neighbour as usize];
+            let neighbours = &mut self.nodes[*neighbour];
             neighbours.insert(node);
             neighbours.remove(&last_node);
         }
-        self.nodes.swap_remove(node as usize);
-        *self.invert_labels.get_mut(&self.labels[last_node as usize]).unwrap() =
-            node as usize;
-        self.labels.swap_remove(node as usize);
+        self.nodes.swap_remove(node);
+        *self.invert_labels.get_mut(&self.labels[last_node]).unwrap() = node;
+        self.labels.swap_remove(node);
     }
 
     fn complement(&mut self) {
         let nodes = self.iter_nodes().collect::<Vec<_>>();
-        for (node, neighbours) in enumerate!(self.nodes.iter_mut()) {
+        for (node, neighbours) in self.nodes.iter_mut().enumerate() {
             let mut neighbourhood_to_complement = mem::take(neighbours);
             neighbourhood_to_complement.insert(node); // no self loops in the complement
             for other in nodes.iter() {
@@ -145,16 +141,10 @@ impl ImplGraph for AdjGraph {
 }
 
 impl AdjGraph {
-    fn insert(
-        &mut self,
-        // nodes: &mut Vec<Neighbourhood>,
-        // labels: &mut Vec<Label>,
-        // invert_labels: &mut HashMap<Label, usize>,
-        node: Node,
-    ) -> usize {
-        *self.invert_labels.entry(node).or_insert_with(|| {
+    fn insert(&mut self, label: Label) -> Node {
+        *self.invert_labels.entry(label).or_insert_with(|| {
             self.nodes.push(HashSet::new());
-            self.labels.push(node);
+            self.labels.push(label);
             self.nodes.len() - 1
         })
     }
@@ -165,12 +155,12 @@ impl AdjGraph {
         // in one loop
         let nodes = self.iter_nodes().collect::<Vec<_>>();
         for node in nodes {
-            let neighbours = self.nodes.get_mut(node as usize).unwrap();
+            let neighbours = self.nodes.get_mut(node).unwrap();
             neighbours.remove(&node);
             // PERF: have to clone here
             for neighbour in neighbours.clone() {
-                if !self.nodes.get(neighbour as usize).unwrap().contains(&node) {
-                    self.nodes.get_mut(neighbour as usize).unwrap().insert(node);
+                if !self.nodes.get(neighbour).unwrap().contains(&node) {
+                    self.nodes.get_mut(neighbour).unwrap().insert(node);
                 }
             }
         }
@@ -187,15 +177,6 @@ mod tests {
 
     #[test]
     fn from_adj() {
-        let list = collect!(vv; (1, [2, 3]), (2, [1, 3]), (3, [1, 2]),);
-        let expected_nodes = collect!(vh; [1, 2], [0, 2], [0, 1],);
-        let graph = AdjGraph::from_adjacency_labels(list).unwrap();
-        assert_eq!(
-            graph.iter_neighbourhoods().cloned().collect::<Vec<_>>(),
-            expected_nodes
-        );
-        assert_eq!(graph.iter_labels().collect::<Vec<_>>(), vec![1, 2, 3]);
-
         let list = collect!(vv; (2, [3]), (1, [3]), (3, [1, 2]),);
         let expected_graph = HashMap::from_iter(
             list.clone().into_iter().map(|(a, b)| (a, HashSet::from_iter(b))),

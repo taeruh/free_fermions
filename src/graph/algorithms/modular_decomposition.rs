@@ -3,16 +3,14 @@ use std::collections::{HashMap, HashSet};
 use modular_decomposition::ModuleKind;
 use petgraph::{graph::DiGraph, Direction};
 
-use crate::{
-    fix_int::int,
-    graph::{
-        generic::{Graph, ImplGraph},
-        Node,
-    },
+use crate::graph::{
+    generic::{Graph, ImplGraph},
+    Label, Node,
 };
 
-pub type NodeIndex = petgraph::graph::NodeIndex<u32>; // = int
-pub type TreeGraph = DiGraph<ModuleKind<int>, ()>;
+pub type NodeIndex = petgraph::graph::NodeIndex<u32>;
+
+pub type TreeGraph = DiGraph<ModuleKind<Node>, ()>;
 
 #[derive(Debug, Clone, Default)]
 pub struct Tree {
@@ -183,7 +181,7 @@ impl Tree {
         &'a self,
         graph: &'a impl ImplGraph,
         node: NodeIndex,
-    ) -> impl Iterator<Item = int> + 'a {
+    ) -> impl Iterator<Item = Label> + 'a {
         self.graph
             .neighbors_directed(node, Direction::Outgoing)
             .filter_map(|child| {
@@ -198,7 +196,7 @@ impl Tree {
     fn get_leaves_with_inverted_map(
         &self,
         graph: &impl ImplGraph,
-    ) -> HashMap<int, NodeIndex> {
+    ) -> HashMap<Label, NodeIndex> {
         self.graph
             .node_indices()
             .filter_map(|node| {

@@ -1,10 +1,9 @@
 use modular_decomposition::ModuleKind;
 use petgraph::Direction;
 
-use super::modular_decomposition::{NodeIndex, Tree, TreeGraph};
-use crate::{
-    fix_int::int,
-    graph::generic::{Graph, ImplGraph, SwapRemoveMap},
+use crate::graph::{
+    algorithms::modular_decomposition::{NodeIndex, Tree, TreeGraph},
+    generic::{Graph, ImplGraph, SwapRemoveMap},
 };
 
 impl<G: ImplGraph> Graph<G> {
@@ -94,6 +93,7 @@ mod tests {
     use crate::graph::{
         generic::adj::AdjGraph,
         test_utils::{collect, RandomMap},
+        Label,
     };
 
     #[test]
@@ -117,8 +117,8 @@ mod tests {
 
     fn check<A, N>(input: A, collapsed: impl IntoIterator<Item = A>)
     where
-        A: IntoIterator<Item = (int, N)>,
-        N: IntoIterator<Item = int>,
+        A: IntoIterator<Item = (Label, N)>,
+        N: IntoIterator<Item = Label>,
     {
         let mut graph = Graph::<AdjGraph>::from_adjacency_labels(input).unwrap();
         let expected: Vec<Graph> = collapsed

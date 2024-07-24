@@ -1,15 +1,11 @@
 use modular_decomposition::ModuleKind;
 use petgraph::Direction;
 
-use super::modular_decomposition::{NodeIndex, Tree};
 use crate::{
-    fix_int::int,
     graph::{
-        generic::{
-            algorithms::modular_decomposition::TreeGraph, Graph, ImplGraph,
-            NodeCollection,
-        },
-        Node,
+        algorithms::modular_decomposition::{NodeIndex, Tree, TreeGraph},
+        generic::{Graph, ImplGraph, NodeCollection},
+        int, Label, Node,
     },
     mat_mul::Matrix,
 };
@@ -44,16 +40,16 @@ pub enum StructureFail {
     PrimeNonClique(NodeIndex),
     SeriesPrimeNonClique(NodeIndex, NodeIndex),
     SeriesParallelNonClique(NodeIndex, NodeIndex),
-    SeriesParallelCount(NodeIndex, int),
+    SeriesParallelCount(NodeIndex, Node),
     ParallelPrimeNonClique(NodeIndex, NodeIndex),
     ParallelSeriesPrimeNonClique(NodeIndex, NodeIndex, NodeIndex),
     ParallelSeriesParallelNonClique(NodeIndex, NodeIndex, NodeIndex),
-    ParallelSeriesParallelCount(NodeIndex, NodeIndex, int),
+    ParallelSeriesParallelCount(NodeIndex, NodeIndex, Node),
 }
 
 #[derive(Debug, Clone)]
 pub struct Triangles {
-    pub indices: Vec<Node>,
+    pub indices: Vec<Label>,
     pub counts: Vec<int>,
 }
 
@@ -101,7 +97,7 @@ impl<G: ImplGraph> Graph<G> {
                     if c != 0 {
                         return ClawFree::No(FailKind::SeriesCase(Triangles {
                             indices,
-                            counts,
+                            counts: counts.into_iter().map(|c| c as int).collect(),
                         }));
                     }
                 }
@@ -280,7 +276,10 @@ impl<G: ImplGraph> Graph<G> {
                 if c != 0 {
                     return ClawFreeNaive::No(Claw {
                         center: node,
-                        leaves: Triangles { indices, counts },
+                        leaves: Triangles {
+                            indices,
+                            counts: counts.into_iter().map(|c| c as int).collect(),
+                        },
                     });
                 }
             }
@@ -289,7 +288,7 @@ impl<G: ImplGraph> Graph<G> {
     }
 }
 
-fn to_matrix<G: ImplGraph>(graph: &Graph<G>) -> (Vec<Node>, Matrix) {
+fn to_matrix<G: ImplGraph>(graph: &Graph<G>) -> (Vec<Label>, Matrix) {
     let len = graph.len();
     let mut array = vec![0; len * len];
     let mut indices = Vec::with_capacity(len);
@@ -381,8 +380,8 @@ mod tests {
         );
         let mut graph = AdjGraph::from_adjacency_labels(data.clone()).unwrap();
         let mut tree = graph.modular_decomposition();
-        let mut pgraph = PetGraph::from_adjacency_labels(data).unwrap();
-        let mut ptree = pgraph.modular_decomposition();
+        let pgraph = PetGraph::from_adjacency_labels(data).unwrap();
+        let ptree = pgraph.modular_decomposition();
         println!("{:?}", graph);
         println!("{:?}", tree);
         println!("naive: {:?}", graph.is_claw_free_naive());
