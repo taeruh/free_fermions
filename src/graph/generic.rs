@@ -381,6 +381,10 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
         self.iter_with_labels()
             .find_map(|(n, l)| if l == label { Some(n) } else { None })
     }
+
+    fn get_label_mapping(&self) -> impl Fn(Node) -> Label + Copy {
+        |n| self.get_label(n).unwrap()
+    }
 }
 
 impl<G: CompactNodes> CompactNodes for Graph<G> {}

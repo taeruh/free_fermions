@@ -130,7 +130,12 @@ mod tests {
         graph.twin_collapse(&mut tree);
 
         let sanity_tree = graph.modular_decomposition();
-        assert!(Tree::is_equivalent(&tree, &sanity_tree, &graph, &graph));
+        assert!(Tree::is_equivalent(
+            &tree,
+            &sanity_tree,
+            graph.get_label_mapping(),
+            graph.get_label_mapping()
+        ));
 
         let mapped_graph = graph.map_to_labels();
         let equivalent_graph: &Graph = expected
@@ -138,7 +143,12 @@ mod tests {
             .find(|graph| graph.map_to_labels() == mapped_graph)
             .unwrap();
         let equivalent_tree = equivalent_graph.modular_decomposition();
-        assert!(Tree::is_equivalent(&tree, &equivalent_tree, &graph, equivalent_graph));
+        assert!(Tree::is_equivalent(
+            &tree,
+            &equivalent_tree,
+            graph.get_label_mapping(),
+            equivalent_graph.get_label_mapping()
+        ));
     }
 
     #[test]

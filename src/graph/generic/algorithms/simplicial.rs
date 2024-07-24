@@ -55,12 +55,12 @@ impl<G: ImplGraph> Graph<G> {
                             // not really efficient here (e.g., instead of re-doing the
                             // modular partition for the subtree, we could just take the
                             // subtree and update the labels)
-                            let graph = self.subgraph(&tree.module_nodes(child));
+                            let graph = self.subgraph(&tree.module_nodes(child, None));
                             let tree = graph.modular_decomposition();
                             ret.push(graph.prime_simplicial(&tree));
                         },
                         modular_decomposition::ModuleKind::Series => {
-                            let graph = self.subgraph(&tree.module_nodes(child));
+                            let graph = self.subgraph(&tree.module_nodes(child, None));
                             let tree = graph.modular_decomposition();
                             ret.push(graph.series_simplicial(&tree));
                         },
@@ -99,7 +99,7 @@ impl<G: ImplGraph> Graph<G> {
                 // there might be more possibilities to flat_map (at least for one of
                 // the nodes), but I only care about getting one simplicial clique at
                 // the moment
-                tree.module_nodes(modules[&graph.get_label(n).unwrap()])
+                tree.module_nodes(modules[&graph.get_label(n).unwrap()], None)
             })
         });
         self.map_simplicial_cliques(cliques)
@@ -120,7 +120,7 @@ impl<G: ImplGraph> Graph<G> {
             let mut graph = self.clone();
             graph.remove_node(node);
             let tree = graph.modular_decomposition();
-            if !tree.graph_is_really_prime() {
+            if !tree.graph_is_fully_prime() {
                 continue;
             }
             if self.clique_is_simplicial(&[node]) {
@@ -202,7 +202,6 @@ impl<G: ImplGraph> Graph<G> {
             match tree.graph.node_weight(child).unwrap() {
                 ModuleKind::Node(_) => continue,
                 ModuleKind::Prime => {
-                    println!("prime");
                     if update_count() {
                         return ret;
                     } else {
@@ -211,7 +210,6 @@ impl<G: ImplGraph> Graph<G> {
                 },
                 ModuleKind::Series => unreachable!("series child of series node"),
                 ModuleKind::Parallel => {
-                    println!("parallel");
                     if update_count() {
                         return ret;
                     } else {
@@ -224,7 +222,7 @@ impl<G: ImplGraph> Graph<G> {
         if let Some(child) = non_trivial_child {
             match tree.graph.node_weight(child).unwrap() {
                 ModuleKind::Prime => {
-                    let graph = self.subgraph(&tree.module_nodes(child));
+                    let graph = self.subgraph(&tree.module_nodes(child, None));
                     let tree = graph.modular_decomposition();
                     // we could just early return here, but for debugging purposes, we
                     // continue the loop
@@ -235,8 +233,7 @@ impl<G: ImplGraph> Graph<G> {
                     for gchild in
                         tree.graph.neighbors_directed(child, Direction::Outgoing)
                     {
-                        let clique = tree.module_nodes(gchild);
-                        println!("{:?}", clique);
+                        let clique = tree.module_nodes(gchild, None);
                         assert!(self.set_is_clique(clique.iter()));
                         assert!(self.clique_is_simplicial(&clique));
                         cliques.push(clique);

@@ -603,6 +603,18 @@ impl<G: GraphData> Graph<G> {
             .map(|(index, label, neighbours)| GraphNode { index, label, neighbours })
             .collect()
     }
+
+    pub fn get_label_mapping(&self) -> impl Fn(Node) -> Label + Copy + '_ {
+        |n| self.0.get_label(n).unwrap()
+    }
+
+    /// # Safety
+    /// The returned closure must only be called with valid nodes.
+    pub unsafe fn get_unchecked_label_mapping(
+        &self,
+    ) -> impl Fn(Node) -> Label + Copy + '_ {
+        move |n| unsafe { self.0.get_label_unchecked(n) }
+    }
 }
 
 impl<G: GraphData> Debug for Graph<G> {

@@ -28,6 +28,121 @@ impl<G: ImplGraph> Graph<G> {
     }
 }
 
+fn mapped_eq(
+    left_module: &ModuleKind<Node>,
+    right_module: &ModuleKind<Node>,
+    left_map: impl FnOnce(Node) -> Label,
+    right_map: impl FnOnce(Node) -> Label,
+) -> bool {
+    match (left_module, right_module) {
+        (ModuleKind::Prime, ModuleKind::Prime) => true,
+        (ModuleKind::Series, ModuleKind::Series) => true,
+        (ModuleKind::Parallel, ModuleKind::Parallel) => true,
+        (ModuleKind::Node(left_node), ModuleKind::Node(right_node)) => {
+            left_map(*left_node) == right_map(*right_node)
+        },
+        _ => false,
+    }
+}
+
+impl Tree {
+    pub fn reduced_module(&self, module: NodeIndex) -> Vec<Node> {
+        if let ModuleKind::Node(idx) = self.graph.node_weight(module).unwrap() {
+            return vec![*idx];
+        }
+
+        let mut ret = Vec::new();
+        for child in self.graph.neighbors_directed(module, Direction::Outgoing) {
+            ret.push(self.module_representative(child));
+        }
+        ret
+    }
+
+    pub fn module_representative(&self, mut module: NodeIndex) -> Node {
+        loop {
+            module = if let Some(m) =
+                self.graph.neighbors_directed(module, Direction::Outgoing).next()
+            {
+                m
+            } else {
+                break; // child is a leaf
+            };
+        }
+
+        if let ModuleKind::Node(idx) = self.graph.node_weight(module).unwrap() {
+            *idx
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn module_nodes(
+        &self,
+        module: NodeIndex,
+        stack_size_hint: Option<usize>,
+    ) -> Vec<Node> {
+        if let ModuleKind::Node(idx) = self.graph.node_weight(module).unwrap() {
+            return vec![*idx];
+        }
+
+        let mut ret = Vec::new();
+
+        // // recursive version (tail recursion is not going to happen, because the frame
+        // // stack needs to keep the remaining iterator)
+        // fn recurse(tree: &TreeGraph, module: NodeIndex, ret: &mut Vec<Node>) {
+        //     for child in tree.neighbors_directed(module, Direction::Outgoing) {
+        //         match tree.node_weight(child).unwrap() {
+        //             ModuleKind::Node(idx) => ret.push(*idx),
+        //             _ => recurse(tree, child, ret),
+        //         }
+        //     }
+        // }
+        // recurse(&self.graph, module, &mut ret);
+
+        // manually keep the modules in a stack
+        let mut stack = if let Some(size_hint) = stack_size_hint {
+            let mut s = Vec::with_capacity(size_hint);
+            s.push(module);
+            s
+        } else {
+            vec![module]
+        };
+        while let Some(module) = stack.pop() {
+            for child in self.graph.neighbors_directed(module, Direction::Outgoing) {
+                match self.graph.node_weight(child).unwrap() {
+                    ModuleKind::Node(idx) => ret.push(*idx),
+                    _ => stack.push(child),
+                }
+            }
+        }
+
+        // hard to say which method is better in general: while a whole stack frame is
+        // more expensive than just a module (NodeIndex), we are stacking more modules
+        // than stack frames; also the operation of adding a stack frame might be more
+        // expensive than a simple push to a vector, but then again, a simple push is not
+        // necessary that simple if it has to reallocate; we can partially prevent this
+        // with the stack_size_hint, but we usually don't know what it should be; the
+        // solution is probably to manually stack the remaining iterators, because in our
+        // usecase we know the upper limit of the recursion depth (4, I think), because we
+        // only run this in the claw free case
+        // TODO: do just that
+
+        ret
+    }
+
+    pub fn graph_is_fully_prime(&self) -> bool {
+        if !matches!(self.graph.node_weight(self.root).unwrap(), ModuleKind::Prime) {
+            return false;
+        }
+        for child in self.graph.neighbors_directed(self.root, Direction::Outgoing) {
+            if !matches!(self.graph.node_weight(child).unwrap(), ModuleKind::Node(_)) {
+                return false;
+            }
+        }
+        true
+    }
+}
+
 // We often (mainly when testing) have the same graph and the same decomposition, in two
 // different instances. The instances might not be the same under struct data structure
 // equality since we do not use stable graphs (since we want them to be compact; unstable
@@ -93,8 +208,8 @@ impl Tree {
     pub fn is_equivalent(
         left_tree: &Self,
         right_tree: &Self,
-        left_graph: &impl ImplGraph,
-        right_graph: &impl ImplGraph,
+        left_map: impl FnOnce(Node) -> Label + Copy,
+        right_map: impl FnOnce(Node) -> Label + Copy,
     ) -> bool {
         if left_tree.graph.node_weight(left_tree.root)
             != right_tree.graph.node_weight(right_tree.root)
@@ -102,8 +217,8 @@ impl Tree {
             return false;
         }
 
-        let mut left_leaf_mapped = left_tree.get_leaves_with_inverted_map(left_graph);
-        let mut right_leaf_mapped = right_tree.get_leaves_with_inverted_map(right_graph);
+        let mut left_leaf_mapped = left_tree.get_leaves_with_inverted_map(left_map);
+        let mut right_leaf_mapped = right_tree.get_leaves_with_inverted_map(right_map);
         let true_leafs = left_leaf_mapped.keys().copied().collect::<Vec<_>>();
         // below, after the loop we check that both (left|right)_leaf_mapped are empty
         // after loop, which ensures they were the same
@@ -112,12 +227,7 @@ impl Tree {
             let left_leaf = left_leaf_mapped.remove(true_leaf).unwrap();
             let right_leaf = right_leaf_mapped.remove(true_leaf).unwrap();
             if !Self::recurse_compare_parent_path(
-                left_tree,
-                right_tree,
-                left_graph,
-                right_graph,
-                left_leaf,
-                right_leaf,
+                left_tree, right_tree, left_map, right_map, left_leaf, right_leaf,
             ) {
                 return false;
             }
@@ -129,8 +239,8 @@ impl Tree {
     fn recurse_compare_parent_path(
         left_tree: &Self,
         right_tree: &Self,
-        left_graph: &impl ImplGraph,
-        right_graph: &impl ImplGraph,
+        left_map: impl FnOnce(Node) -> Label + Copy,
+        right_map: impl FnOnce(Node) -> Label + Copy,
         left_node: NodeIndex,
         right_node: NodeIndex,
     ) -> bool {
@@ -138,16 +248,16 @@ impl Tree {
         let right_parent = right_tree.get_parent(right_node);
 
         let true_left_leaf_siblings: HashSet<_> =
-            left_tree.get_leaf_children(left_graph, left_parent).collect();
+            left_tree.get_leaf_children(left_map, left_parent).collect();
         let true_right_leaf_siblings: HashSet<_> =
-            right_tree.get_leaf_children(right_graph, right_parent).collect();
+            right_tree.get_leaf_children(right_map, right_parent).collect();
 
         if (true_left_leaf_siblings != true_right_leaf_siblings)
-            || !compare_module_kind_mapped(
+            || !mapped_eq(
                 &left_tree.graph[left_parent],
                 &right_tree.graph[right_parent],
-                left_graph,
-                right_graph,
+                left_map,
+                left_map,
             )
         {
             return false;
@@ -163,8 +273,8 @@ impl Tree {
         Self::recurse_compare_parent_path(
             left_tree,
             right_tree,
-            left_graph,
-            right_graph,
+            left_map,
+            right_map,
             left_parent,
             right_parent,
         )
@@ -179,131 +289,34 @@ impl Tree {
 
     fn get_leaf_children<'a>(
         &'a self,
-        graph: &'a impl ImplGraph,
+        map: impl FnOnce(Node) -> Label + Copy + 'a,
         node: NodeIndex,
     ) -> impl Iterator<Item = Label> + 'a {
-        self.graph
-            .neighbors_directed(node, Direction::Outgoing)
-            .filter_map(|child| {
+        self.graph.neighbors_directed(node, Direction::Outgoing).filter_map(
+            move |child| {
                 if let ModuleKind::Node(weight) = self.graph[child] {
-                    Some(graph.get_label(weight).unwrap())
+                    Some(map(weight))
                 } else {
                     None
                 }
-            })
+            },
+        )
     }
 
     fn get_leaves_with_inverted_map(
         &self,
-        graph: &impl ImplGraph,
+        map: impl FnOnce(Node) -> Label + Copy,
     ) -> HashMap<Label, NodeIndex> {
         self.graph
             .node_indices()
             .filter_map(|node| {
                 if let ModuleKind::Node(weight) = self.graph.node_weight(node).unwrap() {
-                    Some((graph.get_label(*weight).unwrap(), node))
+                    Some((map(*weight), node))
                 } else {
                     None
                 }
             })
             .collect()
-    }
-}
-
-pub fn compare_module_kind(
-    left_module: &ModuleKind<Node>,
-    right_module: &ModuleKind<Node>,
-) -> bool {
-    match (left_module, right_module) {
-        (ModuleKind::Prime, ModuleKind::Prime) => true,
-        (ModuleKind::Series, ModuleKind::Series) => true,
-        (ModuleKind::Parallel, ModuleKind::Parallel) => true,
-        (ModuleKind::Node(left_node), ModuleKind::Node(right_node)) => {
-            *left_node == *right_node
-        },
-        _ => false,
-    }
-}
-
-pub fn compare_module_kind_mapped(
-    left_module: &ModuleKind<Node>,
-    right_module: &ModuleKind<Node>,
-    left_graph: &impl ImplGraph,
-    right_graph: &impl ImplGraph,
-) -> bool {
-    match (left_module, right_module) {
-        (ModuleKind::Prime, ModuleKind::Prime) => true,
-        (ModuleKind::Series, ModuleKind::Series) => true,
-        (ModuleKind::Parallel, ModuleKind::Parallel) => true,
-        (ModuleKind::Node(left_node), ModuleKind::Node(right_node)) => {
-            left_graph.get_label(*left_node) == right_graph.get_label(*right_node)
-        },
-        _ => false,
-    }
-}
-
-impl Tree {
-    pub fn reduced_module(&self, module: NodeIndex) -> Vec<Node> {
-        if let ModuleKind::Node(idx) = self.graph.node_weight(module).unwrap() {
-            return vec![*idx];
-        }
-
-        let mut ret = Vec::new();
-        for child in self.graph.neighbors_directed(module, Direction::Outgoing) {
-            ret.push(self.module_representative(child));
-        }
-        ret
-    }
-
-    pub fn module_representative(&self, mut module: NodeIndex) -> Node {
-        loop {
-            module = if let Some(m) =
-                self.graph.neighbors_directed(module, Direction::Outgoing).next()
-            {
-                m
-            } else {
-                break; // child is a leaf
-            };
-        }
-
-        if let ModuleKind::Node(idx) = self.graph.node_weight(module).unwrap() {
-            *idx
-        } else {
-            unreachable!()
-        }
-    }
-
-    pub fn module_nodes(&self, module: NodeIndex) -> Vec<Node> {
-        if let ModuleKind::Node(idx) = self.graph.node_weight(module).unwrap() {
-            return vec![*idx];
-        }
-
-        let mut ret = Vec::new();
-
-        // PERF: tail recursion ...
-        fn recurse(tree: &TreeGraph, module: NodeIndex, ret: &mut Vec<Node>) {
-            for child in tree.neighbors_directed(module, Direction::Outgoing) {
-                match tree.node_weight(child).unwrap() {
-                    ModuleKind::Node(idx) => ret.push(*idx),
-                    _ => recurse(tree, child, ret),
-                }
-            }
-        }
-
-        recurse(&self.graph, module, &mut ret);
-        ret
-    }
-
-    pub fn graph_is_really_prime(&self) -> bool {
-        if !matches!(self.graph.node_weight(self.root).unwrap(), ModuleKind::Prime) {
-            return false;
-        }
-        for child in self.graph.neighbors_directed(self.root, Direction::Outgoing) {
-            if !matches!(self.graph.node_weight(child).unwrap(), ModuleKind::Node(_)) {
-                return false;
-            }
-        }
-        true
     }
 }
 
@@ -332,7 +345,12 @@ mod tests {
         edges.shuffle(rng);
         let graph2 = Graph::<AdjGraph>::from_edge_labels(edges).unwrap();
         let tree2 = graph2.modular_decomposition();
-        assert!(Tree::is_equivalent(&tree1, &tree2, &graph1, &graph2));
+        assert!(Tree::is_equivalent(
+            &tree1,
+            &tree2,
+            |n| graph1.get_label(n).unwrap(),
+            |n| graph2.get_label(n).unwrap()
+        ));
 
         // nearly same as above, but connecting 5 and 6
         let other_edges = collect!(v, map;
@@ -340,7 +358,12 @@ mod tests {
         );
         let graph3 = Graph::<AdjGraph>::from_edge_labels(other_edges).unwrap();
         let tree3 = graph3.modular_decomposition();
-        assert!(!Tree::is_equivalent(&tree1, &tree3, &graph1, &graph3));
+        assert!(!Tree::is_equivalent(
+            &tree1,
+            &tree3,
+            |n| graph1.get_label(n).unwrap(),
+            |n| graph3.get_label(n).unwrap()
+        ));
 
         let graph = graph1;
         let tree = tree1;
