@@ -76,6 +76,9 @@ impl Tree {
         }
     }
 
+    /// `stack_size_hint` is how deep the tree can go from the module (which we usually
+    /// know when calling this function, since we are then usually in the claw-free case)
+    // TODO: implement an unsafe version of that, where we use a stack on the stack
     pub fn module_nodes(
         &self,
         module: NodeIndex,
@@ -87,45 +90,32 @@ impl Tree {
 
         let mut ret = Vec::new();
 
-        // // recursive version (tail recursion is not going to happen, because the frame
-        // // stack needs to keep the remaining iterator)
-        // fn recurse(tree: &TreeGraph, module: NodeIndex, ret: &mut Vec<Node>) {
-        //     for child in tree.neighbors_directed(module, Direction::Outgoing) {
-        //         match tree.node_weight(child).unwrap() {
-        //             ModuleKind::Node(idx) => ret.push(*idx),
-        //             _ => recurse(tree, child, ret),
-        //         }
-        //     }
-        // }
-        // recurse(&self.graph, module, &mut ret);
-
-        // manually keep the modules in a stack
-        let mut stack = if let Some(size_hint) = stack_size_hint {
-            let mut s = Vec::with_capacity(size_hint);
-            s.push(module);
-            s
+        let mut stack = if let Some(stack_size) = stack_size_hint {
+            Vec::with_capacity(stack_size)
         } else {
-            vec![module]
+            Vec::new()
         };
-        while let Some(module) = stack.pop() {
-            for child in self.graph.neighbors_directed(module, Direction::Outgoing) {
+        stack.push(self.graph.neighbors_directed(module, Direction::Outgoing));
+
+        'outer: while let Some(iter) = stack.last_mut() {
+            for child in iter {
                 match self.graph.node_weight(child).unwrap() {
                     ModuleKind::Node(idx) => ret.push(*idx),
-                    _ => stack.push(child),
+                    _ => {
+                        stack.push(
+                            self.graph.neighbors_directed(child, Direction::Outgoing),
+                        );
+                        // checking if the logic about claw-free graphs is correct
+                        #[cfg(debug_assertions)]
+                        if let Some(stack_size) = stack_size_hint {
+                            assert!(stack.len() <= stack_size);
+                        }
+                        continue 'outer;
+                    },
                 }
             }
+            stack.pop();
         }
-
-        // hard to say which method is better in general: while a whole stack frame is
-        // more expensive than just a module (NodeIndex), we are stacking more modules
-        // than stack frames; also the operation of adding a stack frame might be more
-        // expensive than a simple push to a vector, but then again, a simple push is not
-        // necessary that simple if it has to reallocate; we can partially prevent this
-        // with the stack_size_hint, but we usually don't know what it should be; the
-        // solution is probably to manually stack the remaining iterators, because in our
-        // usecase we know the upper limit of the recursion depth (4, I think), because we
-        // only run this in the claw free case
-        // TODO: do just that
 
         ret
     }
