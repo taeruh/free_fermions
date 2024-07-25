@@ -82,7 +82,7 @@ impl GraphData for IndexMap {
         self.values_mut()
     }
 
-    fn enumerate_neighbours(&self) -> impl Iterator<Item = (Node, &Neighbours)> {
+    fn enumerate_neighbours(&self) -> impl Iterator<Item = (Node, &Neighbours)> + Clone {
         // enumerate() makes sense here; cf. doc (or code) of values()
         self.values().enumerate()
     }

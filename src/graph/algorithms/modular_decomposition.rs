@@ -46,18 +46,6 @@ fn mapped_eq(
 }
 
 impl Tree {
-    pub fn reduced_module(&self, module: NodeIndex) -> Vec<Node> {
-        if let ModuleKind::Node(idx) = self.graph.node_weight(module).unwrap() {
-            return vec![*idx];
-        }
-
-        let mut ret = Vec::new();
-        for child in self.graph.neighbors_directed(module, Direction::Outgoing) {
-            ret.push(self.module_representative(child));
-        }
-        ret
-    }
-
     pub fn module_representative(&self, mut module: NodeIndex) -> Node {
         loop {
             module = if let Some(m) =
@@ -74,6 +62,18 @@ impl Tree {
         } else {
             unreachable!()
         }
+    }
+
+    pub fn reduced_module(&self, module: NodeIndex) -> Vec<Node> {
+        if let ModuleKind::Node(idx) = self.graph.node_weight(module).unwrap() {
+            return vec![*idx];
+        }
+
+        let mut ret = Vec::new();
+        for child in self.graph.neighbors_directed(module, Direction::Outgoing) {
+            ret.push(self.module_representative(child));
+        }
+        ret
     }
 
     /// `stack_size_hint` is how deep the tree can go from the module (which we usually
@@ -120,14 +120,31 @@ impl Tree {
         ret
     }
 
-    pub fn graph_is_fully_prime(&self) -> bool {
-        if !matches!(self.graph.node_weight(self.root).unwrap(), ModuleKind::Prime) {
+    pub fn module_is_fully_prime(&self, module: NodeIndex) -> bool {
+        if !matches!(self.graph.node_weight(module).unwrap(), ModuleKind::Prime) {
             return false;
         }
         for child in self.graph.neighbors_directed(self.root, Direction::Outgoing) {
             if !matches!(self.graph.node_weight(child).unwrap(), ModuleKind::Node(_)) {
                 return false;
             }
+        }
+        true
+    }
+
+    pub fn module_is_clique(&self, module: NodeIndex) -> bool {
+        match self.graph.node_weight(module).unwrap() {
+            ModuleKind::Prime => return false,
+            ModuleKind::Series => {
+                for child in self.graph.neighbors_directed(module, Direction::Outgoing) {
+                    match self.graph.node_weight(child).unwrap() {
+                        ModuleKind::Node(_) => {},
+                        _ => return false,
+                    }
+                }
+            },
+            ModuleKind::Parallel => return false,
+            ModuleKind::Node(_) => {},
         }
         true
     }

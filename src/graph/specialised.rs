@@ -115,7 +115,7 @@ pub trait GraphData: GraphDataSpecializerHelper + Debug + Clone + Default {
 
     fn iter_neighbours(&self) -> impl Iterator<Item = &Neighbours>;
 
-    fn enumerate_neighbours(&self) -> impl Iterator<Item = (Node, &Neighbours)>;
+    fn enumerate_neighbours(&self) -> impl Iterator<Item = (Node, &Neighbours)> + Clone;
 
     fn enumerate_full(&self) -> impl Iterator<Item = (Node, Label, &Neighbours)>;
 
@@ -229,7 +229,13 @@ impl<G: GraphData> Graph<G> {
         self.0.get_index(label)
     }
     #[inline(always)]
-    pub fn enumerate_neighbours(&self) -> impl Iterator<Item = (Node, &Neighbours)> {
+    pub fn iter_neighbours(&self) -> impl Iterator<Item = &Neighbours> {
+        self.0.iter_neighbours()
+    }
+    #[inline(always)]
+    pub fn enumerate_neighbours(
+        &self,
+    ) -> impl Iterator<Item = (Node, &Neighbours)> + Clone {
         self.0.enumerate_neighbours()
     }
     #[inline(always)]
@@ -479,6 +485,7 @@ impl<G: GraphData> Graph<G> {
 
     /// # Safety
     /// The `nodes` must be valid, i.e., between `0` and `self.len() - 1`.
+    #[inline]
     pub unsafe fn subgraph_via_deletion(
         mut self,
         nodes_to_delete: impl IntoIterator<Item = Node>,

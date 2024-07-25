@@ -3,7 +3,7 @@ use petgraph::Direction;
 
 use crate::{
     graph::{
-        algorithms::modular_decomposition::{NodeIndex, Tree, TreeGraph},
+        algorithms::modular_decomposition::{NodeIndex, Tree},
         generic::{Graph, ImplGraph, NodeCollection},
         int, Label, Node,
     },
@@ -121,33 +121,14 @@ impl<G: ImplGraph> Graph<G> {
     }
 
     fn has_right_structure(&self, tree: &Tree) -> Structure {
-        fn is_clique(tree: &TreeGraph, node: NodeIndex) -> bool {
-            match tree.node_weight(node).unwrap() {
-                ModuleKind::Prime => return false,
-                ModuleKind::Series => {
-                    for child in tree.neighbors_directed(node, Direction::Outgoing) {
-                        match tree.node_weight(child).unwrap() {
-                            ModuleKind::Node(_) => {},
-                            _ => return false,
-                        }
-                    }
-                },
-                ModuleKind::Parallel => return false,
-                _ => {},
-            }
-            true
-        }
-
-        fn some_non_clique_children(
-            tree: &TreeGraph,
-            node: NodeIndex,
-        ) -> Option<NodeIndex> {
-            tree.neighbors_directed(node, Direction::Outgoing)
-                .find(|&child| !is_clique(tree, child))
+        fn some_non_clique_children(tree: &Tree, node: NodeIndex) -> Option<NodeIndex> {
+            tree.graph
+                .neighbors_directed(node, Direction::Outgoing)
+                .find(|&child| !tree.module_is_clique(child))
         }
 
         #[inline]
-        fn prime_check(tree: &TreeGraph, root: NodeIndex) -> Structure {
+        fn prime_check(tree: &Tree, root: NodeIndex) -> Structure {
             match some_non_clique_children(tree, root) {
                 Some(child) => Structure::No(StructureFail::PrimeNonClique(child)),
                 None => Structure::Yes,
@@ -155,9 +136,9 @@ impl<G: ImplGraph> Graph<G> {
         }
 
         #[inline]
-        fn series_check(tree: &TreeGraph, node: NodeIndex) -> Structure {
-            for child in tree.neighbors_directed(node, Direction::Outgoing) {
-                match tree.node_weight(child).unwrap() {
+        fn series_check(tree: &Tree, node: NodeIndex) -> Structure {
+            for child in tree.graph.neighbors_directed(node, Direction::Outgoing) {
+                match tree.graph.node_weight(child).unwrap() {
                     ModuleKind::Prime => {
                         if let Some(grandchild) = some_non_clique_children(tree, child) {
                             return Structure::No(StructureFail::SeriesPrimeNonClique(
@@ -171,7 +152,7 @@ impl<G: ImplGraph> Graph<G> {
                     ModuleKind::Parallel => {
                         let mut count = 0;
                         for grandchild in
-                            tree.neighbors_directed(child, Direction::Outgoing)
+                            tree.graph.neighbors_directed(child, Direction::Outgoing)
                         {
                             count += 1;
                             if count > 2 {
@@ -179,7 +160,7 @@ impl<G: ImplGraph> Graph<G> {
                                     StructureFail::SeriesParallelCount(child, count),
                                 );
                             }
-                            if !is_clique(tree, grandchild) {
+                            if !tree.module_is_clique(grandchild) {
                                 return Structure::No(
                                     StructureFail::SeriesParallelNonClique(
                                         child, grandchild,
@@ -195,9 +176,9 @@ impl<G: ImplGraph> Graph<G> {
         }
 
         #[inline]
-        fn parallel_check(tree: &TreeGraph, root: NodeIndex) -> Structure {
-            for child in tree.neighbors_directed(root, Direction::Outgoing) {
-                match tree.node_weight(child).unwrap() {
+        fn parallel_check(tree: &Tree, root: NodeIndex) -> Structure {
+            for child in tree.graph.neighbors_directed(root, Direction::Outgoing) {
+                match tree.graph.node_weight(child).unwrap() {
                     ModuleKind::Prime => {
                         // if some_non_clique_children(tree, child) {
                         //     return false;
@@ -258,9 +239,9 @@ impl<G: ImplGraph> Graph<G> {
         }
 
         match tree.graph.node_weight(tree.root).unwrap() {
-            ModuleKind::Prime => prime_check(&tree.graph, tree.root),
-            ModuleKind::Series => series_check(&tree.graph, tree.root),
-            ModuleKind::Parallel => parallel_check(&tree.graph, tree.root),
+            ModuleKind::Prime => prime_check(tree, tree.root),
+            ModuleKind::Series => series_check(tree, tree.root),
+            ModuleKind::Parallel => parallel_check(tree, tree.root),
             ModuleKind::Node(_) => Structure::Yes,
         }
     }

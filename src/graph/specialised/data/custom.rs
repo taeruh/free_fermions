@@ -73,7 +73,7 @@ impl GraphData for Custom {
         self.nodes.iter()
     }
 
-    fn enumerate_neighbours(&self) -> impl Iterator<Item = (Node, &Neighbours)> {
+    fn enumerate_neighbours(&self) -> impl Iterator<Item = (Node, &Neighbours)> + Clone {
         self.nodes.iter().enumerate()
     }
 

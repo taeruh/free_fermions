@@ -120,7 +120,7 @@ impl<G: ImplGraph> Graph<G> {
             let mut graph = self.clone();
             graph.remove_node(node);
             let tree = graph.modular_decomposition();
-            if !tree.graph_is_fully_prime() {
+            if !tree.module_is_fully_prime(tree.root) {
                 continue;
             }
             if self.clique_is_simplicial(&[node]) {
