@@ -182,10 +182,10 @@ impl SwapRemoveMap {
     /// Let a = (a_1, ldots, a_m) subset {1, ldots, n-1} be the set of pairwise different
     /// elements we want to swap_remove in some ordered list b = \[b_i, ldots, b_{n-1}\]
     /// (m leq n-1). Then the following holds: c_i = self_{i-1}.swap_remove_unchecked(a_i)
-    /// is the right element to swap_remove.
-    // More specifically, self.map contains the updated
-    // positions of b_j in b for all i,j in {1, ldots, m}. Furthermore, the elements of
-    // self.position[..n-i] mirrors the indices of the elements in b.
+    /// is the right element to swap_remove. More specifically, self.map(j) returns the
+    /// position of b_j in b for all i,j in {1, ldots, m}.
+    // Furthermore, the elements of self.position[..n-i] mirrors the indices of the
+    // elements in b.
     // _Proof_:
     // We prove it via induction for all i in {1, ldots, m}. The case i = 1 is clear: it
     // is c_i = a_i which is correct; we updated self.map, so that n-1 is mapped to c_i;

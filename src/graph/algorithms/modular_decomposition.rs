@@ -78,7 +78,20 @@ impl Tree {
 
     /// `stack_size_hint` is how deep the tree can go from the module (which we usually
     /// know when calling this function, since we are then usually in the claw-free case)
-    // TODO: implement an unsafe version of that, where we use a stack on the stack
+    //
+    // instead of doing a recursion, we keep a manual stack; I think this is more
+    // performant, because we usually know the stack size and in the unsafe version (todo)
+    // we can even put the our stack onto the stack; therefore we have barely any heap
+    // (re)alloction overhead and save the context switching overhead of recursion
+    //
+    // we are stacking the iterators here, i.e, it is a depth-first traversal; instead we
+    // could do a breadth-first traversal, where we would put the nodes into the stack; it
+    // is not clear which one is better; the depth-first traversal requires a smaller
+    // stack, however, one could imagine that stopping an iterator and then continuing it
+    // later - instead of going through it in one go - is not that cache-friedly, but then
+    // when roughly looking at the implementation of our Neighbors iterator here, it is
+    // probably not cache-friendly anyway
+    // TODO: implement an unsafe version, where we use a stack on the stack
     pub fn module_nodes(
         &self,
         module: NodeIndex,

@@ -31,8 +31,6 @@ impl<G: ImplGraph> Graph<G> {
             return;
         }
 
-        // PERF: collect because of borrow rules -> improve somehow
-        // edit: actually, probably fine, since we use it twice ...
         let children: Vec<NodeIndex> =
             tree.neighbors_directed(new_root, Direction::Outgoing).collect();
 
