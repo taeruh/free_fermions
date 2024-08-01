@@ -35,14 +35,9 @@ impl<G: GraphData> Graph<G> {
         match tree.graph.node_weight(tree.root).unwrap() {
             ModuleKind::Prime => self.prime_claw_check(tree),
             ModuleKind::Series => self.series_claw_check(tree),
-            ModuleKind::Parallel => {
+            ModuleKind::Parallel => unsafe {
                 // safety: invariant promises that the graph is connected
-                #[cfg(debug_assertions)]
-                panic!("graph is connected");
-                #[allow(unreachable_code)]
-                {
-                    unsafe { hint::unreachable_unchecked() };
-                }
+                debug_unreachable_unchecked!();
             },
             ModuleKind::Node(_) => true,
         }
@@ -65,16 +60,9 @@ impl<G: GraphData> Graph<G> {
                             return false;
                         }
                     },
-                    ModuleKind::Series => {
-                        // safety: a series module never has series children
-                        #[cfg(debug_assertions)]
-                        {
-                            panic!("series module has series children");
-                        }
-                        #[allow(unreachable_code)] // suppress lsp warning
-                        {
-                            unsafe { hint::unreachable_unchecked() };
-                        }
+                    ModuleKind::Series => unsafe {
+                        // safety: assume modular decomposition is correct
+                        debug_unreachable_unchecked!("series module has series children");
                     },
                     ModuleKind::Parallel => {
                         let mut count = 0;
@@ -96,14 +84,9 @@ impl<G: GraphData> Graph<G> {
         match tree.graph.node_weight(tree.root).unwrap() {
             ModuleKind::Prime => prime_check(tree, tree.root),
             ModuleKind::Series => series_check(tree),
-            ModuleKind::Parallel => {
+            ModuleKind::Parallel => unsafe {
                 // safety: invariant promises that the graph is connected
-                #[cfg(debug_assertions)]
-                panic!("graph is connected");
-                #[allow(unreachable_code)]
-                {
-                    unsafe { hint::unreachable_unchecked() };
-                }
+                debug_unreachable_unchecked!("graph is connected");
             },
             ModuleKind::Node(_) => true,
         }
@@ -130,14 +113,11 @@ impl<G: GraphData> Graph<G> {
                         return false;
                     }
                 },
-                ModuleKind::Series => {
-                    #[cfg(debug_assertions)]
-                    panic!("series module has series children");
-                    #[allow(unreachable_code)]
-                    {
-                        unsafe { hint::unreachable_unchecked() };
-                    }
+                ModuleKind::Series => unsafe {
+                    // safety: assume modular decomposition is correct
+                    debug_unreachable_unchecked!("series module has series children");
                 },
+
                 ModuleKind::Parallel => {
                     // nothing to do here: we know that we have the right structure, so
                     // this module does not contain any independent set of size 3 (cf.

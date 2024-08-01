@@ -1,0 +1,240 @@
+use hashbrown::{hash_set::Entry, HashSet};
+use modular_decomposition::ModuleKind;
+
+use crate::graph::{
+    algorithms::{
+        modular_decomposition::Tree,
+        obstinate::{Obstinate, ObstinateKind},
+    },
+    specialised::{Graph, GraphData},
+    Label, Node, VNodes,
+};
+
+impl<G: GraphData> Graph<G> {
+    /// # Safety
+    /// The graph `self` must be claw-free and connected. Furthermore the `tree` must be
+    /// the graph's modular decomposition tree and we must have run [Self::twin_collapse].
+    pub unsafe fn simplicial(&self, tree: &Tree) -> HashSet<VNodes> {
+        match tree.graph.node_weight(tree.root).unwrap() {
+            ModuleKind::Prime => self.prime_simplicial(tree),
+            ModuleKind::Series => self.series_simplicial(tree),
+            ModuleKind::Parallel => unsafe {
+                // safety: invariant promises that the graph is connected
+                debug_unreachable_unchecked!("graph is connected");
+            },
+            ModuleKind::Node(n) => HashSet::from_iter([vec![*n]]),
+        }
+    }
+
+    fn prime_simplicial(&self, tree: &Tree) -> HashSet<VNodes> {
+        // no need to get a representative graph, because we collapse everything
+        debug_assert!(tree.module_is_fully_prime(tree.root));
+        self.prime_recurse(self.get_index_mapping())
+    }
+
+    #[inline]
+    fn to_parent_map(&self, map: impl Fn(Label) -> Node, mut clique: VNodes) -> VNodes {
+        clique.iter_mut().for_each(|n| *n = map(self.get_label(*n).unwrap()));
+        clique.sort_unstable();
+        clique
+    }
+
+    #[inline]
+    fn clone_to_parent_map(
+        &self,
+        map: impl Fn(Label) -> Node,
+        clique: &[Node],
+    ) -> VNodes {
+        let mut clique =
+            Vec::from_iter((*clique).iter().map(|n| map(self.get_label(*n).unwrap())));
+        clique.sort_unstable();
+        clique
+    }
+
+    fn prime_recurse(&self, map: impl Fn(Label) -> Node + Copy) -> HashSet<VNodes> {
+        match self.obstinate() {
+            Obstinate::True(ObstinateKind::Itself, (a, b)) => {
+                let len = self.len();
+                if len == 2 {
+                    return HashSet::from_iter(
+                        [vec![a[0]], vec![b[0]], vec![a[0], b[0]]]
+                            .into_iter()
+                            .map(|c| self.to_parent_map(map, c)),
+                    );
+                } else if len == 4 {
+                    return HashSet::from_iter(
+                        [
+                            vec![a[0]],
+                            vec![a[0], b[0]],
+                            vec![a[1], b[0]],
+                            vec![a[1], b[1]],
+                            vec![b[1]],
+                        ]
+                        .into_iter()
+                        .map(|c| self.to_parent_map(map, c)),
+                    );
+                } else {
+                    unsafe {
+                        // safety: assume the claw_free and obstinate algorithms are
+                        // correct
+                        debug_unreachable_unchecked!(
+                            "claw-free and obstinate (itself), but the length is not 2 \
+                             or 4"
+                        );
+                    }
+                }
+            },
+            Obstinate::True(ObstinateKind::Complement, (a, b)) => {
+                debug_assert_eq!(a.len(), self.len() / 2);
+                let mut cliques = Vec::with_capacity(self.len());
+                for i in 0..a.len() {
+                    cliques.push(a[i..].to_vec());
+                    cliques.push(b[..i + 1].to_vec());
+                }
+                return HashSet::from_iter(
+                    cliques.into_iter().map(|c| self.to_parent_map(map, c)),
+                );
+            },
+            Obstinate::False => {},
+        }
+
+        let mut cliques: HashSet<VNodes> = HashSet::new();
+
+        // we keep track of the cliques that we have already checked (duplicates happen;
+        // see note in generic version); while this require 1 clone + 2 potential clones
+        // (instead of 1 potential clone), we do not do any duplicate checks which are
+        // something like O(n^3)
+        let mut checked_cliques: HashSet<VNodes> = HashSet::new();
+
+        for node in self.iter_nodes() {
+            // In the paper "Growing without Cloning" it is not clear whether this step
+            // should be done before are after checking whether the subgraph is (fully)
+            // prime (rather after). However, this is wrong, as the example test
+            // `simplicial_vertex_but_subgraph_not_prime` shows.
+            if self.clique_is_simplicial(&[node]) {
+                cliques.insert(vec![map(self.get_label(node).unwrap())]);
+            }
+
+            let mut graph = self.clone();
+            // safety: we are in bounds because node comes from the graph itself
+            unsafe { graph.remove_node_unchecked(node) };
+            let tree = graph.modular_decomposition();
+            if !tree.module_is_fully_prime(tree.root) {
+                continue;
+            }
+
+            let subcliques = graph.prime_recurse(self.get_index_mapping());
+            for mut clique in subcliques.into_iter() {
+                checked_cliques.get_or_insert_with(clique.as_slice(), |clique| {
+                    if self.clique_is_simplicial(clique) {
+                        cliques.insert(self.clone_to_parent_map(map, clique));
+                    }
+                    clique.to_vec()
+                });
+                clique.push(node);
+                clique.sort_unstable();
+                match checked_cliques.entry(clique) {
+                    Entry::Occupied(_) => {},
+                    Entry::Vacant(e) => {
+                        let clique = e.get();
+                        if self.set_is_clique(clique.iter())
+                            && self.clique_is_simplicial(clique)
+                        {
+                            cliques.insert(self.clone_to_parent_map(map, clique));
+                        }
+                        e.insert();
+                    },
+                }
+            }
+        }
+
+        cliques
+    }
+
+    fn series_simplicial(&self, tree: &Tree) -> HashSet<VNodes> {
+        todo!()
+    }
+
+    fn clique_is_simplicial(&self, clique: &[Node]) -> bool {
+        for node in clique {
+            let mut neighbours = unsafe { self.get_neighbours_unchecked(*node) }.clone();
+            for n in clique {
+                neighbours.remove(n);
+            }
+            if !self.set_is_clique(neighbours.iter()) {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn set_is_clique<'s, I: Iterator<Item = &'s Node> + Clone>(
+        &'s self,
+        mut set: I,
+    ) -> bool {
+        while let Some(node) = set.next() {
+            let neighbours = unsafe { self.get_neighbours_unchecked(*node) };
+            for other in set.clone() {
+                if !neighbours.contains(other) {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use modular_decomposition::ModuleKind;
+    use petgraph::Direction::Outgoing;
+
+    use crate::graph::{
+        specialised::{data::Custom, Graph},
+        test_utils::collect,
+        Label,
+    };
+
+    #[test]
+    fn simplicial_vertex_but_subgraph_not_prime() {
+        const VERTEX: Label = 2; // the simplicial vertex we remove
+        const MODULE: [Label; 2] = [3, 4]; // the module we then get
+        //         ------
+        //        /      \
+        // 0 -- 1 -- 2 -- 3 -- 5
+        //       \     \     /
+        //         ------ 4 -
+        let mut graph = Graph::<Custom>::from_edge_labels(collect!(v;
+            (0, 1),
+            (1, 2),
+            (1, 3),
+            (1, 4),
+            (2, 4),
+            (3, 5),
+            (4, 5),
+        ))
+        .unwrap();
+        let tree = graph.modular_decomposition();
+        assert!(tree.module_is_fully_prime(tree.root));
+        let node = graph.get_index(VERTEX).unwrap();
+        assert!(graph.set_is_clique([node].iter()));
+        assert!(graph.clique_is_simplicial(&[node]));
+        graph.remove_node(node);
+        let tree = graph.modular_decomposition();
+        assert!(!tree.module_is_fully_prime(tree.root));
+        let module_node = tree
+            .graph
+            .neighbors_directed(tree.root, Outgoing)
+            .find(|&node| {
+                matches!(tree.graph.node_weight(node).unwrap(), ModuleKind::Parallel)
+            })
+            .unwrap();
+        let mut module: Vec<_> = tree
+            .module_nodes(module_node, None)
+            .into_iter()
+            .map(|n| graph.get_label(n).unwrap())
+            .collect();
+        module.sort_unstable();
+        assert_eq!(module, MODULE);
+    }
+}

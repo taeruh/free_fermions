@@ -34,13 +34,9 @@ impl<G: ImplGraph> Graph<G> {
         }
 
         match tree.graph.node_weight(tree.root).unwrap() {
-            modular_decomposition::ModuleKind::Prime => {
-                Some(vec![self.prime_simplicial(tree)])
-            },
-            modular_decomposition::ModuleKind::Series => {
-                Some(vec![self.series_simplicial(tree)])
-            },
-            modular_decomposition::ModuleKind::Parallel => {
+            ModuleKind::Prime => Some(vec![self.prime_simplicial(tree)]),
+            ModuleKind::Series => Some(vec![self.series_simplicial(tree)]),
+            ModuleKind::Parallel => {
                 // this is not very efficient here, but I don't really care, because in
                 // the end we will throw away parallel graphs anyway, and this here is
                 // only for correctness
@@ -48,10 +44,10 @@ impl<G: ImplGraph> Graph<G> {
                 for child in tree.graph.neighbors(tree.root) {
                     let kind = tree.graph.node_weight(child).unwrap();
                     match kind {
-                        modular_decomposition::ModuleKind::Node(node) => {
+                        ModuleKind::Node(node) => {
                             ret.push(self.map_simplicial_cliques(vec![vec![*node]]));
                         },
-                        modular_decomposition::ModuleKind::Prime => {
+                        ModuleKind::Prime => {
                             // not really efficient here (e.g., instead of re-doing the
                             // modular partition for the subtree, we could just take the
                             // subtree and update the labels)
@@ -59,19 +55,19 @@ impl<G: ImplGraph> Graph<G> {
                             let tree = graph.modular_decomposition();
                             ret.push(graph.prime_simplicial(&tree));
                         },
-                        modular_decomposition::ModuleKind::Series => {
+                        ModuleKind::Series => {
                             let graph = self.subgraph(&tree.module_nodes(child, Some(3)));
                             let tree = graph.modular_decomposition();
                             ret.push(graph.series_simplicial(&tree));
                         },
-                        modular_decomposition::ModuleKind::Parallel => {
+                        ModuleKind::Parallel => {
                             unreachable!("parallel child of parallel node");
                         },
                     }
                 }
                 Some(ret)
             },
-            modular_decomposition::ModuleKind::Node(a) => {
+            ModuleKind::Node(a) => {
                 Some(vec![self.map_simplicial_cliques(vec![vec![*a]])])
             },
         }
@@ -105,10 +101,10 @@ impl<G: ImplGraph> Graph<G> {
         self.map_simplicial_cliques(cliques)
     }
 
-    // TODO: first collect into a HashSet, because we obviously collect some cliques
-    // multiple times (e.g., consider a simplicial clique of size 2, and for both nodes
-    // G\{v} is prime, then we will collect the clique twice; assuming we are not directly
-    // in the obstinate case; eplicitly example: 5 node hole)
+    // TODO: we obviously collect some cliques multiple times (e.g., consider a simplicial
+    // clique of size 2, and for both nodes G\{v} is prime, then we will collect the
+    // clique twice; assuming we are not directly in the obstinate case; explicitly
+    // example: 5 node hole) -> collect into HashSet and sort before insertion
     fn prime_recurse(&self) -> Vec<VNodes> {
         if let Some(cliques) = self.obstinate_case() {
             return cliques;
@@ -117,14 +113,15 @@ impl<G: ImplGraph> Graph<G> {
         let mut cliques = Vec::new();
 
         for node in self.iter_nodes() {
+            if self.clique_is_simplicial(&[node]) {
+                cliques.push(vec![node]);
+            }
+
             let mut graph = self.clone();
             graph.remove_node(node);
             let tree = graph.modular_decomposition();
             if !tree.module_is_fully_prime(tree.root) {
                 continue;
-            }
-            if self.clique_is_simplicial(&[node]) {
-                cliques.push(vec![node]);
             }
             let mut subcliques = graph.prime_recurse();
             // need to have them with the correct index sets in the parent graph (self)

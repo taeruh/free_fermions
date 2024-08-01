@@ -1,12 +1,20 @@
 use std::{
     fmt::{self, Debug},
+    iter::Copied,
     mem,
     ops::Range,
 };
 
-use hashbrown::{HashMap, HashSet};
+use hashbrown::{hash_set, HashMap, HashSet};
+use petgraph::{
+    visit::{
+        GraphBase, GraphProp, IntoNeighbors, NodeCompactIndexable, NodeCount,
+        NodeIndexable,
+    },
+    Undirected,
+};
 
-use super::{InvalidGraph, Label, LabelEdge, Node};
+use super::{Edge, InvalidGraph, Label, LabelEdge, Node};
 
 const DECIDER_SUBGRAPH_VIA_DELETION_IF_LESS: f64 = 0.5; // otherwise via creation
 
@@ -622,6 +630,18 @@ impl<G: GraphData> Graph<G> {
     ) -> impl Fn(Node) -> Label + Copy + '_ {
         move |n| unsafe { self.0.get_label_unchecked(n) }
     }
+
+    pub fn get_index_mapping(&self) -> impl Fn(Label) -> Node + Copy + '_ {
+        |l| self.0.get_index(l).unwrap()
+    }
+
+    /// # Safety
+    /// The returned closure must only be called with valid labels.
+    pub unsafe fn get_unchecked_index_mapping(
+        &self,
+    ) -> impl Fn(Label) -> Node + Copy + '_ {
+        move |l| unsafe { self.0.get_index_unchecked(l) }
+    }
 }
 
 impl<G: GraphData> Debug for Graph<G> {
@@ -629,6 +649,47 @@ impl<G: GraphData> Debug for Graph<G> {
         f.debug_struct("Graph").field("nodes", &self.map_to_full()).finish()
     }
 }
+
+// needed for modular-decomposition: {{{
+impl<G: GraphData> GraphBase for Graph<G> {
+    type NodeId = Node;
+    type EdgeId = Edge;
+}
+
+impl<G: GraphData> GraphProp for Graph<G> {
+    type EdgeType = Undirected;
+}
+
+impl<G: GraphData> NodeCount for Graph<G> {
+    fn node_count(&self) -> usize {
+        self.len()
+    }
+}
+
+impl<G: GraphData> NodeIndexable for Graph<G> {
+    // this makes sense, because ImplGraph requires CompactNodes
+    fn node_bound(&self) -> usize {
+        self.len()
+    }
+
+    fn to_index(&self, a: Self::NodeId) -> usize {
+        a
+    }
+
+    fn from_index(&self, i: usize) -> Self::NodeId {
+        i
+    }
+}
+
+impl<G: GraphData> NodeCompactIndexable for Graph<G> {}
+
+impl<'a, G: GraphData> IntoNeighbors for &'a Graph<G> {
+    type Neighbors = Copied<hash_set::Iter<'a, usize>>;
+    fn neighbors(self, a: Self::NodeId) -> Self::Neighbors {
+        self.0.get_neighbours(a).unwrap().iter().copied()
+    }
+}
+// }}}
 
 pub mod algorithms;
 pub mod data;

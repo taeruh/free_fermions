@@ -39,6 +39,25 @@ pub mod fix_int {
     }
 }
 
+/// Don't use this function; it's just an unsafe marker.
+/// # Safety
+/// None
+#[inline(always)]
+pub unsafe fn unsafe_marker() {}
+
+#[macro_export]
+macro_rules! debug_unreachable_unchecked {
+    ($($arg:tt)*) => {
+        #[cfg(debug_assertions)]
+        {
+            $crate::unsafe_marker();
+            unreachable!($($arg)*);
+        }
+        #[cfg(not(debug_assertions))]
+        std::hint::unreachable_unchecked();
+    };
+}
+
 pub mod enumerate_offset;
 pub mod graph;
 pub mod hamiltonian;

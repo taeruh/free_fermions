@@ -3,10 +3,7 @@ use std::collections::{HashMap, HashSet};
 use modular_decomposition::ModuleKind;
 use petgraph::{graph::DiGraph, Direction};
 
-use crate::graph::{
-    generic::{Graph, ImplGraph},
-    Label, Node,
-};
+use crate::graph::{Label, Node};
 
 pub type NodeIndex = petgraph::graph::NodeIndex<u32>;
 
@@ -16,16 +13,6 @@ pub type TreeGraph = DiGraph<ModuleKind<Node>, ()>;
 pub struct Tree {
     pub graph: TreeGraph,
     pub root: NodeIndex,
-}
-
-impl<G: ImplGraph> Graph<G> {
-    pub fn modular_decomposition(&self) -> Tree {
-        let md_tree = modular_decomposition::modular_decomposition(&self).unwrap();
-        Tree {
-            root: NodeIndex::from(md_tree.root().index() as u32),
-            graph: md_tree.into_digraph(),
-        }
-    }
 }
 
 fn mapped_eq(
@@ -347,7 +334,7 @@ mod tests {
 
     use super::*;
     use crate::graph::{
-        generic::adj::AdjGraph,
+        generic::{adj::AdjGraph, Graph, ImplGraph},
         test_utils::{collect, RandomMap},
     };
 
