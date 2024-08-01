@@ -1,4 +1,4 @@
-use hashbrown::{hash_set::Entry, HashSet};
+use hashbrown::{hash_set::Entry, HashMap, HashSet};
 use modular_decomposition::ModuleKind;
 
 use crate::graph::{
@@ -152,6 +152,12 @@ impl<G: GraphData> Graph<G> {
     }
 
     fn series_simplicial(&self, tree: &Tree) -> HashSet<VNodes> {
+        let mut complement = self.clone();
+        complement.complement();
+        if let Some(bipartition) = complement.try_bipartion() {
+            return bipartition;
+        }
+
         todo!()
     }
 
@@ -181,6 +187,57 @@ impl<G: GraphData> Graph<G> {
             }
         }
         true
+    }
+
+    fn try_bipartion(&self) -> Option<HashSet<VNodes>> {
+        let (mut fcolor, mut tcolor) = (Vec::new(), Vec::new());
+        let mut unvisited = self.iter_nodes().collect::<HashSet<_>>();
+        let mut marked = HashMap::new(); // fcolor: false, tcolor: true
+        let mut stack = Vec::new();
+
+        // outer loop, because we pass in non-connected graphs (complements of series
+        // graphs)
+        while let Some(&node) = unvisited.iter().next() {
+            fcolor.push(node);
+            marked.insert(node, false);
+            #[cfg(debug_assertions)]
+            debug_assert!(unvisited.remove(&node));
+            #[cfg(any(not(debug_assertions), lsp_rust_analyzer))]
+            unvisited.remove(&node);
+            for neighbour in unsafe { self.get_neighbours_unchecked(node) } {
+                stack.push((node, true));
+                marked.insert(*neighbour, true);
+                #[cfg(debug_assertions)]
+                assert!(unvisited.remove(neighbour));
+                #[cfg(any(not(debug_assertions), lsp_rust_analyzer))]
+                unvisited.remove(neighbour);
+            }
+
+            while let Some((node, mark)) = stack.pop() {
+                for neighbour in unsafe { self.get_neighbours_unchecked(node) } {
+                    if let Some(&neighbour_mark) = marked.get(neighbour) {
+                        if neighbour_mark == mark {
+                            return None;
+                        }
+                    } else {
+                        let neg_mark = !mark;
+                        stack.push((*neighbour, neg_mark));
+                        marked.insert(*neighbour, neg_mark);
+                        #[cfg(debug_assertions)]
+                        assert!(unvisited.remove(neighbour));
+                        #[cfg(any(not(debug_assertions), lsp_rust_analyzer))]
+                        unvisited.remove(neighbour);
+                    }
+                }
+                if mark {
+                    tcolor.push(node);
+                } else {
+                    fcolor.push(node);
+                }
+            }
+        }
+
+        Some(HashSet::from_iter([tcolor, fcolor]))
     }
 }
 

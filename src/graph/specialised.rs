@@ -575,7 +575,6 @@ impl<G: GraphData> Graph<G> {
                 // insert into the replaced neighbours; not sure which is faster
             }
         }
-
         // let nodes = self.iter_nodes().collect::<Vec<_>>();
         // for (node, neighbours) in enumerate!(self.nodes.iter_mut()) {
         //     let mut neighbourhood_to_complement = mem::take(neighbours);
