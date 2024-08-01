@@ -1,14 +1,20 @@
 use hashbrown::{hash_set::Entry, HashMap, HashSet};
 use modular_decomposition::ModuleKind;
+use petgraph::Direction;
 
 use crate::graph::{
     algorithms::{
-        modular_decomposition::Tree,
+        modular_decomposition::{NodeIndex, Tree},
         obstinate::{Obstinate, ObstinateKind},
     },
     specialised::{Graph, GraphData},
     Label, Node, VNodes,
 };
+
+enum NonTrivialChild {
+    Prime(NodeIndex),
+    Parallel(NodeIndex),
+}
 
 impl<G: GraphData> Graph<G> {
     /// # Safety
@@ -51,6 +57,8 @@ impl<G: GraphData> Graph<G> {
         clique
     }
 
+    // PERF: we could/should seperate the first call of the recursion and early return
+    // from it as soon as we find one simplicial clique
     fn prime_recurse(&self, map: impl Fn(Label) -> Node + Copy) -> HashSet<VNodes> {
         match self.obstinate() {
             Obstinate::True(ObstinateKind::Itself, (a, b)) => {
@@ -158,7 +166,75 @@ impl<G: GraphData> Graph<G> {
             return bipartition;
         }
 
-        todo!()
+        let mut count = 0;
+        let mut non_trivial_child = None;
+
+        for child in tree.graph.neighbors_directed(tree.root, Direction::Outgoing) {
+            match tree.graph.node_weight(child).unwrap() {
+                ModuleKind::Prime => {
+                    count += 1;
+                    // more than one non-node child but no bipartition found
+                    if count == 2 {
+                        return HashSet::new();
+                    } else {
+                        non_trivial_child = Some(NonTrivialChild::Prime(child));
+                    }
+                },
+                ModuleKind::Series => unsafe {
+                    // safety: assume modular decomposition is correct
+                    debug_unreachable_unchecked!("series module has series children");
+                },
+                ModuleKind::Parallel => {
+                    count += 1;
+                    if count == 2 {
+                        return HashSet::new();
+                    } else {
+                        non_trivial_child = Some(NonTrivialChild::Parallel(child));
+                    }
+                },
+                ModuleKind::Node(_) => continue,
+            }
+        }
+
+        if let Some(child) = non_trivial_child {
+            match child {
+                NonTrivialChild::Prime(child) => {
+                    let module_nodes = tree.module_nodes(child, Some(2));
+                    let graph =
+                        unsafe { self.subgraph(module_nodes.len(), module_nodes) };
+                    // PERF: maybe we can construct the "subtree" frome `tree`
+                    let tree = graph.modular_decomposition();
+                    graph.prime_simplicial(&tree)
+                },
+                NonTrivialChild::Parallel(child) => {
+                    #[cfg(debug_assertions)]
+                    #[allow(clippy::needless_return)]
+                    {
+                        let mut cliques: HashSet<VNodes> = HashSet::with_capacity(2);
+                        for gchild in
+                            tree.graph.neighbors_directed(child, Direction::Outgoing)
+                        {
+                            let clique = tree.module_nodes(gchild, Some(1));
+                            assert!(self.set_is_clique(clique.iter()));
+                            assert!(self.clique_is_simplicial(&clique));
+                            cliques.insert(clique);
+                        }
+                        assert_eq!(cliques.len(), 2);
+                        return cliques;
+                    }
+                    #[cfg(any(not(debug_assertions), lsp_rust_analyzer))]
+                    #[cfg_attr(debug_assertions, allow(unreachable_code))]
+                    {
+                        tree.graph
+                            .neighbors_directed(child, Direction::Outgoing)
+                            .map(|gchild| tree.module_nodes(gchild, Some(1)))
+                            .collect()
+                    }
+                },
+            }
+        } else {
+            HashSet::new()
+        }
     }
 
     fn clique_is_simplicial(&self, clique: &[Node]) -> bool {

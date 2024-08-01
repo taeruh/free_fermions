@@ -37,7 +37,7 @@ impl<G: GraphData> Graph<G> {
             ModuleKind::Series => self.series_claw_check(tree),
             ModuleKind::Parallel => unsafe {
                 // safety: invariant promises that the graph is connected
-                debug_unreachable_unchecked!();
+                debug_unreachable_unchecked!("graph is connected");
             },
             ModuleKind::Node(_) => true,
         }

@@ -221,8 +221,6 @@ impl<G: ImplGraph> Graph<G> {
                 ModuleKind::Prime => {
                     let graph = self.subgraph(&tree.module_nodes(child, Some(2)));
                     let tree = graph.modular_decomposition();
-                    // we could just early return here, but for debugging purposes, we
-                    // continue the loop
                     ret = graph.prime_simplicial(&tree);
                 },
                 ModuleKind::Parallel => {
