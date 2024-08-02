@@ -8,7 +8,7 @@ use crate::graph::{
         obstinate::{Obstinate, ObstinateKind},
     },
     specialised::{Graph, GraphData},
-    Label, Node, VNodes,
+    Node, VNodes,
 };
 
 enum NonTrivialChild {
@@ -33,33 +33,41 @@ impl<G: GraphData> Graph<G> {
     }
 
     fn prime_simplicial(&self, tree: &Tree) -> HashSet<VNodes> {
-        // no need to get a representative graph, because we collapse everything
+        // no need to get a representative graph, because we collapsed everything
         debug_assert!(tree.module_is_fully_prime(tree.root));
-        self.prime_recurse(self.get_index_mapping())
+        // safety: we will only pass in labels from a subgraph (which has a subset of the
+        // labels)
+        self.prime_recurse(self)
     }
 
     #[inline]
-    fn to_parent_map(&self, map: impl Fn(Label) -> Node, mut clique: VNodes) -> VNodes {
-        clique.iter_mut().for_each(|n| *n = map(self.get_label(*n).unwrap()));
+    fn to_parent_map(&self, parent: &Self, mut clique: VNodes) -> VNodes {
+        clique.iter_mut().for_each(|n| {
+            *n = unsafe {
+                // safety: the nodes come from the graph and then the labels are a subset
+                // of the parent's labels
+                parent.get_index_unchecked(self.get_label_unchecked(*n))
+            }
+        });
         clique.sort_unstable();
         clique
     }
 
     #[inline]
-    fn clone_to_parent_map(
-        &self,
-        map: impl Fn(Label) -> Node,
-        clique: &[Node],
-    ) -> VNodes {
-        let mut clique =
-            Vec::from_iter((*clique).iter().map(|n| map(self.get_label(*n).unwrap())));
+    fn clone_to_parent_map(&self, parent: &Self, clique: &[Node]) -> VNodes {
+        let mut clique = Vec::from_iter((*clique).iter().map(|n| {
+            unsafe {
+                // safety: cf. `to_parent_map`
+                parent.get_index_unchecked(self.get_label_unchecked(*n))
+            }
+        }));
         clique.sort_unstable();
         clique
     }
 
     // PERF: we could/should seperate the first call of the recursion and early return
     // from it as soon as we find one simplicial clique
-    fn prime_recurse(&self, map: impl Fn(Label) -> Node + Copy) -> HashSet<VNodes> {
+    fn prime_recurse(&self, parent: &Self) -> HashSet<VNodes> {
         match self.obstinate() {
             Obstinate::True(ObstinateKind::Itself, (a, b)) => {
                 let len = self.len();
@@ -67,7 +75,7 @@ impl<G: GraphData> Graph<G> {
                     return HashSet::from_iter(
                         [vec![a[0]], vec![b[0]], vec![a[0], b[0]]]
                             .into_iter()
-                            .map(|c| self.to_parent_map(map, c)),
+                            .map(|c| self.to_parent_map(parent, c)),
                     );
                 } else if len == 4 {
                     return HashSet::from_iter(
@@ -79,7 +87,7 @@ impl<G: GraphData> Graph<G> {
                             vec![b[1]],
                         ]
                         .into_iter()
-                        .map(|c| self.to_parent_map(map, c)),
+                        .map(|c| self.to_parent_map(parent, c)),
                     );
                 } else {
                     unsafe {
@@ -100,7 +108,7 @@ impl<G: GraphData> Graph<G> {
                     cliques.push(b[..i + 1].to_vec());
                 }
                 return HashSet::from_iter(
-                    cliques.into_iter().map(|c| self.to_parent_map(map, c)),
+                    cliques.into_iter().map(|c| self.to_parent_map(parent, c)),
                 );
             },
             Obstinate::False => {},
@@ -120,7 +128,10 @@ impl<G: GraphData> Graph<G> {
             // prime (rather after). However, this is wrong, as the example test
             // `simplicial_vertex_but_subgraph_not_prime` shows.
             if self.clique_is_simplicial(&[node]) {
-                cliques.insert(vec![map(self.get_label(node).unwrap())]);
+                cliques.insert(vec![unsafe {
+                    // safety: cf. `to_parent_map`
+                    parent.get_index_unchecked(self.get_label_unchecked(node))
+                }]);
             }
 
             let mut graph = self.clone();
@@ -131,11 +142,11 @@ impl<G: GraphData> Graph<G> {
                 continue;
             }
 
-            let subcliques = graph.prime_recurse(self.get_index_mapping());
+            let subcliques = graph.prime_recurse(self);
             for mut clique in subcliques.into_iter() {
                 checked_cliques.get_or_insert_with(clique.as_slice(), |clique| {
                     if self.clique_is_simplicial(clique) {
-                        cliques.insert(self.clone_to_parent_map(map, clique));
+                        cliques.insert(self.clone_to_parent_map(parent, clique));
                     }
                     clique.to_vec()
                 });
@@ -148,7 +159,7 @@ impl<G: GraphData> Graph<G> {
                         if self.set_is_clique(clique.iter())
                             && self.clique_is_simplicial(clique)
                         {
-                            cliques.insert(self.clone_to_parent_map(map, clique));
+                            cliques.insert(self.clone_to_parent_map(parent, clique));
                         }
                         e.insert();
                     },
@@ -201,6 +212,7 @@ impl<G: GraphData> Graph<G> {
                 NonTrivialChild::Prime(child) => {
                     let module_nodes = tree.module_nodes(child, Some(2));
                     let graph =
+                        // safety: nodes come from the graph itself
                         unsafe { self.subgraph(module_nodes.len(), module_nodes) };
                     // PERF: maybe we can construct the "subtree" frome `tree`
                     let tree = graph.modular_decomposition();
@@ -239,6 +251,7 @@ impl<G: GraphData> Graph<G> {
 
     fn clique_is_simplicial(&self, clique: &[Node]) -> bool {
         for node in clique {
+            // safety: we only ever pass in nodes from the graph itself
             let mut neighbours = unsafe { self.get_neighbours_unchecked(*node) }.clone();
             for n in clique {
                 neighbours.remove(n);
@@ -255,6 +268,7 @@ impl<G: GraphData> Graph<G> {
         mut set: I,
     ) -> bool {
         while let Some(node) = set.next() {
+            // safety: we only ever pass in nodes from the graph itself
             let neighbours = unsafe { self.get_neighbours_unchecked(*node) };
             for other in set.clone() {
                 if !neighbours.contains(other) {
@@ -280,6 +294,7 @@ impl<G: GraphData> Graph<G> {
             debug_assert!(unvisited.remove(&node));
             #[cfg(any(not(debug_assertions), lsp_rust_analyzer))]
             unvisited.remove(&node);
+            // safety: unvisited->node was created from the graph itself
             for neighbour in unsafe { self.get_neighbours_unchecked(node) } {
                 stack.push((node, true));
                 marked.insert(*neighbour, true);
@@ -290,6 +305,8 @@ impl<G: GraphData> Graph<G> {
             }
 
             while let Some((node, mark)) = stack.pop() {
+                // safety: node comes from unvisited originally, which was created from he
+                // graph itself
                 for neighbour in unsafe { self.get_neighbours_unchecked(node) } {
                     if let Some(&neighbour_mark) = marked.get(neighbour) {
                         if neighbour_mark == mark {

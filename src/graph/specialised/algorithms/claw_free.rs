@@ -1,5 +1,3 @@
-use std::hint;
-
 use modular_decomposition::ModuleKind;
 use petgraph::Direction;
 

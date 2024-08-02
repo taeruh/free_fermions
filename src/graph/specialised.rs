@@ -232,9 +232,25 @@ impl SwapRemoveMap {
 }
 
 impl<G: GraphData> Graph<G> {
+    /// # Safety
+    /// The label must be valid.
+    #[inline(always)]
+    pub unsafe fn get_index_unchecked(&self, label: Label) -> Node {
+        unsafe { self.0.get_index_unchecked(label) }
+    }
     #[inline(always)]
     pub fn get_index(&self, label: Label) -> Option<Node> {
         self.0.get_index(label)
+    }
+    /// # Safety
+    /// The node/index must be valid.
+    #[inline(always)]
+    pub unsafe fn get_label_unchecked(&self, node: Node) -> Label {
+        unsafe { self.0.get_label_unchecked(node) }
+    }
+    #[inline(always)]
+    pub fn get_label(&self, node: Node) -> Option<Label> {
+        self.0.get_label(node)
     }
     #[inline(always)]
     pub fn iter_neighbours(&self) -> impl Iterator<Item = &Neighbours> {
@@ -245,10 +261,6 @@ impl<G: GraphData> Graph<G> {
         &self,
     ) -> impl Iterator<Item = (Node, &Neighbours)> + Clone {
         self.0.enumerate_neighbours()
-    }
-    #[inline(always)]
-    pub fn get_label(&self, node: Node) -> Option<Label> {
-        self.0.get_label(node)
     }
     #[inline(always)]
     pub fn len(&self) -> usize {
@@ -628,18 +640,6 @@ impl<G: GraphData> Graph<G> {
         &self,
     ) -> impl Fn(Node) -> Label + Copy + '_ {
         move |n| unsafe { self.0.get_label_unchecked(n) }
-    }
-
-    pub fn get_index_mapping(&self) -> impl Fn(Label) -> Node + Copy + '_ {
-        |l| self.0.get_index(l).unwrap()
-    }
-
-    /// # Safety
-    /// The returned closure must only be called with valid labels.
-    pub unsafe fn get_unchecked_index_mapping(
-        &self,
-    ) -> impl Fn(Label) -> Node + Copy + '_ {
-        move |l| unsafe { self.0.get_index_unchecked(l) }
     }
 }
 
