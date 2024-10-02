@@ -84,14 +84,14 @@ impl<G: ImplGraph> Graph<G> {
 
 #[cfg(test)]
 mod tests {
-    use rand::{seq::SliceRandom, SeedableRng};
+    use rand::{SeedableRng, seq::SliceRandom};
     use rand_pcg::Pcg64;
 
     use super::*;
     use crate::graph::{
-        generic::adj::AdjGraph,
-        test_utils::{collect, RandomMap},
         Label,
+        generic::adj::AdjGraph,
+        test_utils::{RandomMap, collect},
     };
 
     #[test]

@@ -7,13 +7,13 @@ use std::{
 };
 
 use adj::AdjGraph;
-use hashbrown::{hash_set, HashSet};
+use hashbrown::{HashSet, hash_set};
 use petgraph::{
+    Undirected,
     visit::{
         GraphBase, GraphProp, IntoNeighbors, NodeCompactIndexable, NodeCount,
         NodeIndexable,
     },
-    Undirected,
 };
 
 use super::{Edge, HLabels, HNodes, InvalidGraph, Label, LabelEdge, Node, VNodes};
@@ -391,7 +391,10 @@ impl<G: CompactNodes> CompactNodes for Graph<G> {}
 
 impl<G: ImplGraph> ImplGraph for Graph<G> {
     type Nodes = G::Nodes;
-    type Neighbours<'a> = G::Neighbours<'a> where Self: 'a;
+    type Neighbours<'a>
+        = G::Neighbours<'a>
+    where
+        Self: 'a;
     #[inline]
     fn add_labelled_edge(&mut self, edge: LabelEdge) {
         self.0.add_labelled_edge(edge)
@@ -622,7 +625,10 @@ impl<'a, T: NodeCollection> NodeCollectionRef for &'a T {
 
 impl<'a, T: NodeCollection> NodeCollection for &'a T {
     type Collected = T::Collected;
-    type Iter<'b> = T::Iter<'b> where Self: 'b;
+    type Iter<'b>
+        = T::Iter<'b>
+    where
+        Self: 'b;
     #[inline]
     fn contains(&self, e: Node) -> bool {
         (*self).contains(e)

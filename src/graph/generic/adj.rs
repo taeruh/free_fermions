@@ -23,7 +23,10 @@ impl ImplGraph for AdjGraph {
     // TODO: implement a bunch of default methods more efficiently (if possible)
 
     type Nodes = HNodes;
-    type Neighbours<'a> = &'a Self::Nodes where Self: 'a;
+    type Neighbours<'a>
+        = &'a Self::Nodes
+    where
+        Self: 'a;
 
     fn add_labelled_edge(&mut self, (a, b): LabelEdge) {
         let idxa = self.insert(a);
@@ -151,17 +154,19 @@ impl AdjGraph {
 
     /// Correct (potentially) invalid graph description.
     pub fn correct(&mut self) {
-        // PERF: safety bounds us here to first collect the keys, instead of doing things
-        // in one loop
-        let nodes = self.iter_nodes().collect::<Vec<_>>();
-        for node in nodes {
+        for node in self.iter_nodes() {
             let neighbours = self.nodes.get_mut(node).unwrap();
             neighbours.remove(&node);
-            // PERF: have to clone here
             for neighbour in neighbours.clone() {
-                if !self.nodes.get(neighbour).unwrap().contains(&node) {
-                    self.nodes.get_mut(neighbour).unwrap().insert(node);
-                }
+                self.nodes
+                    .get_mut(neighbour)
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "node '{node}' has neighbour '{neighbour}' that does not  \
+                             exist in the graph"
+                        )
+                    })
+                    .insert(node);
             }
         }
     }

@@ -2,13 +2,13 @@ use std::{collections::HashSet, hash::Hash};
 
 use num::integer;
 use rand::{
+    RngCore, SeedableRng,
     distributions::Uniform,
     prelude::Distribution,
     seq::{
-        index::{self},
         SliceRandom,
+        index::{self},
     },
-    RngCore, SeedableRng,
 };
 use rand_pcg::Pcg64;
 

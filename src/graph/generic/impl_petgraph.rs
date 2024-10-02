@@ -1,7 +1,7 @@
 use std::{iter::Map, mem};
 
 use hashbrown::HashSet;
-use petgraph::{graph::Neighbors, operator, Undirected};
+use petgraph::{Undirected, graph::Neighbors, operator};
 
 use super::{CompactNodes, HNodes, ImplGraph, Node, NodeCollection, NodeCollectionRef};
 use crate::graph::{Label, LabelEdge};
@@ -15,7 +15,8 @@ impl CompactNodes for PetGraph {}
 impl ImplGraph for PetGraph {
     type Nodes = HNodes;
 
-    type Neighbours<'a> = Neighbors<'a, (), Node>
+    type Neighbours<'a>
+        = Neighbors<'a, (), Node>
     where
         Self: 'a;
 
@@ -101,7 +102,8 @@ fn insert_node(graph: &mut PetGraph, label: Label) -> NodeIndex {
 
 impl NodeCollection for Neighbors<'_, (), Node> {
     type Collected = HNodes;
-    type Iter<'a> = Map<Self, fn(NodeIndex) -> Node>
+    type Iter<'a>
+        = Map<Self, fn(NodeIndex) -> Node>
     where
         Self: 'a;
 

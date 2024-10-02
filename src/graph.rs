@@ -53,7 +53,7 @@ pub mod test_utils {
 
     use std::collections::HashMap;
 
-    use rand::{seq::IteratorRandom, Rng, SeedableRng};
+    use rand::{Rng, SeedableRng, seq::IteratorRandom};
     use rand_pcg::Pcg64;
 
     use super::*;

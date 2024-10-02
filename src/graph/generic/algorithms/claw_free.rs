@@ -3,9 +3,10 @@ use petgraph::Direction;
 
 use crate::{
     graph::{
+        Label, Node,
         algorithms::modular_decomposition::{NodeIndex, Tree},
         generic::{Graph, ImplGraph, NodeCollection},
-        int, Label, Node,
+        int,
     },
     mat_mul::Matrix,
 };

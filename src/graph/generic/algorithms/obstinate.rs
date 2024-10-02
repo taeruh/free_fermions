@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 
 use crate::graph::{
+    Node,
     algorithms::obstinate::{Obstinate, ObstinateKind},
     generic::{Graph, ImplGraph, NodeCollection, NodeCollectionRef},
-    Node,
 };
 
 impl<G: ImplGraph + Clone> Graph<G> {
@@ -153,16 +153,16 @@ impl<G: ImplGraph + Clone> Graph<G> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::{generic::impl_petgraph::PetGraph, int, Label, VLabels};
+    use crate::graph::{Label, VLabels, generic::impl_petgraph::PetGraph, int};
 
     type Graph = super::Graph<PetGraph>;
 
     mod utils {
         use super::*;
         use crate::graph::{
+            VLabelInfo,
             algorithms::obstinate::ObstinateMapped,
             test_utils::{self, RandomMap},
-            VLabelInfo,
         };
 
         pub fn create_graph(

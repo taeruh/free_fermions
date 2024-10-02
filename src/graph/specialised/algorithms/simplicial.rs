@@ -1,14 +1,14 @@
-use hashbrown::{hash_set::Entry, HashMap, HashSet};
+use hashbrown::{HashMap, HashSet, hash_set::Entry};
 use modular_decomposition::ModuleKind;
 use petgraph::Direction;
 
 use crate::graph::{
+    Node, VNodes,
     algorithms::{
         modular_decomposition::{NodeIndex, Tree},
         obstinate::{Obstinate, ObstinateKind},
     },
     specialised::{Graph, GraphData},
-    Node, VNodes,
 };
 
 enum NonTrivialChild {
@@ -67,6 +67,7 @@ impl<G: GraphData> Graph<G> {
 
     // PERF: we could/should seperate the first call of the recursion and early return
     // from it as soon as we find one simplicial clique
+    // -> do this after the testing suite is set up and everything works
     fn prime_recurse(&self, parent: &Self) -> HashSet<VNodes> {
         match self.obstinate() {
             Obstinate::True(ObstinateKind::Itself, (a, b)) => {
@@ -215,6 +216,7 @@ impl<G: GraphData> Graph<G> {
                         // safety: nodes come from the graph itself
                         unsafe { self.subgraph(module_nodes.len(), module_nodes) };
                     // PERF: maybe we can construct the "subtree" frome `tree`
+                    // -> do this after the testing suite is set up and everything works
                     let tree = graph.modular_decomposition();
                     graph.prime_simplicial(&tree)
                 },
@@ -340,9 +342,9 @@ mod tests {
     use petgraph::Direction::Outgoing;
 
     use crate::graph::{
-        specialised::{data::Custom, Graph},
-        test_utils::collect,
         Label,
+        specialised::{Graph, data::Custom},
+        test_utils::collect,
     };
 
     #[test]

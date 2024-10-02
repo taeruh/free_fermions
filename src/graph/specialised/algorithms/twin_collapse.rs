@@ -4,9 +4,9 @@ use petgraph::Direction;
 use crate::{
     fix_int::int,
     graph::{
+        Node,
         algorithms::modular_decomposition::{NodeIndex, Tree, TreeGraph},
         specialised::{Graph, GraphData, SwapRemoveMap},
-        Node,
     },
 };
 

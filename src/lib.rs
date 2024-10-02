@@ -65,5 +65,3 @@ pub mod mat_mul;
 pub mod matrix;
 pub mod playing_around;
 pub mod run;
-
-// pub mod mat_mul;

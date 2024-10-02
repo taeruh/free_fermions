@@ -8,12 +8,12 @@ use petgraph::Direction;
 
 use super::claw_free::ClawFree;
 use crate::graph::{
+    Node, VLabels, VNodes,
     algorithms::{
         modular_decomposition::{NodeIndex, Tree},
         obstinate::{Obstinate, ObstinateKind},
     },
     generic::{Graph, ImplGraph, NodeCollection, NodeCollectionMut},
-    Node, VLabels, VNodes,
 };
 
 impl<G: ImplGraph> Graph<G> {

@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use modular_decomposition::ModuleKind;
-use petgraph::{graph::DiGraph, Direction};
+use petgraph::{Direction, graph::DiGraph};
 
 use crate::graph::{Label, Node};
 
@@ -329,13 +329,13 @@ impl Tree {
 
 #[cfg(test)]
 mod tests {
-    use rand::{seq::SliceRandom, SeedableRng};
+    use rand::{SeedableRng, seq::SliceRandom};
     use rand_pcg::Pcg64;
 
     use super::*;
     use crate::graph::{
-        generic::{adj::AdjGraph, Graph, ImplGraph},
-        test_utils::{collect, RandomMap},
+        generic::{Graph, ImplGraph, adj::AdjGraph},
+        test_utils::{RandomMap, collect},
     };
 
     #[test]

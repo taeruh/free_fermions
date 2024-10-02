@@ -5,13 +5,13 @@ use std::{
     ops::Range,
 };
 
-use hashbrown::{hash_set, HashMap, HashSet};
+use hashbrown::{HashMap, HashSet, hash_set};
 use petgraph::{
+    Undirected,
     visit::{
         GraphBase, GraphProp, IntoNeighbors, NodeCompactIndexable, NodeCount,
         NodeIndexable,
     },
-    Undirected,
 };
 
 use super::{Edge, InvalidGraph, Label, LabelEdge, Node};
@@ -58,20 +58,6 @@ impl<T: GraphData> UnsafeGraph<T> {
         self.0
     }
 }
-
-// // TODO: remove these derefs, and instead provide inline methods for Graph(T) for all
-// // the GraphData methods
-// impl<T> std::ops::Deref for Graph<T> {
-//     type Target = T;
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
-// impl<T> std::ops::DerefMut for Graph<T> {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.0
-//     }
-// }
 
 pub trait GraphData: GraphDataSpecializerHelper + Debug + Clone + Default {
     /// # Safety
@@ -630,16 +616,16 @@ impl<G: GraphData> Graph<G> {
             .collect()
     }
 
+    /// Convenience when performance does not matter. When it matters use the graph itself
+    /// and the unchecked method.
     pub fn get_label_mapping(&self) -> impl Fn(Node) -> Label + Copy + '_ {
         |n| self.0.get_label(n).unwrap()
     }
 
-    /// # Safety
-    /// The returned closure must only be called with valid nodes.
-    pub unsafe fn get_unchecked_label_mapping(
-        &self,
-    ) -> impl Fn(Node) -> Label + Copy + '_ {
-        move |n| unsafe { self.0.get_label_unchecked(n) }
+    /// Convenience when performance does not matter. When it matters use the graph itself
+    /// and the unchecked method.
+    pub fn get_index_mapping(&self) -> impl Fn(Label) -> Node + Copy + '_ {
+        |l| self.0.get_index(l).unwrap()
     }
 }
 

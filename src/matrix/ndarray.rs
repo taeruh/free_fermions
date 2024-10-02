@@ -2,7 +2,7 @@
 // tricks. We only care about correctness and not at all about performance. Essentially,
 // we just use the ndarray crate and call basic methods.
 
-use ndarray::{linalg::Dot, Array2, LinalgScalar};
+use ndarray::{Array2, LinalgScalar, linalg::Dot};
 
 use super::MatrixTools;
 
