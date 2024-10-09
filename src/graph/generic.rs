@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     fmt::Debug,
     iter::{self, Copied},
     ops::Range,
@@ -7,7 +6,7 @@ use std::{
 };
 
 use adj::AdjGraph;
-use hashbrown::{HashSet, hash_set};
+use hashbrown::{HashMap, HashSet, hash_set};
 use petgraph::{
     Undirected,
     visit::{
@@ -16,7 +15,9 @@ use petgraph::{
     },
 };
 
-use super::{Edge, HLabels, HNodes, InvalidGraph, Label, LabelEdge, Node, VNodes};
+use super::{
+    CompactNodes, Edge, HLabels, HNodes, InvalidGraph, Label, LabelEdge, Node, VNodes,
+};
 
 /// A helper to keep track of swap-removals. Basically has to be used when some nodes to
 /// remove are fixed and then we iterate over them and remove them one by one (cf. default
@@ -64,11 +65,6 @@ impl<G> Graph<G> {
         Self(graph)
     }
 }
-
-/// Marker trait, that promises that the nodes in the graph go from 0 to n-1 without
-/// skipping any values; and when a node is removed, its index place is reused by the last
-/// node (i.e., swap_removed)
-pub trait CompactNodes {}
 
 // TODO: maybe split this trait using some traits from petgraph (some of them I have to
 // implement anyways, so it might be a good idea to use them directly)

@@ -14,7 +14,12 @@ impl<G: GraphData> Graph<G> {
         } else if len == 0 {
             Obstinate::True(ObstinateKind::Itself, (vec![], vec![]))
         } else if len == 2 {
-            Obstinate::True(ObstinateKind::Complement, (vec![0], vec![1]))
+            // safety: the graph has 2 nodes
+            if unsafe { self.get_neighbours_unchecked(0).len() } == 1 {
+                Obstinate::True(ObstinateKind::Itself, (vec![0], vec![1]))
+            } else {
+                Obstinate::True(ObstinateKind::Complement, (vec![0], vec![1]))
+            }
         } else {
             unsafe { self.obstinate_non_trivial() }
         }
@@ -29,10 +34,7 @@ impl<G: GraphData> Graph<G> {
 
         let mut degrees = self
             .enumerate_neighbours()
-            .map(|(node, neighbours)| {
-                let degree = neighbours.len();
-                (node, degree)
-            })
+            .map(|(node, neighbours)| (node, neighbours.len()))
             .collect::<Vec<_>>();
         degrees.sort_unstable_by_key(|(_, degree)| *degree);
         debug_assert_eq!(degrees.len(), len);
@@ -88,6 +90,11 @@ impl<G: GraphData> Graph<G> {
             || !graph.set_is_independent(a_part.iter().copied())
             || !graph.set_is_independent(b_part.iter().copied())
         {
+            println!("{:?}", "FOOOOOOOOOOO");
+            println!("{:?}", a_part.intersection(b_part).count());
+            println!("{:?}", kind);
+            println!("{:?}", a_part);
+            println!("{:?}", b_part);
             return Obstinate::False;
         }
 
@@ -139,4 +146,26 @@ impl<G: GraphData> Graph<G> {
             ),
         )
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use hashbrown::HashMap;
+
+    use crate::graph::{
+        HLabels, Label,
+        algorithms::obstinate::{self, ObstinateMapped},
+        specialised::{self, data::IndexMap},
+    };
+
+    type Graph = specialised::Graph<IndexMap>;
+
+    fn create(map: HashMap<Label, HLabels>) -> Graph {
+        Graph::from_adjacency_labels(map).unwrap()
+    }
+    fn obstianate_algorithm(graph: &Graph) -> ObstinateMapped {
+        graph.obstinate().map(|n| graph.get_label(n).unwrap())
+    }
+
+    obstinate::tests::test_it!(create, obstianate_algorithm);
 }

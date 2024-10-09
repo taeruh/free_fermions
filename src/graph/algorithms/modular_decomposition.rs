@@ -342,7 +342,7 @@ mod tests {
     fn equivalences() {
         let rng = &mut Pcg64::from_entropy();
 
-        let map = RandomMap::new(1000, 2000, rng);
+        let map = RandomMap::with_rng(1000, 2000, rng);
         let mut edges = collect!(v, map;
             (0, 1), (1, 2), (2, 3), (3, 4), (3, 5), (3, 6), (3, 7), (4, 5), (6, 7),);
 

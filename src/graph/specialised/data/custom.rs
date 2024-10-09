@@ -1,7 +1,8 @@
 use hashbrown::{HashMap, HashSet};
 
-use crate::graph::specialised::{
-    GraphData, GraphDataSpecializerHelper, Label, Neighbours, Node,
+use crate::graph::{
+    CompactNodes,
+    specialised::{GraphData, GraphDataSpecializerHelper, Label, Neighbours, Node},
 };
 
 #[derive(Debug, Clone, Default)]
@@ -10,6 +11,8 @@ pub struct Custom {
     pub labels: Vec<Label>,
     pub invert_labels: HashMap<Label, Node>,
 }
+
+impl CompactNodes for Custom {}
 
 impl GraphData for Custom {
     unsafe fn get_index_unchecked(&self, label: Label) -> Node {
@@ -89,6 +92,12 @@ impl GraphData for Custom {
         self.nodes.iter_mut()
     }
 
+    fn enumerate_neighbours_mut(
+        &mut self,
+    ) -> impl Iterator<Item = (Node, &mut Neighbours)> {
+        self.nodes.iter_mut().enumerate()
+    }
+
     fn pop(&mut self) -> Option<Neighbours> {
         let label = self.labels.pop().unwrap();
         self.invert_labels.remove(&label);
@@ -120,9 +129,8 @@ impl GraphData for Custom {
 }
 
 impl GraphDataSpecializerHelper for Custom {
+    // for a safer version, see what we how we do it for IndexMap
     unsafe fn raw_node_swap_remove(&mut self, node: Node) {
-        // for a safer version, see what we how we do it for IndexMap
-
         let ptr = self.nodes.as_mut_ptr();
         // safety: API safety invariant promises that node is valid
         let neighbours = unsafe { self.nodes.get_unchecked_mut(node) };
@@ -135,9 +143,8 @@ impl GraphDataSpecializerHelper for Custom {
         unsafe { self.swap_remove_unchecked(node) };
     }
 
+    // for a safer version, see what we how we do it for IndexMap
     unsafe fn raw_node_neighbours_update(&mut self, node: Node, before: &Node) {
-        // for a safer version, see what we how we do it for IndexMap
-
         let ptr = self.nodes.as_mut_ptr();
         // safety: API safety invariant promises that node is valid
         let neighbours = unsafe { self.nodes.get_unchecked_mut(node) };

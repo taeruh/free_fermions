@@ -43,7 +43,7 @@ pub mod fix_int {
 /// # Safety
 /// None
 #[inline(always)]
-pub unsafe fn unsafe_marker() {}
+pub(crate) unsafe fn unsafe_marker() {}
 
 #[macro_export]
 macro_rules! debug_unreachable_unchecked {

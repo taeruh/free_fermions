@@ -1,6 +1,6 @@
-use std::{collections::HashMap, mem};
+use std::mem;
 
-use hashbrown::HashSet;
+use hashbrown::{HashMap, HashSet};
 
 use super::{CompactNodes, ImplGraph, NodeCollection};
 use crate::graph::{HNodes, Label, LabelEdge, Node};
@@ -233,7 +233,7 @@ mod tests {
         // map_to_labels, but instead creating the expected graph with the graph
         // constructor (therefore we cannot allow any randomness on the order of
         // insertion)
-        let map = RandomMap::new(5, 42, &mut Pcg64::from_entropy());
+        let map = RandomMap::with_rng(5, 42, &mut Pcg64::from_entropy());
         let correct = AdjGraph::from_adjacency_labels(collect!(vv, map;
                 (0, [2, 4]),
                 (1, [2, 3, 4]),

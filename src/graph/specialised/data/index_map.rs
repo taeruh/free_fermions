@@ -4,9 +4,14 @@ use hashbrown::HashSet;
 use indexmap::map::Entry;
 
 use super::super::GraphDataSpecializerHelper;
-use crate::graph::specialised::{GraphData, Label, Neighbours, Node};
+use crate::graph::{
+    CompactNodes,
+    specialised::{GraphData, Label, Neighbours, Node},
+};
 
 pub type IndexMap = indexmap::IndexMap<Label, Neighbours>;
+
+impl CompactNodes for IndexMap {}
 
 impl GraphData for IndexMap {
     unsafe fn get_index_unchecked(&self, label: Label) -> Node {
@@ -87,6 +92,12 @@ impl GraphData for IndexMap {
         self.values().enumerate()
     }
 
+    fn enumerate_neighbours_mut(
+        &mut self,
+    ) -> impl Iterator<Item = (Node, &mut Neighbours)> {
+        self.values_mut().enumerate()
+    }
+
     fn enumerate_full(&self) -> impl Iterator<Item = (Node, Label, &Neighbours)> {
         // enumerate() makes sense here; cf. doc (or code) of values()
         self.iter()
@@ -109,10 +120,10 @@ impl GraphData for IndexMap {
 }
 
 impl GraphDataSpecializerHelper for IndexMap {
-    // we could also do something similar as for the custom::Foo by getting mut refs to
+    // we could also do something similar as for the custom::Custom by getting mut refs to
     // the entries and then transmute_copy them or turn them into raw pointers; while the
     // aliasing rules would probably hold, it relies on that the getter methods of
-    // IndexMap don't do something unexpected (which would probably be catch by miri, but
+    // IndexMap don't do something unexpected (which would probably be catched by miri, but
     // I don't want to rely on that); I couldn't really find a way around the getter
     // methods of IndexMap, because it does not provide any public raw access methods to
     // the underlining vector of entries

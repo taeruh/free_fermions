@@ -14,7 +14,7 @@ use petgraph::{
     },
 };
 
-use super::{Edge, InvalidGraph, Label, LabelEdge, Node};
+use super::{CompactNodes, Edge, InvalidGraph, Label, LabelEdge, Node};
 
 const DECIDER_SUBGRAPH_VIA_DELETION_IF_LESS: f64 = 0.5; // otherwise via creation
 
@@ -59,7 +59,10 @@ impl<T: GraphData> UnsafeGraph<T> {
     }
 }
 
-pub trait GraphData: GraphDataSpecializerHelper + Debug + Clone + Default {
+/// Inner graph data structure.
+pub trait GraphData:
+    CompactNodes + GraphDataSpecializerHelper + Debug + Clone + Default
+{
     /// # Safety
     /// The label must be valid.
     unsafe fn get_index_unchecked(&self, label: Label) -> Node;
@@ -110,6 +113,10 @@ pub trait GraphData: GraphDataSpecializerHelper + Debug + Clone + Default {
     fn iter_neighbours(&self) -> impl Iterator<Item = &Neighbours>;
 
     fn enumerate_neighbours(&self) -> impl Iterator<Item = (Node, &Neighbours)> + Clone;
+
+    fn enumerate_neighbours_mut(
+        &mut self,
+    ) -> impl Iterator<Item = (Node, &mut Neighbours)>;
 
     fn enumerate_full(&self) -> impl Iterator<Item = (Node, Label, &Neighbours)>;
 
@@ -239,6 +246,16 @@ impl<G: GraphData> Graph<G> {
         self.0.get_label(node)
     }
     #[inline(always)]
+    /// # Safety
+    /// The node/index must be valid.
+    pub unsafe fn get_neighbours_unchecked(&self, node: Node) -> &Neighbours {
+        unsafe { self.0.get_neighbours_unchecked(node) }
+    }
+    #[inline(always)]
+    pub fn get_neighbours(&self, node: Node) -> Option<&Neighbours> {
+        self.0.get_neighbours(node)
+    }
+    #[inline(always)]
     pub fn iter_neighbours(&self) -> impl Iterator<Item = &Neighbours> {
         self.0.iter_neighbours()
     }
@@ -255,12 +272,6 @@ impl<G: GraphData> Graph<G> {
     #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
-    }
-    #[inline(always)]
-    /// # Safety
-    /// The node/index must be valid.
-    pub unsafe fn get_neighbours_unchecked(&self, node: Node) -> &Neighbours {
-        unsafe { self.0.get_neighbours_unchecked(node) }
     }
 
     /// # Safety
@@ -562,12 +573,12 @@ impl<G: GraphData> Graph<G> {
             }
         }
         let node_range = 0..self.0.len();
-        for neighbours in self.0.iter_neighbours_mut() {
-            for node in node_range.clone() {
-                if !neighbours.contains(&node) {
-                    neighbours.insert(node);
+        for (node, neighbours) in self.0.enumerate_neighbours_mut() {
+            for other in node_range.clone() {
+                if !neighbours.contains(&other) && node != other {
+                    neighbours.insert(other);
                 } else {
-                    neighbours.remove(&node);
+                    neighbours.remove(&other);
                 }
                 // PERF: alternatively, we could mem::take(neighbours) and then only
                 // insert into the replaced neighbours; not sure which is faster
@@ -652,13 +663,12 @@ impl<G: GraphData> NodeCount for Graph<G> {
 }
 
 impl<G: GraphData> NodeIndexable for Graph<G> {
-    // this makes sense, because ImplGraph requires CompactNodes
     fn node_bound(&self) -> usize {
         self.len()
     }
 
-    fn to_index(&self, a: Self::NodeId) -> usize {
-        a
+    fn to_index(&self, i: Self::NodeId) -> usize {
+        i
     }
 
     fn from_index(&self, i: usize) -> Self::NodeId {

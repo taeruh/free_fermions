@@ -153,7 +153,7 @@ mod tests {
     fn test() {
         let rng = &mut Pcg64::from_entropy();
 
-        let map = RandomMap::new(24, 42, rng);
+        let map = RandomMap::with_rng(24, 42, rng);
         let input = collect!(
             hh, map;
             (0, [1]),
