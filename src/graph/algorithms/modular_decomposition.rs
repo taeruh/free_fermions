@@ -32,6 +32,7 @@ fn mapped_eq(
     }
 }
 
+// TODO: test these methods ...
 impl Tree {
     pub fn module_representative(&self, mut module: NodeIndex) -> Node {
         loop {
@@ -232,7 +233,11 @@ impl Tree {
 
         for ref true_leaf in true_leafs {
             let left_leaf = left_leaf_mapped.remove(true_leaf).unwrap();
-            let right_leaf = right_leaf_mapped.remove(true_leaf).unwrap();
+            let right_leaf = match right_leaf_mapped.remove(true_leaf) {
+                Some(l) => l,
+                // in that case, the labelled leaf nodes were already different
+                None => return false,
+            };
             if !Self::recurse_compare_parent_path(
                 left_tree, right_tree, left_map, right_map, left_leaf, right_leaf,
             ) {
@@ -328,55 +333,109 @@ impl Tree {
 }
 
 #[cfg(test)]
-mod tests {
-    use rand::{SeedableRng, seq::SliceRandom};
+pub mod tests {
+    use rand::{Rng, SeedableRng, seq::SliceRandom};
     use rand_pcg::Pcg64;
 
     use super::*;
-    use crate::graph::{
-        generic::{Graph, ImplGraph, adj::AdjGraph},
-        test_utils::{RandomMap, collect},
+    use crate::{
+        fix_int::int,
+        graph::{
+            generic::{self, ImplGraph, adj::AdjGraph, impl_petgraph::PetGraph},
+            specialised::{self, data::IndexMap},
+            test_utils::RandomMap,
+        },
     };
 
+    fn random_edges(
+        rng: &mut impl Rng,
+        num_nodes: int,
+        num_edges: int,
+    ) -> Vec<(Label, Label)> {
+        assert!(num_nodes > 1); // otherwise, the loop below will never terminate
+        let map = RandomMap::with_rng(num_nodes, num_nodes * 2, rng);
+        let dist = rand::distributions::Uniform::new(0, num_nodes);
+        let mut edges = Vec::with_capacity(num_edges as usize);
+        for _ in 0..num_edges {
+            loop {
+                let (a, b) = (rng.sample(dist), rng.sample(dist));
+                if a != b {
+                    edges.push((map.map(a), map.map(b)));
+                    break;
+                }
+            }
+        }
+        edges
+    }
+
     #[test]
-    fn equivalences() {
+    fn positive_equivalences() {
         let rng = &mut Pcg64::from_entropy();
+        // modular decomposition fails if there are no nodes or no edges
+        let num_nodes = rng.gen_range(2..50);
+        let num_edges = rng.gen_range(1..100);
+        let mut edges = random_edges(rng, num_nodes, num_edges);
 
-        let map = RandomMap::with_rng(1000, 2000, rng);
-        let mut edges = collect!(v, map;
-            (0, 1), (1, 2), (2, 3), (3, 4), (3, 5), (3, 6), (3, 7), (4, 5), (6, 7),);
+        let gen_adj =
+            generic::Graph::<AdjGraph>::from_edge_labels(edges.clone()).unwrap();
+        let tree_gen_adj = gen_adj.modular_decomposition();
+        edges.shuffle(rng);
+        let gen_pet =
+            generic::Graph::<PetGraph>::from_edge_labels(edges.clone()).unwrap();
+        let tree_gen_pet = gen_pet.modular_decomposition();
+        edges.shuffle(rng);
+        let spec_index =
+            specialised::Graph::<IndexMap>::from_edge_labels(edges.clone()).unwrap();
+        let tree_spec_index = spec_index.modular_decomposition();
+        edges.shuffle(rng);
+        let spec_cus = specialised::Graph::<IndexMap>::from_edge_labels(edges).unwrap();
+        let tree_spec_cus = spec_cus.modular_decomposition();
 
-        edges.shuffle(rng);
-        let graph1 = Graph::<AdjGraph>::from_edge_labels(edges.clone()).unwrap();
-        let tree1 = graph1.modular_decomposition();
-        edges.shuffle(rng);
-        let graph2 = Graph::<AdjGraph>::from_edge_labels(edges).unwrap();
-        let tree2 = graph2.modular_decomposition();
         assert!(Tree::is_equivalent(
-            &tree1,
-            &tree2,
-            |n| graph1.get_label(n).unwrap(),
-            |n| graph2.get_label(n).unwrap()
+            &tree_gen_adj,
+            &tree_gen_pet,
+            |n| gen_adj.get_label(n).unwrap(),
+            |n| gen_pet.get_label(n).unwrap()
         ));
+        assert!(Tree::is_equivalent(
+            &tree_gen_pet,
+            &tree_spec_index,
+            |n| gen_pet.get_label(n).unwrap(),
+            |n| spec_index.get_label(n).unwrap()
+        ));
+        assert!(Tree::is_equivalent(
+            &tree_spec_index,
+            &tree_spec_cus,
+            |n| spec_index.get_label(n).unwrap(),
+            |n| spec_cus.get_label(n).unwrap()
+        ));
+    }
 
-        // nearly same as above, but connecting 5 and 6
-        let other_edges = collect!(v, map;
-            (0, 1), (1, 2), (2, 3), (3, 4), (3, 5), (3, 6), (3, 7), (4, 5), (5, 6), (6, 7),
-        );
-        let graph3 = Graph::<AdjGraph>::from_edge_labels(other_edges).unwrap();
-        let tree3 = graph3.modular_decomposition();
+    #[test]
+    fn negative_equivalences() {
+        let rng = &mut Pcg64::from_entropy();
+        let num_nodes_a = rng.gen_range(2..50);
+        let num_nodes_b = rng.gen_range(2..50);
+        let num_edges_a = rng.gen_range(1..100);
+        let num_edges_b = rng.gen_range(1..100);
+        let (edges_a, edges_b) = loop {
+            let edges_a = random_edges(rng, num_nodes_a, num_edges_a);
+            let edges_b = random_edges(rng, num_nodes_b, num_edges_b);
+            if HashSet::<_>::from_iter(edges_a.iter().cloned())
+                != HashSet::<_>::from_iter(edges_b.iter().cloned())
+            {
+                break (edges_a, edges_b);
+            }
+        };
+        let graph_a = specialised::Graph::<IndexMap>::from_edge_labels(edges_a).unwrap();
+        let tree_a = graph_a.modular_decomposition();
+        let graph_b = specialised::Graph::<IndexMap>::from_edge_labels(edges_b).unwrap();
+        let tree_b = graph_b.modular_decomposition();
         assert!(!Tree::is_equivalent(
-            &tree1,
-            &tree3,
-            |n| graph1.get_label(n).unwrap(),
-            |n| graph3.get_label(n).unwrap()
+            &tree_a,
+            &tree_b,
+            |n| graph_a.get_label(n).unwrap(),
+            |n| graph_b.get_label(n).unwrap()
         ));
-
-        let graph = graph1;
-        let tree = tree1;
-        let reprs = tree.reduced_module(tree.root);
-        let repr_graph = graph.subgraph(&reprs);
-        println!("{:?}", graph);
-        println!("{:?}", repr_graph);
     }
 }

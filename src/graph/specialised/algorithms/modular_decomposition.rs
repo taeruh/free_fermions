@@ -12,3 +12,5 @@ impl<G: GraphData> Graph<G> {
         }
     }
 }
+
+// tests covered in src/graph/algorithms/modular_decomposition.rs
