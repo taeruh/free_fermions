@@ -16,45 +16,9 @@ use petgraph::{
 };
 
 use super::{
-    CompactNodes, Edge, HLabels, HNodes, InvalidGraph, Label, LabelEdge, Node, VNodes,
+    CompactNodes, Edge, HLabels, HNodes, InvalidGraph, Label, LabelEdge, Node,
+    SwapRemoveMap, VNodes,
 };
-
-/// A helper to keep track of swap-removals. Basically has to be used when some nodes to
-/// remove are fixed and then we iterate over them and remove them one by one (cf. default
-/// implemenation of retain nodes).
-#[derive(Clone, Debug)]
-pub struct SwapRemoveMap {
-    map: Vec<Node>,
-    position: Vec<Node>,
-    len: usize,
-}
-
-impl SwapRemoveMap {
-    pub fn new(len: usize) -> Self {
-        assert!(len > 0);
-        Self {
-            map: (0..len).collect(),
-            position: (0..len).collect(),
-            len,
-        }
-    }
-
-    pub fn map(&self, node: Node) -> Node {
-        self.map[node]
-    }
-
-    // assert above len > 0
-    /// No bounds checking (usually automatically done since this type only accompanies
-    /// some other indexing type which defines the indices which should be valid).
-    pub fn swap_remove_unchecked(&mut self, node: Node) -> Node {
-        self.len -= 1;
-        let mapped = self.map[node];
-        let position_last = self.position[self.len];
-        self.map[position_last] = mapped;
-        self.position[mapped] = position_last;
-        mapped
-    }
-}
 
 /// Newtype around `impl `[ImplGraph] types that supports foreign traits.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -228,7 +192,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
         let mut graph_map = SwapRemoveMap::new(self.len());
         for node in self.iter_nodes() {
             if !f(node) {
-                self.remove_node(graph_map.swap_remove_unchecked(node));
+                self.remove_node(graph_map.swap_remove(node));
             }
         }
     }

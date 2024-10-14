@@ -50,6 +50,111 @@ impl InvalidGraph<Node> {
     }
 }
 
+/// A helper to keep track of swap-removals. Basically has to be used when some nodes to
+/// remove are fixed and then we iterate over them and remove them one by one (cf. default
+/// implemenation of retain nodes).
+#[derive(Clone, Debug)]
+pub struct SwapRemoveMap {
+    map: Vec<Node>,
+    position: Vec<Node>,
+    len: usize,
+}
+
+impl SwapRemoveMap {
+    #[inline]
+    /// # Safety
+    /// The `len` must be greater than 0.
+    pub fn new_unchecked(len: usize) -> Self {
+        debug_assert!(len > 0);
+        let position: Vec<_> = (0..len).collect();
+        Self {
+            map: position.clone(),
+            position,
+            len,
+        }
+    }
+
+    #[inline]
+    pub fn new(len: usize) -> Self {
+        assert!(len > 0);
+        Self::new_unchecked(len)
+    }
+
+    /// # Safety
+    /// The `node` must be in bounds, i.e., less than the `len` initialiser.
+    #[inline(always)]
+    pub unsafe fn map_unchecked(&self, node: Node) -> Node {
+        debug_assert!(node < self.map.len());
+        unsafe { *self.map.get_unchecked(node) }
+    }
+
+    #[inline]
+    pub fn map(&self, node: Node) -> Node {
+        assert!(node < self.map.len());
+        unsafe { self.map_unchecked(node) }
+    }
+
+    // _Statement_:
+    /// Let a = (a_1, ldots, a_m) subset {1, ldots, n-1} be the set of pairwise different
+    /// elements we want to swap_remove in some ordered list b = \[b_i, ldots, b_{n-1}\]
+    /// (m leq n-1). Then the following holds: c_i = self_{i-1}.swap_remove_unchecked(a_i)
+    /// is the right element to swap_remove. More specifically, self.map(j) returns the
+    /// position of b_j in b for all i,j in {1, ldots, m}.
+    // Furthermore, the elements of self.position[..n-i] mirrors the indices of the
+    // elements in b.
+    // _Proof_:
+    // We prove it via induction for all i in {1, ldots, m}. The case i = 1 is clear: it
+    // is c_i = a_i which is correct; we updated self.map, so that n-1 is mapped to c_i;
+    // and in self.position[..n-1], c_i contains n-1. Now let the statement hold for i-1.
+    // Then we know that c_i is the right element to swap_remove. We then get the index j
+    // of b_j which is currently at the end of b (via self.position[self.len], which
+    // holds via induction). b_j will be put in the position c_i, so we update
+    // self.map[j] = c_i. Finally, we update self_position[c_i] = j, which mirrors the
+    // actual swap_remove in b.
+    ///
+    /// # Safety
+    /// The `node` must be "valid", that is, it must be `node < len` where `len` was the
+    /// argument during initialisation of `self`, and previous calls to
+    /// `swap_remove(_unchecked)` must not have had `node` as their argument.
+    // The last requirement is actually stricter than necessary, but it enforces correct
+    // use (we actually require self.len > 0)
+    #[inline]
+    pub unsafe fn swap_remove_unchecked(&mut self, node: Node) -> Node {
+        #[cfg(not(debug_assertions))]
+        unsafe {
+            // safety: every node can only be removed once, according to the safety
+            // invariant, so self.len > 0
+            self.len = self.len.unchecked_sub(1);
+            let mapped = self.map_unchecked(node);
+            // safety: position was initialised to have more then `len` elements and we
+            // never remove elements from it
+            let position_last = *self.position.get_unchecked(self.len);
+            // safety: position_last is less then n and we never remove anything from
+            // self.map
+            *self.map.get_unchecked_mut(position_last) = mapped;
+            // safety: mapped is less then n and we never remove anything from
+            // self.position
+            *self.position.get_unchecked_mut(mapped) = position_last;
+            mapped
+        }
+        #[cfg(debug_assertions)]
+        {
+            self.len -= 1;
+            let mapped = self.map[node];
+            let position_last = self.position[self.len];
+            self.map[position_last] = mapped;
+            self.position[mapped] = position_last;
+            mapped
+        }
+    }
+
+    pub fn swap_remove(&mut self, node: Node) -> Node {
+        assert!(node < self.map.len());
+        assert!(self.len > 0);
+        unsafe { self.swap_remove_unchecked(node) }
+    }
+}
+
 pub mod algorithms;
 pub mod generic;
 pub mod specialised;
@@ -267,5 +372,32 @@ pub mod test_utils {
             ),
             collect!(h, map; (1, 2), (1, 3),)
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rand::{SeedableRng, seq::SliceRandom};
+    use rand_pcg::Pcg64;
+
+    use super::*;
+
+    #[test]
+    fn swap_remove() {
+        const NUM_NODES: usize = 3000;
+        const NUM_REMOVE: usize = NUM_NODES / 2;
+        let mut rng = Pcg64::from_entropy();
+
+        let mut pseudo_graph = (0..NUM_NODES).collect::<Vec<_>>();
+        let to_remove = pseudo_graph
+            .choose_multiple(&mut rng, NUM_REMOVE)
+            .copied()
+            .collect::<Vec<usize>>();
+        let mut map = SwapRemoveMap::new(NUM_NODES);
+
+        for node in to_remove.into_iter() {
+            let removed = pseudo_graph.swap_remove(map.swap_remove(node));
+            assert_eq!(removed, node);
+        }
     }
 }

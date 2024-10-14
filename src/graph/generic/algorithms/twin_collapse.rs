@@ -51,9 +51,7 @@ impl<G: ImplGraph> Graph<G> {
                 tree.node_weight((tree_map.map(child.index()) as u32).into()).unwrap()
             {
                 remaining_leaf = Some(*node);
-                tree.remove_node(
-                    (tree_map.swap_remove_unchecked(child.index()) as u32).into(),
-                );
+                tree.remove_node((tree_map.swap_remove(child.index()) as u32).into());
                 num_children -= 1;
                 break;
             }
@@ -64,10 +62,8 @@ impl<G: ImplGraph> Graph<G> {
             if let ModuleKind::Node(node) =
                 tree.node_weight((tree_map.map(child.index()) as u32).into()).unwrap()
             {
-                self.remove_node(graph_map.swap_remove_unchecked(*node));
-                tree.remove_node(
-                    (tree_map.swap_remove_unchecked(child.index()) as u32).into(),
-                );
+                self.remove_node(graph_map.swap_remove(*node));
+                tree.remove_node((tree_map.swap_remove(child.index()) as u32).into());
                 num_children -= 1;
             }
         }
@@ -77,14 +73,14 @@ impl<G: ImplGraph> Graph<G> {
             *tree.node_weight_mut(new_root).unwrap() =
                 ModuleKind::Node(remaining_leaf.unwrap());
         } else {
-            self.remove_node(graph_map.swap_remove_unchecked(remaining_leaf.unwrap()));
+            self.remove_node(graph_map.swap_remove(remaining_leaf.unwrap()));
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use rand::{SeedableRng, seq::SliceRandom};
+    use rand::SeedableRng;
     use rand_pcg::Pcg64;
 
     use super::*;
@@ -93,25 +89,6 @@ mod tests {
         generic::adj::AdjGraph,
         test_utils::{RandomMap, collect},
     };
-
-    #[test]
-    fn swap_remove() {
-        const NUM_NODES: usize = 3000;
-        const NUM_REMOVE: usize = NUM_NODES / 2;
-        let mut rng = Pcg64::from_entropy();
-
-        let mut pseudo_graph = (0..NUM_NODES).collect::<Vec<_>>();
-        let to_remove = pseudo_graph
-            .choose_multiple(&mut rng, NUM_REMOVE)
-            .copied()
-            .collect::<Vec<usize>>();
-        let mut map = SwapRemoveMap::new(NUM_NODES);
-
-        for node in to_remove.into_iter() {
-            let removed = pseudo_graph.swap_remove(map.swap_remove_unchecked(node));
-            assert_eq!(removed, node);
-        }
-    }
 
     fn check<A, N>(input: A, collapsed: impl IntoIterator<Item = A>)
     where

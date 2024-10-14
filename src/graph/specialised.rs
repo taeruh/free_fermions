@@ -14,7 +14,7 @@ use petgraph::{
     },
 };
 
-use super::{CompactNodes, Edge, InvalidGraph, Label, LabelEdge, Node};
+use super::{CompactNodes, Edge, InvalidGraph, Label, LabelEdge, Node, SwapRemoveMap};
 
 const DECIDER_SUBGRAPH_VIA_DELETION_IF_LESS: f64 = 0.5; // otherwise via creation
 
@@ -139,89 +139,6 @@ pub trait GraphDataSpecializerHelper {
     /// The `node` has to be valid. Furthermore all its neighbours have to be valid and do
     /// not contain `node`.
     unsafe fn raw_node_neighbours_update(&mut self, node: Node, before: &Node);
-}
-
-#[derive(Clone, Debug)]
-pub struct SwapRemoveMap {
-    map: Vec<Node>,
-    position: Vec<Node>,
-    len: usize,
-}
-
-impl SwapRemoveMap {
-    #[inline]
-    /// Same as `new`, but without the check that `len` is greater than 0.
-    pub fn new_unchecked(len: usize) -> Self {
-        let position: Vec<_> = (0..len).collect();
-        Self {
-            map: position.clone(),
-            position,
-            len,
-        }
-    }
-
-    #[inline]
-    pub fn new(len: usize) -> Self {
-        assert!(len > 0);
-        Self::new_unchecked(len)
-    }
-
-    /// # Safety
-    /// The `node` must be in bounds, i.e., less than the `len` initialiser.
-    #[inline(always)]
-    pub unsafe fn map_unchecked(&self, node: Node) -> Node {
-        unsafe { *self.map.get_unchecked(node) }
-    }
-
-    #[inline]
-    pub fn map(&self, node: Node) -> Node {
-        assert!(node < self.len);
-        unsafe { self.map_unchecked(node) }
-    }
-
-    // _Statement_:
-    /// Let a = (a_1, ldots, a_m) subset {1, ldots, n-1} be the set of pairwise different
-    /// elements we want to swap_remove in some ordered list b = \[b_i, ldots, b_{n-1}\]
-    /// (m leq n-1). Then the following holds: c_i = self_{i-1}.swap_remove_unchecked(a_i)
-    /// is the right element to swap_remove. More specifically, self.map(j) returns the
-    /// position of b_j in b for all i,j in {1, ldots, m}.
-    // Furthermore, the elements of self.position[..n-i] mirrors the indices of the
-    // elements in b.
-    // _Proof_:
-    // We prove it via induction for all i in {1, ldots, m}. The case i = 1 is clear: it
-    // is c_i = a_i which is correct; we updated self.map, so that n-1 is mapped to c_i;
-    // and in self.position[..n-1], c_i contains n-1. Now let the statement hold for i-1.
-    // Then we know that c_i is the right element to swap_remove. We then get the index j
-    // of b_j which is currently at the end of b (via self.position[self.len], which
-    // holds via induction). b_j will be put in the position c_i, so we update
-    // self.map[j] = c_i. Finally, we update self_position[c_i] = j, which mirrors the
-    // actual swap_remove in b.
-    ///
-    /// # Safety
-    /// The `node` must be in bounds, i.e., less than `len`.
-    #[inline]
-    pub unsafe fn swap_remove_unchecked(&mut self, node: Node) -> Node {
-        // safety: node is in bounds, so self.len > 0
-        unsafe { self.len = self.len.unchecked_sub(1) };
-        let mapped = unsafe { self.map_unchecked(node) };
-        // safety: position was initialised to have more then `len` elements and we never
-        // remove elements from it
-        let position_last = unsafe { *self.position.get_unchecked(self.len) };
-        unsafe {
-            // safety: position_last is less then n and we never remove anything from
-            // self.map
-            *self.map.get_unchecked_mut(position_last) = mapped;
-        }
-        // safety: mapped is less then n and we never remove anything from
-        // self.position
-        *unsafe { self.position.get_unchecked_mut(mapped) } = position_last;
-        mapped
-    }
-
-    pub fn swap_remove(&mut self, node: Node) -> Node {
-        assert!(node < self.len);
-        unsafe { self.swap_remove_unchecked(node) }
-    }
 }
 
 impl<G: GraphData> Graph<G> {
