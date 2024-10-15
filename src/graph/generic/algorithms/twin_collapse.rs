@@ -85,15 +85,14 @@ mod tests {
     use crate::graph::{
         HLabels, Label, Node,
         algorithms::{
-            modular_decomposition::Tree, twin_collapse::tests::RequiredMethods,
+            modular_decomposition::Tree,
+            twin_collapse::{self, tests::RequiredMethods},
         },
-        generic::{self, ImplGraph, impl_petgraph::PetGraph},
+        generic::{AdjGraph, Graph, ImplGraph, PetGraph},
     };
 
-    type Graph = generic::Graph<PetGraph>;
-
-    impl RequiredMethods for Graph {
-        fn create(map: HashMap<Label, HLabels>) -> Graph {
+    impl<G: ImplGraph> RequiredMethods for Graph<G> {
+        fn create(map: HashMap<Label, HLabels>) -> Self {
             Graph::from_adjacency_labels(map).unwrap()
         }
         fn modular_decomposition(&self) -> Tree {
@@ -110,10 +109,6 @@ mod tests {
         }
     }
 
-    use crate::graph::algorithms::twin_collapse;
-
-    #[test]
-    fn foob() {
-        twin_collapse::tests::test::<Graph>();
-    }
+    twin_collapse::tests::test_it!(petgraph, Graph<PetGraph>);
+    twin_collapse::tests::test_it!(adjgraph, Graph<AdjGraph>);
 }

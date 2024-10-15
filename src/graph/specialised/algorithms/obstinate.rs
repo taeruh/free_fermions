@@ -152,20 +152,25 @@ impl<G: GraphData> Graph<G> {
 mod tests {
     use hashbrown::HashMap;
 
+    use super::*;
     use crate::graph::{
         HLabels, Label,
-        algorithms::obstinate::{self, ObstinateMapped},
-        specialised::{self, data::IndexMap},
+        algorithms::obstinate::{self, ObstinateMapped, tests::RequiredMethods},
+        specialised::{
+            GraphData,
+            data::{Custom, IndexMap},
+        },
     };
 
-    type Graph = specialised::Graph<IndexMap>;
-
-    fn create(map: HashMap<Label, HLabels>) -> Graph {
-        Graph::from_adjacency_labels(map).unwrap()
+    impl<G: GraphData> RequiredMethods for Graph<G> {
+        fn create(adj_list: HashMap<Label, HLabels>) -> Self {
+            Graph::from_adjacency_labels(adj_list).unwrap()
+        }
+        fn obstinate(&self) -> ObstinateMapped {
+            self.obstinate().map(|n| self.get_label(n).unwrap())
+        }
     }
-    fn obstianate_algorithm(graph: &Graph) -> ObstinateMapped {
-        graph.obstinate().map(|n| graph.get_label(n).unwrap())
-    }
 
-    obstinate::tests::test_it!(create, obstianate_algorithm);
+    obstinate::tests::test_it!(indexmap, Graph<IndexMap>);
+    obstinate::tests::test_it!(custom, Graph<Custom>);
 }

@@ -35,6 +35,8 @@ impl Obstinate {
 
 #[cfg(test)]
 pub mod tests {
+    use std::fmt::Debug;
+
     use hashbrown::HashMap;
     use rand::SeedableRng;
     use rand_pcg::Pcg64;
@@ -132,12 +134,11 @@ pub mod tests {
         }
 
         impl ObstinateLists {
-            pub fn into_graph_and_expected<G>(
+            pub fn into_graph_and_expected<G: RequiredMethods>(
                 self,
                 map_length: int,
                 map_max: int,
                 rng: &mut impl Rng,
-                create: impl Fn(HashMap<Label, HLabels>) -> G,
                 kind: ObstinateKind,
             ) -> (G, [ObstinateMapped; 2]) {
                 let map = RandomMap::with_rng(map_length, map_max, rng);
@@ -183,44 +184,38 @@ pub mod tests {
                 }
 
                 (
-                    create(test_utils::adj_hash_hash(&map, self.graph_list)),
+                    G::create(test_utils::adj_hash_hash(&map, self.graph_list)),
                     create_expected(kind, self.a_partition, self.b_partition, map),
                 )
             }
         }
     }
 
+    pub trait RequiredMethods: Debug {
+        fn create(adj_list: HashMap<Label, HLabels>) -> Self;
+        fn obstinate(&self) -> ObstinateMapped;
+    }
+
     // separate test case for the empty graph because:
     // a) I don't want to introduce special logic in the loops in the test_positive test
     // b) I'm not sure yet, whether we want the empty graph to be obstinate or not
-    pub fn empty<G>(
-        create: &impl Fn(HashMap<Label, HLabels>) -> G,
-        obstinate_algorithm: &impl Fn(&G) -> ObstinateMapped,
-    ) {
-        let graph = create(HashMap::new());
+    pub fn empty<G: RequiredMethods>() {
+        let graph = G::create(HashMap::new());
         assert_eq!(
-            obstinate_algorithm(&graph),
+            graph.obstinate(),
             ObstinateMapped::True(ObstinateKind::Itself, (vec![], vec![]))
         );
     }
 
     // check all (co-)obstinate graphs (except the empty one) up to MAX vertices (up to
     // isomorphisms)
-    pub fn test_positive<G>(
-        create: &impl Fn(HashMap<Label, HLabels>) -> G,
-        obstinate_algorithm: &impl Fn(&G) -> ObstinateMapped,
-    ) {
+    pub fn test_positive<G: RequiredMethods>() {
         const MAX: int = 10;
         let rng = &mut Pcg64::from_entropy();
         let mut test = |lists: ObstinateLists, size, kind| {
-            let (graph, expected) = lists.into_graph_and_expected(
-                2 * size + 1,
-                2 * size + 42,
-                rng,
-                create,
-                kind,
-            );
-            let result = obstinate_algorithm(&graph);
+            let (graph, expected): (G, _) =
+                lists.into_graph_and_expected(2 * size + 1, 2 * size + 42, rng, kind);
+            let result = graph.obstinate();
             if !expected.contains(&result) {
                 panic!(
                     "expected:\n{:?} or\n{:?}\nbut got:\n{:?}",
@@ -255,92 +250,74 @@ pub mod tests {
     }
 
     // there should be an early fail in the algorithm for that case
-    pub fn false_odd<G: std::fmt::Debug>(
-        create: &impl Fn(HashMap<Label, HLabels>) -> G,
-        obstinate_algorithm: &impl Fn(&G) -> ObstinateMapped,
-    ) {
-        let graph = create(collect!(hh; (0, [1]), (1, [0]), (2, []),));
-        assert_eq!(obstinate_algorithm(&graph), ObstinateMapped::False,);
+    pub fn false_odd<G: RequiredMethods>() {
+        let graph = G::create(collect!(hh; (0, [1]), (1, [0]), (2, []),));
+        assert_eq!(graph.obstinate(), ObstinateMapped::False,);
     }
 
-    pub fn false_cycle<G>(
-        create: &impl Fn(HashMap<Label, HLabels>) -> G,
-        obstinate_algorithm: &impl Fn(&G) -> ObstinateMapped,
-    ) {
-        let graph = create(
+    pub fn false_cycle<G: RequiredMethods>() {
+        let graph = G::create(
             collect!(hh, 4, 7; (0, [3, 1]), (1, [0, 2]), (2, [1, 3]), (3, [2, 0]),),
         );
-        assert_eq!(obstinate_algorithm(&graph), ObstinateMapped::False,);
+        assert_eq!(graph.obstinate(), ObstinateMapped::False,);
     }
 
-    pub fn false_cycle_extra_edge<G>(
-        create: &impl Fn(HashMap<Label, HLabels>) -> G,
-        obstinate_algorithm: &impl Fn(&G) -> ObstinateMapped,
-    ) {
-        let graph = create(
+    pub fn false_cycle_extra_edge<G: RequiredMethods>() {
+        let graph = G::create(
             collect!(hh, 4, 72; (0, [3, 1, 2]), (1, [0, 2]), (2, [1, 3, 0]), (3, [2, 0]),),
         );
-        assert_eq!(obstinate_algorithm(&graph), ObstinateMapped::False,);
+        assert_eq!(graph.obstinate(), ObstinateMapped::False,);
     }
 
-    pub fn false_all_to_all<G>(
-        create: &impl Fn(HashMap<Label, HLabels>) -> G,
-        obstinate_algorithm: &impl Fn(&G) -> ObstinateMapped,
-    ) {
-        let graph = create(collect!(hh, 4, 15;
+    pub fn false_all_to_all<G: RequiredMethods>() {
+        let graph = G::create(collect!(hh, 4, 15;
                 (0, [1, 2, 3]), (1, [0, 2, 3]), (2, [0, 1, 3]), (3, [0, 1, 2]),));
-        assert_eq!(obstinate_algorithm(&graph), ObstinateMapped::False,);
+        assert_eq!(graph.obstinate(), ObstinateMapped::False,);
     }
 
-    pub fn false_completely_independent<G>(
-        create: &impl Fn(HashMap<Label, HLabels>) -> G,
-        obstinate_algorithm: &impl Fn(&G) -> ObstinateMapped,
-    ) {
-        let graph = create(collect!(hh, 4, 57; (0, []), (1, []), (2, []), (3, []),));
-        assert_eq!(obstinate_algorithm(&graph), ObstinateMapped::False,);
+    pub fn false_completely_independent<G: RequiredMethods>() {
+        let graph = G::create(collect!(hh, 4, 57; (0, []), (1, []), (2, []), (3, []),));
+        assert_eq!(graph.obstinate(), ObstinateMapped::False,);
     }
 
-    pub fn false_disconnect_paths<G>(
-        create: &impl Fn(HashMap<Label, HLabels>) -> G,
-        obstinate_algorithm: &impl Fn(&G) -> ObstinateMapped,
-    ) {
-        let graph = create(collect!(hh, 4, 55; (0, [1]), (1, [0]), (2, [3]), (3, [2]),));
-        assert_eq!(obstinate_algorithm(&graph), ObstinateMapped::False,);
+    pub fn false_disconnect_paths<G: RequiredMethods>() {
+        let graph =
+            G::create(collect!(hh, 4, 55; (0, [1]), (1, [0]), (2, [3]), (3, [2]),));
+        assert_eq!(graph.obstinate(), ObstinateMapped::False,);
     }
 
     // TODO: more negative tests
 
-    // not in a function, but in a macro, so that we see which tests fail
     macro_rules! test_it {
-        ($create:ident, $obstinate_algorithm:ident) => {
-            crate::graph::algorithms::obstinate::tests::wrap!(
-                $create,
-                $obstinate_algorithm,
-                empty,
-                test_positive,
-                false_odd,
-                false_cycle,
-                false_cycle_extra_edge,
-                false_all_to_all,
-                false_completely_independent,
-                false_disconnect_paths,
-            );
+        ($module:ident, $typ:ty) => {
+            mod $module {
+                use super::*;
+                crate::graph::algorithms::obstinate::tests::wrap!(
+                    $typ,
+                    empty,
+                    test_positive,
+                    false_odd,
+                    false_cycle,
+                    false_cycle_extra_edge,
+                    false_all_to_all,
+                    false_completely_independent,
+                    false_disconnect_paths,
+                );
+            }
         };
     }
     pub(crate) use test_it;
 
     macro_rules! wrap {
-        ($create:ident, $obstinate_algorithm:ident, $($fun:ident,)*) => {
+        ($typ:ty, $($fun:ident,)*) => {
             $(
                 #[test]
                 fn $fun() {
-                    crate::graph::algorithms::obstinate::tests::$fun(
-                        &$create,
-                        &$obstinate_algorithm,
-                    );
+                    crate::graph::algorithms::obstinate::tests::$fun::<$typ>();
                 }
             )*
         };
     }
     pub(crate) use wrap;
+
 }

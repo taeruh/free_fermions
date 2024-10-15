@@ -341,7 +341,7 @@ pub mod tests {
     use crate::{
         fix_int::int,
         graph::{
-            generic::{self, ImplGraph, adj::AdjGraph, impl_petgraph::PetGraph},
+            generic::{self, AdjGraph, ImplGraph, PetGraph},
             specialised::{self, data::IndexMap},
             test_utils::RandomMap,
         },

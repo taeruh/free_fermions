@@ -5,8 +5,9 @@ use std::{
     ptr, slice,
 };
 
-use adj::AdjGraph;
+pub use adj::AdjGraph;
 use hashbrown::{HashMap, HashSet, hash_set};
+pub use impl_petgraph::PetGraph;
 use petgraph::{
     Undirected,
     visit::{
@@ -689,6 +690,6 @@ impl NodeCollectionMut for HNodes {
     }
 }
 
-pub mod adj;
+mod adj;
 pub mod algorithms;
-pub mod impl_petgraph;
+mod impl_petgraph;

@@ -16,7 +16,7 @@ pub mod tests {
     };
 
     pub trait RequiredMethods: Debug {
-        fn create(map: HashMap<Label, HLabels>) -> Self;
+        fn create(adj_list: HashMap<Label, HLabels>) -> Self;
         fn modular_decomposition(&self) -> Tree;
         fn twin_collapse(&mut self, tree: &mut Tree);
         fn get_label_mapping(&self) -> impl Fn(Node) -> Label + Copy;
@@ -81,4 +81,29 @@ pub mod tests {
         });
         check::<G>(input, collapsed);
     }
+
+    macro_rules! test_it {
+        ($module:ident, $typ:ty) => {
+            mod $module {
+                use super::*;
+                crate::graph::algorithms::twin_collapse::tests::wrap!(
+                    $typ, test,
+                    // TODO: more
+                );
+            }
+        };
+    }
+    pub(crate) use test_it;
+
+    macro_rules! wrap {
+        ($typ:ty, $($fun:ident,)*) => {
+            $(
+                #[test]
+                fn $fun() {
+                    crate::graph::algorithms::twin_collapse::tests::$fun::<$typ>();
+                }
+            )*
+        };
+    }
+    pub(crate) use wrap;
 }

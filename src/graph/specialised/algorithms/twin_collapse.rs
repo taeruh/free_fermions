@@ -179,9 +179,13 @@ mod tests {
     use crate::graph::{
         HLabels, Label, Node,
         algorithms::{
-            modular_decomposition::Tree, twin_collapse::tests::RequiredMethods,
+            modular_decomposition::Tree, twin_collapse,
+            twin_collapse::tests::RequiredMethods,
         },
-        specialised::{Graph, GraphData, data::Custom},
+        specialised::{
+            Graph, GraphData,
+            data::{Custom, IndexMap},
+        },
     };
 
     impl<G: GraphData> RequiredMethods for Graph<G> {
@@ -202,10 +206,6 @@ mod tests {
         }
     }
 
-    use crate::graph::algorithms::twin_collapse;
-
-    #[test]
-    fn foop() {
-        twin_collapse::tests::test::<Graph<Custom>>();
-    }
+    twin_collapse::tests::test_it!(custom, Graph<Custom>);
+    twin_collapse::tests::test_it!(indexmap, Graph<IndexMap>);
 }
