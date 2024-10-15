@@ -26,12 +26,21 @@ pub mod tests {
     fn check<G: RequiredMethods>(
         input: HashMap<int, HashSet<int>>,
         collapsed: impl IntoIterator<Item = HashMap<int, HashSet<int>>>,
+        show_info: bool,
     ) {
         let mut graph = G::create(input);
         let expected: Vec<G> = collapsed.into_iter().map(|adj| G::create(adj)).collect();
 
         let mut tree = graph.modular_decomposition();
+        if show_info {
+            println!("BEFORE graph: {graph:?}");
+            println!("BEFORE tree: {tree:?}\n");
+        }
         graph.twin_collapse(&mut tree);
+        if show_info {
+            println!("AFTER graph: {graph:?}");
+            println!("AFTER tree: {tree:?}\n");
+        }
 
         let sanity_tree = graph.modular_decomposition();
         assert!(Tree::is_equivalent(
@@ -77,7 +86,7 @@ pub mod tests {
                 (representative, [2]),
             )
         });
-        check::<G>(input, collapsed);
+        check::<G>(input, collapsed, false);
     }
 
     pub fn path4<G: RequiredMethods>() {
@@ -90,7 +99,7 @@ pub mod tests {
             (3, [2]),
         );
         let collapsed = vec![input.clone()];
-        check::<G>(input, collapsed);
+        check::<G>(input, collapsed, false);
     }
 
     pub fn complete<G: RequiredMethods>() {
@@ -109,7 +118,29 @@ pub mod tests {
                 (representative, []),
             )
         });
-        check::<G>(input, collapsed);
+        check::<G>(input, collapsed, false);
+    }
+
+    pub fn cotree<G: RequiredMethods>() {
+        let map = RandomMap::new(8, 16);
+        let input = collect!(
+            hh, map;
+            (0, [2, 3]),
+            (1, [2, 3]),
+            (2, [0, 1]),
+            (3, [0, 1]),
+            (4, [6, 7]),
+            (5, [6, 7]),
+            (6, [4, 5]),
+            (7, [4, 5]),
+        );
+        let collapsed = [0, 1, 2, 3, 4, 5, 6, 7].into_iter().map(|representative| {
+            collect!(
+                hh, map;
+                (representative, []),
+            )
+        });
+        check::<G>(input, collapsed, true);
     }
 
     pub fn independent<G: RequiredMethods>() {
@@ -126,7 +157,7 @@ pub mod tests {
                 (representative, []),
             )
         });
-        check::<G>(input, collapsed);
+        check::<G>(input, collapsed, false);
     }
 
     macro_rules! test_it {
@@ -139,6 +170,7 @@ pub mod tests {
                     path4,
                     complete,
                     independent,
+                    cotree,
                     // TODO: more
                 );
             }
