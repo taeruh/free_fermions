@@ -87,8 +87,12 @@ impl<G: GraphData> Graph<G> {
         let mut to_remaining_leaf = true;
 
         #[inline(always)]
-        fn get_weight(tree: &TreeGraph, node: NodeIndex) -> &ModuleKind<Node> {
-            tree.node_weight((node.index() as int).into()).unwrap()
+        fn get_weight<'t>(
+            tree: &'t TreeGraph,
+            node: NodeIndex,
+            tree_map: &SwapRemoveMap,
+        ) -> &'t ModuleKind<Node> {
+            tree.node_weight((tree_map.map(node.index()) as int).into()).unwrap()
         }
 
         #[inline(always)]
@@ -121,12 +125,12 @@ impl<G: GraphData> Graph<G> {
         }
 
         if let Some(child) = children.next() {
-            if let ModuleKind::Node(node) = get_weight(tree, child) {
+            if let ModuleKind::Node(node) = get_weight(tree, child, tree_map) {
                 remaining_leaf = Some(*node);
                 tree_remove(tree, tree_map, child);
             } else {
                 self.recurse_collapse(tree, child, graph_map, tree_map);
-                if let ModuleKind::Node(node) = get_weight(tree, child) {
+                if let ModuleKind::Node(node) = get_weight(tree, child, tree_map) {
                     remaining_leaf = Some(*node);
                     tree_remove(tree, tree_map, child);
                 } else {
@@ -135,14 +139,14 @@ impl<G: GraphData> Graph<G> {
             }
         }
 
-        // break the loop into to leaps to so that we only have the `to_remaining_leaf`
+        // break the loop into two loops to so that we only have the `to_remaining_leaf`
         // logic once
         for child in children.by_ref() {
-            if let ModuleKind::Node(node) = get_weight(tree, child) {
+            if let ModuleKind::Node(node) = get_weight(tree, child, tree_map) {
                 full_remove(self, graph_map, tree, tree_map, child, *node);
             } else {
                 self.recurse_collapse(tree, child, graph_map, tree_map);
-                if let ModuleKind::Node(node) = get_weight(tree, child) {
+                if let ModuleKind::Node(node) = get_weight(tree, child, tree_map) {
                     full_remove(self, graph_map, tree, tree_map, child, *node);
                 } else {
                     to_remaining_leaf = false;
@@ -151,11 +155,11 @@ impl<G: GraphData> Graph<G> {
             }
         }
         for child in children {
-            if let ModuleKind::Node(node) = get_weight(tree, child) {
+            if let ModuleKind::Node(node) = get_weight(tree, child, tree_map) {
                 full_remove(self, graph_map, tree, tree_map, child, *node);
             } else {
                 self.recurse_collapse(tree, child, graph_map, tree_map);
-                if let ModuleKind::Node(node) = get_weight(tree, child) {
+                if let ModuleKind::Node(node) = get_weight(tree, child, tree_map) {
                     full_remove(self, graph_map, tree, tree_map, child, *node);
                 }
             }

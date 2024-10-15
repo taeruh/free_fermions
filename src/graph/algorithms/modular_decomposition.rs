@@ -219,6 +219,19 @@ impl Tree {
         left_map: impl FnOnce(Node) -> Label + Copy,
         right_map: impl FnOnce(Node) -> Label + Copy,
     ) -> bool {
+        if left_tree.graph.node_count() != right_tree.graph.node_count() {
+            return false;
+        } else if left_tree.graph.node_count() == 1 {
+            let get_node = |tree: &Self| {
+                if let ModuleKind::Node(node) = tree.graph.node_weight(tree.root).unwrap()
+                {
+                    *node
+                } else {
+                    unreachable!("tree has only one node, so it must be a leaf node")
+                }
+            };
+            return left_map(get_node(left_tree)) == right_map(get_node(right_tree));
+        }
         if left_tree.graph.node_weight(left_tree.root)
             != right_tree.graph.node_weight(right_tree.root)
         {
@@ -394,21 +407,50 @@ pub mod tests {
         assert!(Tree::is_equivalent(
             &tree_gen_adj,
             &tree_gen_pet,
-            |n| gen_adj.get_label(n).unwrap(),
-            |n| gen_pet.get_label(n).unwrap()
+            gen_adj.get_label_mapping(),
+            gen_pet.get_label_mapping()
         ));
         assert!(Tree::is_equivalent(
             &tree_gen_pet,
             &tree_spec_index,
-            |n| gen_pet.get_label(n).unwrap(),
-            |n| spec_index.get_label(n).unwrap()
+            gen_pet.get_label_mapping(),
+            spec_index.get_label_mapping()
         ));
         assert!(Tree::is_equivalent(
             &tree_spec_index,
             &tree_spec_cus,
-            |n| spec_index.get_label(n).unwrap(),
-            |n| spec_cus.get_label(n).unwrap()
+            spec_index.get_label_mapping(),
+            spec_cus.get_label_mapping()
         ));
+
+        // // the following does not make sense, since modules can be collapsed onto
+        // // different representatives; however, I it succeeds quite often (and it did
+        // // indeed collapse some stuff in these cases), and also in the cases where it
+        // // failed, the smaller graphs (checked manually) where same up to labelling, which
+        // // is a good positive indication:
+        // // while we are at it, let's compare them after twin_collapsing
+        // gen_adj.twin_collapse(&mut tree_gen_adj);
+        // gen_pet.twin_collapse(&mut tree_gen_pet);
+        // unsafe { spec_index.twin_collapse(&mut tree_spec_index) };
+        // unsafe { spec_cus.twin_collapse(&mut tree_spec_cus) };
+        // assert!(Tree::is_equivalent(
+        //     &tree_gen_adj,
+        //     &tree_gen_pet,
+        //     gen_adj.get_label_mapping(),
+        //     gen_pet.get_label_mapping()
+        // ));
+        // assert!(Tree::is_equivalent(
+        //     &tree_gen_pet,
+        //     &tree_spec_index,
+        //     gen_pet.get_label_mapping(),
+        //     spec_index.get_label_mapping()
+        // ));
+        // assert!(Tree::is_equivalent(
+        //     &tree_spec_index,
+        //     &tree_spec_cus,
+        //     |n| spec_index.get_label(n).unwrap(),
+        //     |n| spec_cus.get_label(n).unwrap()
+        // ));
     }
 
     #[test]

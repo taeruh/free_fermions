@@ -56,11 +56,9 @@ pub mod tests {
         ));
     }
 
-    pub fn test<G: RequiredMethods>() {
+    pub fn some_test<G: RequiredMethods>() {
         let rng = &mut Pcg64::from_entropy();
-
-        // let map = RandomMap::with_rng(24, 42, rng);
-        let map = RandomMap::Identity;
+        let map = RandomMap::with_rng(24, 42, rng);
         let input = collect!(
             hh, map;
             (0, [1]),
@@ -82,12 +80,65 @@ pub mod tests {
         check::<G>(input, collapsed);
     }
 
+    pub fn path4<G: RequiredMethods>() {
+        let map = RandomMap::new(4, 10);
+        let input = collect!(
+            hh, map;
+            (0, [1]),
+            (1, [0, 2]),
+            (2, [1, 3]),
+            (3, [2]),
+        );
+        let collapsed = vec![input.clone()];
+        check::<G>(input, collapsed);
+    }
+
+    pub fn complete<G: RequiredMethods>() {
+        let map = RandomMap::new(5, 10);
+        let input = collect!(
+            hh, map;
+            (0, [1, 2, 3, 4]),
+            (1, [0, 2, 3, 4]),
+            (2, [0, 1, 3, 4]),
+            (3, [0, 1, 2, 4]),
+            (4, [0, 1, 2, 3]),
+        );
+        let collapsed = [0, 1, 2, 3, 4].into_iter().map(|representative| {
+            collect!(
+                hh, map;
+                (representative, []),
+            )
+        });
+        check::<G>(input, collapsed);
+    }
+
+    pub fn independent<G: RequiredMethods>() {
+        let map = RandomMap::new(3, 10);
+        let input = collect!(
+            hh, map;
+            (0, []),
+            (1, []),
+            (2, []),
+        );
+        let collapsed = [0, 1, 2].into_iter().map(|representative| {
+            collect!(
+                hh, map;
+                (representative, []),
+            )
+        });
+        check::<G>(input, collapsed);
+    }
+
     macro_rules! test_it {
         ($module:ident, $typ:ty) => {
             mod $module {
                 use super::*;
                 crate::graph::algorithms::twin_collapse::tests::wrap!(
-                    $typ, test,
+                    $typ,
+                    some_test,
+                    path4,
+                    complete,
+                    independent,
                     // TODO: more
                 );
             }
