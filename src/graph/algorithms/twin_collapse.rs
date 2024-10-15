@@ -1,35 +1,24 @@
 #[cfg(test)]
 pub mod tests {
-    use std::fmt::Debug;
 
-    use hashbrown::{HashMap, HashSet};
+    use hashbrown::HashMap;
     use rand::SeedableRng;
     use rand_pcg::Pcg64;
 
-    use crate::{
-        fix_int::int,
-        graph::{
-            HLabels, Label, Node,
-            algorithms::modular_decomposition::Tree,
-            test_utils::{RandomMap, collect},
-        },
+    use crate::graph::{
+        HLabels, Label,
+        algorithms::{modular_decomposition::Tree, test_impl::RequiredMethods},
+        test_utils::{RandomMap, collect},
     };
 
-    pub trait RequiredMethods: Debug {
-        fn create(adj_list: HashMap<Label, HLabels>) -> Self;
-        fn modular_decomposition(&self) -> Tree;
-        fn twin_collapse(&mut self, tree: &mut Tree);
-        fn get_label_mapping(&self) -> impl Fn(Node) -> Label + Copy;
-        fn map_to_labels(&self) -> HashMap<Label, HLabels>;
-    }
-
     fn check<G: RequiredMethods>(
-        input: HashMap<int, HashSet<int>>,
-        collapsed: impl IntoIterator<Item = HashMap<int, HashSet<int>>>,
+        input: HashMap<Label, HLabels>,
+        collapsed: impl IntoIterator<Item = HashMap<Label, HLabels>>,
         show_info: bool,
     ) {
-        let mut graph = G::create(input);
-        let expected: Vec<G> = collapsed.into_iter().map(|adj| G::create(adj)).collect();
+        let mut graph = G::from_adj_list(input);
+        let expected: Vec<G> =
+            collapsed.into_iter().map(|adj| G::from_adj_list(adj)).collect();
 
         let mut tree = graph.modular_decomposition();
         if show_info {

@@ -80,34 +80,10 @@ impl<G: ImplGraph> Graph<G> {
 
 #[cfg(test)]
 mod tests {
-    use hashbrown::HashMap;
-
     use crate::graph::{
-        HLabels, Label, Node,
-        algorithms::{
-            modular_decomposition::Tree,
-            twin_collapse::{self, tests::RequiredMethods},
-        },
-        generic::{AdjGraph, Graph, ImplGraph, PetGraph},
+        algorithms::twin_collapse,
+        generic::{AdjGraph, Graph, PetGraph},
     };
-
-    impl<G: ImplGraph> RequiredMethods for Graph<G> {
-        fn create(map: HashMap<Label, HLabels>) -> Self {
-            Graph::from_adjacency_labels(map).unwrap()
-        }
-        fn modular_decomposition(&self) -> Tree {
-            self.modular_decomposition()
-        }
-        fn twin_collapse(&mut self, tree: &mut Tree) {
-            self.twin_collapse(tree);
-        }
-        fn get_label_mapping(&self) -> impl Fn(Node) -> Label + Copy {
-            ImplGraph::get_label_mapping(self)
-        }
-        fn map_to_labels(&self) -> HashMap<Label, HLabels> {
-            ImplGraph::map_to_labels(self)
-        }
-    }
 
     twin_collapse::tests::test_it!(petgraph, Graph<PetGraph>);
     twin_collapse::tests::test_it!(adjgraph, Graph<AdjGraph>);

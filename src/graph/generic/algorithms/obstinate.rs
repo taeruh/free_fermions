@@ -150,23 +150,11 @@ impl<G: ImplGraph + Clone> Graph<G> {
 
 #[cfg(test)]
 mod tests {
-    use hashbrown::HashMap;
-
     use super::*;
     use crate::graph::{
-        HLabels, Label,
-        algorithms::obstinate::{self, ObstinateMapped, tests::RequiredMethods},
+        algorithms::obstinate::{self},
         generic::{AdjGraph, PetGraph},
     };
-
-    impl<G: ImplGraph> RequiredMethods for Graph<G> {
-        fn create(adj_list: HashMap<Label, HLabels>) -> Self {
-            Graph::from_adjacency_labels(adj_list).unwrap()
-        }
-        fn obstinate(&self) -> ObstinateMapped {
-            self.obstinate().map(|n| self.get_label(n).unwrap())
-        }
-    }
 
     obstinate::tests::test_it!(petgraph, Graph<PetGraph>);
     obstinate::tests::test_it!(adjgraph, Graph<AdjGraph>);

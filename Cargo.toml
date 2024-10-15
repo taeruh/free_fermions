@@ -18,3 +18,6 @@ rand_pcg = { version = "0.3.1", default-features = false }
 thiserror = "1.0.61"
 
 [dev-dependencies]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(lsp_rust_analyzer)'] }

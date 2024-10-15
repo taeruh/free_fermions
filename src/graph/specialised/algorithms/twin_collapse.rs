@@ -178,37 +178,13 @@ impl<G: GraphData> Graph<G> {
 
 #[cfg(test)]
 mod tests {
-    use hashbrown::HashMap;
-
     use crate::graph::{
-        HLabels, Label, Node,
-        algorithms::{
-            modular_decomposition::Tree, twin_collapse,
-            twin_collapse::tests::RequiredMethods,
-        },
+        algorithms::twin_collapse,
         specialised::{
-            Graph, GraphData,
+            Graph,
             data::{Custom, IndexMap},
         },
     };
-
-    impl<G: GraphData> RequiredMethods for Graph<G> {
-        fn create(map: HashMap<Label, HLabels>) -> Self {
-            Graph::from_adjacency_labels(map).unwrap()
-        }
-        fn modular_decomposition(&self) -> Tree {
-            self.modular_decomposition()
-        }
-        fn twin_collapse(&mut self, tree: &mut Tree) {
-            unsafe { self.twin_collapse(tree) };
-        }
-        fn get_label_mapping(&self) -> impl Fn(Node) -> Label + Copy {
-            self.get_label_mapping()
-        }
-        fn map_to_labels(&self) -> HashMap<Label, HLabels> {
-            self.map_to_labels()
-        }
-    }
 
     twin_collapse::tests::test_it!(custom, Graph<Custom>);
     twin_collapse::tests::test_it!(indexmap, Graph<IndexMap>);

@@ -46,7 +46,8 @@ pub mod tests {
     use crate::{
         fix_int::int,
         graph::{
-            HLabels, Label, algorithms::obstinate::ObstinateKind, test_utils::collect,
+            algorithms::{obstinate::ObstinateKind, test_impl::RequiredMethods},
+            test_utils::collect,
         },
     };
 
@@ -184,23 +185,18 @@ pub mod tests {
                 }
 
                 (
-                    G::create(test_utils::adj_hash_hash(&map, self.graph_list)),
+                    G::from_adj_list(test_utils::adj_hash_hash(&map, self.graph_list)),
                     create_expected(kind, self.a_partition, self.b_partition, map),
                 )
             }
         }
     }
 
-    pub trait RequiredMethods: Debug {
-        fn create(adj_list: HashMap<Label, HLabels>) -> Self;
-        fn obstinate(&self) -> ObstinateMapped;
-    }
-
     // separate test case for the empty graph because:
     // a) I don't want to introduce special logic in the loops in the test_positive test
     // b) I'm not sure yet, whether we want the empty graph to be obstinate or not
     pub fn empty<G: RequiredMethods>() {
-        let graph = G::create(HashMap::new());
+        let graph = G::from_adj_list(HashMap::new());
         assert_eq!(
             graph.obstinate(),
             ObstinateMapped::True(ObstinateKind::Itself, (vec![], vec![]))
@@ -251,38 +247,40 @@ pub mod tests {
 
     // there should be an early fail in the algorithm for that case
     pub fn false_odd<G: RequiredMethods>() {
-        let graph = G::create(collect!(hh; (0, [1]), (1, [0]), (2, []),));
+        let graph = G::from_adj_list(collect!(hh; (0, [1]), (1, [0]), (2, []),));
         assert_eq!(graph.obstinate(), ObstinateMapped::False,);
     }
 
     pub fn false_cycle<G: RequiredMethods>() {
-        let graph = G::create(
+        let graph = G::from_adj_list(
             collect!(hh, 4, 7; (0, [3, 1]), (1, [0, 2]), (2, [1, 3]), (3, [2, 0]),),
         );
         assert_eq!(graph.obstinate(), ObstinateMapped::False,);
     }
 
     pub fn false_cycle_extra_edge<G: RequiredMethods>() {
-        let graph = G::create(
+        let graph = G::from_adj_list(
             collect!(hh, 4, 72; (0, [3, 1, 2]), (1, [0, 2]), (2, [1, 3, 0]), (3, [2, 0]),),
         );
         assert_eq!(graph.obstinate(), ObstinateMapped::False,);
     }
 
     pub fn false_all_to_all<G: RequiredMethods>() {
-        let graph = G::create(collect!(hh, 4, 15;
+        let graph = G::from_adj_list(collect!(hh, 4, 15;
                 (0, [1, 2, 3]), (1, [0, 2, 3]), (2, [0, 1, 3]), (3, [0, 1, 2]),));
         assert_eq!(graph.obstinate(), ObstinateMapped::False,);
     }
 
     pub fn false_completely_independent<G: RequiredMethods>() {
-        let graph = G::create(collect!(hh, 4, 57; (0, []), (1, []), (2, []), (3, []),));
+        let graph =
+            G::from_adj_list(collect!(hh, 4, 57; (0, []), (1, []), (2, []), (3, []),));
         assert_eq!(graph.obstinate(), ObstinateMapped::False,);
     }
 
     pub fn false_disconnect_paths<G: RequiredMethods>() {
-        let graph =
-            G::create(collect!(hh, 4, 55; (0, [1]), (1, [0]), (2, [3]), (3, [2]),));
+        let graph = G::from_adj_list(
+            collect!(hh, 4, 55; (0, [1]), (1, [0]), (2, [3]), (3, [2]),),
+        );
         assert_eq!(graph.obstinate(), ObstinateMapped::False,);
     }
 
@@ -319,5 +317,4 @@ pub mod tests {
         };
     }
     pub(crate) use wrap;
-
 }
