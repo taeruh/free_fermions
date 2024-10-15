@@ -84,7 +84,7 @@ impl SwapRemoveMap {
     /// The `node` must be in bounds, i.e., less than the `len` initialiser.
     #[inline(always)]
     pub unsafe fn map_unchecked(&self, node: Node) -> Node {
-        debug_assert!(node < self.map.len());
+        debug_assert!(node < self.map.len(), "node: {}, map: {:?}", node, self.map);
         unsafe { *self.map.get_unchecked(node) }
     }
 

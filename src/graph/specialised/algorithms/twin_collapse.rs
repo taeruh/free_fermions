@@ -28,7 +28,7 @@ impl<G: GraphData> Graph<G> {
         // decomposition tree of the graph
 
         let mut graph_map = SwapRemoveMap::new(self.len());
-        let mut tree_map = SwapRemoveMap::new(self.len());
+        let mut tree_map = SwapRemoveMap::new(tree.graph.node_count());
         self.recurse_collapse(&mut tree.graph, tree.root, &mut graph_map, &mut tree_map);
         // cf. comment in fn full_remove
         for node in tree.graph.node_weights_mut() {
@@ -36,6 +36,7 @@ impl<G: GraphData> Graph<G> {
                 *node = unsafe { graph_map.map_unchecked(*node) };
             }
         }
+        tree.root = (unsafe { tree_map.map_unchecked(tree.root.index()) } as int).into();
     }
 
     fn recurse_collapse(
@@ -168,5 +169,43 @@ impl<G: GraphData> Graph<G> {
                 self.remove_node(unsafe { graph_map.swap_remove_unchecked(new_leaf) });
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use hashbrown::HashMap;
+
+    use crate::graph::{
+        HLabels, Label, Node,
+        algorithms::{
+            modular_decomposition::Tree, twin_collapse::tests::RequiredMethods,
+        },
+        specialised::{Graph, GraphData, data::Custom},
+    };
+
+    impl<G: GraphData> RequiredMethods for Graph<G> {
+        fn create(map: HashMap<Label, HLabels>) -> Self {
+            Graph::from_adjacency_labels(map).unwrap()
+        }
+        fn modular_decomposition(&self) -> Tree {
+            self.modular_decomposition()
+        }
+        fn twin_collapse(&mut self, tree: &mut Tree) {
+            unsafe { self.twin_collapse(tree) };
+        }
+        fn get_label_mapping(&self) -> impl Fn(Node) -> Label + Copy {
+            self.get_label_mapping()
+        }
+        fn map_to_labels(&self) -> HashMap<Label, HLabels> {
+            self.map_to_labels()
+        }
+    }
+
+    use crate::graph::algorithms::twin_collapse;
+
+    #[test]
+    fn foop() {
+        twin_collapse::tests::test::<Graph<Custom>>();
     }
 }

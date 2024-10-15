@@ -80,75 +80,40 @@ impl<G: ImplGraph> Graph<G> {
 
 #[cfg(test)]
 mod tests {
-    use rand::SeedableRng;
-    use rand_pcg::Pcg64;
+    use hashbrown::HashMap;
 
-    use super::*;
     use crate::graph::{
-        Label,
-        generic::adj::AdjGraph,
-        test_utils::{RandomMap, collect},
+        HLabels, Label, Node,
+        algorithms::{
+            modular_decomposition::Tree, twin_collapse::tests::RequiredMethods,
+        },
+        generic::{self, ImplGraph, impl_petgraph::PetGraph},
     };
 
-    fn check<A, N>(input: A, collapsed: impl IntoIterator<Item = A>)
-    where
-        A: IntoIterator<Item = (Label, N)>,
-        N: IntoIterator<Item = Label>,
-    {
-        let mut graph = Graph::<AdjGraph>::from_adjacency_labels(input).unwrap();
-        let expected: Vec<Graph> = collapsed
-            .into_iter()
-            .map(|adj| Graph::from_adjacency_labels(adj).unwrap())
-            .collect();
+    type Graph = generic::Graph<PetGraph>;
 
-        let mut tree = graph.modular_decomposition();
-        graph.twin_collapse(&mut tree);
-
-        let sanity_tree = graph.modular_decomposition();
-        assert!(Tree::is_equivalent(
-            &tree,
-            &sanity_tree,
-            graph.get_label_mapping(),
-            graph.get_label_mapping()
-        ));
-
-        let mapped_graph = graph.map_to_labels();
-        let equivalent_graph: &Graph = expected
-            .iter()
-            .find(|graph| graph.map_to_labels() == mapped_graph)
-            .unwrap();
-        let equivalent_tree = equivalent_graph.modular_decomposition();
-        assert!(Tree::is_equivalent(
-            &tree,
-            &equivalent_tree,
-            graph.get_label_mapping(),
-            equivalent_graph.get_label_mapping()
-        ));
+    impl RequiredMethods for Graph {
+        fn create(map: HashMap<Label, HLabels>) -> Graph {
+            Graph::from_adjacency_labels(map).unwrap()
+        }
+        fn modular_decomposition(&self) -> Tree {
+            self.modular_decomposition()
+        }
+        fn twin_collapse(&mut self, tree: &mut Tree) {
+            self.twin_collapse(tree);
+        }
+        fn get_label_mapping(&self) -> impl Fn(Node) -> Label + Copy {
+            ImplGraph::get_label_mapping(self)
+        }
+        fn map_to_labels(&self) -> HashMap<Label, HLabels> {
+            ImplGraph::map_to_labels(self)
+        }
     }
 
-    #[test]
-    fn test() {
-        let rng = &mut Pcg64::from_entropy();
+    use crate::graph::algorithms::twin_collapse;
 
-        let map = RandomMap::with_rng(24, 42, rng);
-        let input = collect!(
-            hh, map;
-            (0, [1]),
-            (1, [0, 2]),
-            (2, [1, 3, 4, 5]),
-            (3, [2, 4]),
-            (4, [2, 3]),
-            (5, [2]),
-        );
-        let collapsed = [3, 4, 5].into_iter().map(|representative| {
-            collect!(
-                hh, map;
-                (0, [1]),
-                (1, [0, 2]),
-                (2, [1, representative]),
-                (representative, [2]),
-            )
-        });
-        check(input, collapsed);
+    #[test]
+    fn foob() {
+        twin_collapse::tests::test::<Graph>();
     }
 }
