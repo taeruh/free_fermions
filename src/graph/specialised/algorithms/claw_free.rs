@@ -13,9 +13,8 @@ impl<G: GraphData> Graph<G> {
     pub fn is_claw_free_naive(&self) -> bool {
         for neighbourhood in self.iter_neighbours() {
             // safety: neighbourhood nodes have to be valid nodes
-            let mut graph = unsafe {
-                self.subgraph(neighbourhood.len(), neighbourhood.iter().copied())
-            };
+            let mut graph =
+                unsafe { self.subgraph_from_set(neighbourhood.len(), neighbourhood) };
             graph.complement();
             if graph.has_triangle() {
                 return false;
@@ -150,4 +149,18 @@ impl<G: GraphData> Graph<G> {
         }
         false
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::graph::{
+        algorithms::claw_free,
+        specialised::{
+            Graph,
+            data::{Custom, IndexMap},
+        },
+    };
+
+    claw_free::tests::test_it!(custom, Graph<Custom>);
+    claw_free::tests::test_it!(indexmap, Graph<IndexMap>);
 }

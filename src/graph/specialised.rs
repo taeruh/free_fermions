@@ -459,7 +459,7 @@ impl<G: GraphData> Graph<G> {
         nodes: impl IntoIterator<Item = Node>,
     ) -> Self {
         if subgraph_size as f64
-            <= self.0.len() as f64 * DECIDER_SUBGRAPH_VIA_DELETION_IF_LESS
+            >= self.0.len() as f64 * DECIDER_SUBGRAPH_VIA_DELETION_IF_LESS
         {
             let nodes = HashSet::<_>::from_iter(nodes);
             let nodes_to_delete =
@@ -481,7 +481,7 @@ impl<G: GraphData> Graph<G> {
         nodes: &HashSet<Node>,
     ) -> Self {
         if subgraph_size as f64
-            <= self.0.len() as f64 * DECIDER_SUBGRAPH_VIA_DELETION_IF_LESS
+            >= self.0.len() as f64 * DECIDER_SUBGRAPH_VIA_DELETION_IF_LESS
         {
             let nodes_to_delete =
                 self.iter_nodes().filter(|n| !nodes.contains(n)).collect::<Vec<_>>();

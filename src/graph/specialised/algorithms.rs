@@ -18,6 +18,7 @@ mod test_impl {
     };
 
     impl<G: GraphData> RequiredMethods for Graph<G> {
+        type ClawFree = bool;
         fn from_adj_list(adj_list: HashMap<Label, HLabels>) -> Self {
             Graph::from_adjacency_labels(adj_list).unwrap()
         }
@@ -29,6 +30,9 @@ mod test_impl {
         }
         fn twin_collapse(&mut self, tree: &mut Tree) {
             unsafe { self.twin_collapse(tree) }
+        }
+        fn is_claw_free(&self, tree: &Tree) -> Self::ClawFree {
+            unsafe { self.is_claw_free(tree) }
         }
         fn get_label_mapping(&self) -> impl Fn(Node) -> Label + Copy {
             self.get_label_mapping()
