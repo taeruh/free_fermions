@@ -145,9 +145,9 @@ impl<G: GraphData> Graph<G> {
         let matrix = Matrix::from_vec_with_shape(array, (len, len));
         for &c in matrix.diag_cube().iter() {
             if c != 0 {
-                return false;
+                return true;
             }
         }
-        true
+        false
     }
 }
