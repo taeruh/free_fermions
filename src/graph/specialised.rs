@@ -461,9 +461,33 @@ impl<G: GraphData> Graph<G> {
         if subgraph_size as f64
             <= self.0.len() as f64 * DECIDER_SUBGRAPH_VIA_DELETION_IF_LESS
         {
-            unsafe { self.clone().subgraph_via_deletion(nodes) }
+            let nodes = HashSet::<_>::from_iter(nodes);
+            let nodes_to_delete =
+                self.iter_nodes().filter(|n| !nodes.contains(n)).collect::<Vec<_>>();
+            unsafe { self.clone().subgraph_via_deletion(nodes_to_delete) }
         } else {
             unsafe { self.subgraph_via_creation(nodes) }
+        }
+    }
+
+    /// Same as [subgraph], but potentially optimised for a HashSet as input (instead of a
+    /// general IntoIterator).
+    ///
+    /// # Safety
+    /// The `nodes` must be valid, i.e., between `0` and `self.len() - 1`.
+    pub unsafe fn subgraph_from_set(
+        &self,
+        subgraph_size: usize,
+        nodes: &HashSet<Node>,
+    ) -> Self {
+        if subgraph_size as f64
+            <= self.0.len() as f64 * DECIDER_SUBGRAPH_VIA_DELETION_IF_LESS
+        {
+            let nodes_to_delete =
+                self.iter_nodes().filter(|n| !nodes.contains(n)).collect::<Vec<_>>();
+            unsafe { self.clone().subgraph_via_deletion(nodes_to_delete) }
+        } else {
+            unsafe { self.subgraph_via_creation(nodes.into_iter().copied()) }
         }
     }
 
