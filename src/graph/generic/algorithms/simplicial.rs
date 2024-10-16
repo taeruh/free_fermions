@@ -6,6 +6,7 @@ use std::{
 use modular_decomposition::ModuleKind;
 use petgraph::Direction;
 
+use super::claw_free::ClawFree;
 use crate::graph::{
     Node, VLabels, VNodes,
     algorithms::{
@@ -14,8 +15,6 @@ use crate::graph::{
     },
     generic::{Graph, ImplGraph, NodeCollection, NodeCollectionMut},
 };
-
-use super::claw_free::ClawFree;
 
 impl<G: ImplGraph> Graph<G> {
     /// Return None if not claw-free (checked on claw_free if provided, otherwise

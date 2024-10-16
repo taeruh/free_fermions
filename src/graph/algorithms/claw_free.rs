@@ -1,7 +1,3 @@
-use hashbrown::HashMap;
-
-use crate::graph::{Label, algorithms::modular_decomposition::NodeIndex, int};
-
 #[cfg(test)]
 pub mod tests {
     use crate::graph::{
@@ -137,8 +133,6 @@ pub mod tests {
         graph.twin_collapse(&mut tree); // nothing should happen
         check(&graph, &tree, true, false);
     }
-
-    // TODO: port the other commented tests from the generic module
 
     macro_rules! test_it {
         ($module:ident, $typ:ty) => {
