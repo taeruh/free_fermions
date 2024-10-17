@@ -1,6 +1,7 @@
 #[cfg(test)]
 pub mod tests {
     use hashbrown::HashMap;
+    use modular_decomposition::ModuleKind;
 
     use crate::graph::{
         HLabels, Label, algorithms::test_impl::RequiredMethods, test_utils::collect,
@@ -8,7 +9,7 @@ pub mod tests {
 
     fn check<G: RequiredMethods>(
         data: HashMap<Label, HLabels>,
-        expected: Option<bool>, // cf. claw_free->check comment
+        expected: Option<bool>, // cf. claw_free->check comment; None if not claw-free
         show_info: bool,
     ) {
         let mut graph = G::from_adj_list(data);
@@ -21,6 +22,15 @@ pub mod tests {
         // version in the RequiredMethods implementation (unwrapping there)
         if !graph.is_claw_free(&tree).into() {
             assert_eq!(expected, None);
+            // while it is not safe to run the simplicial algorithm; one could still do it
+            // and it still might return something that is likely to be a simplicial
+            // cliques, e.g., for the first_prime_example_in_paper test it returns the
+            // [0, 5] simplicial clique (although the graph is not claw-free)
+            return;
+        }
+        // and it must be connected
+        if let ModuleKind::Parallel = tree.graph.node_weight(tree.root).unwrap() {
+            panic!("not connected");
         }
 
         let cliques = graph.simplicial(&tree);
@@ -76,7 +86,94 @@ pub mod tests {
             (4, [5, 6, 1, 2]),
             (2, [5, 6, 4, 0]),
         );
-        check::<G>(data, Some(true), true);
+        check::<G>(data, Some(true), false);
+    }
+
+    pub fn path2<G: RequiredMethods>() {
+        // 0 -- 1
+        let data = collect!(hh;
+            (0, [1]),
+            (1, [0]),
+        );
+        // just a single node after collapse
+        check::<G>(data, Some(true), false);
+    }
+
+    pub fn path3<G: RequiredMethods>() {
+        // 0 -- 1 -- 2
+        let data = collect!(hh;
+            (0, [1]),
+            (1, [0, 2]),
+            (2, [1]),
+        );
+        // just a single node after collapse
+        check::<G>(data, Some(true), false);
+    }
+
+    pub fn triangle<G: RequiredMethods>() {
+        // 0 -- 1
+        //  \ /
+        //    2
+        let data = collect!(hh;
+            (0, [1, 2]),
+            (1, [0, 2]),
+            (2, [0, 1]),
+        );
+        // just a single node after collapse
+        check::<G>(data, Some(true), false);
+    }
+
+    pub fn square<G: RequiredMethods>() {
+        // 0 -- 1
+        // |    |
+        // 2 -- 3
+        let data = collect!(hh;
+            (0, [1, 2]),
+            (1, [0, 3]),
+            (2, [0, 3]),
+            (3, [1, 2]),
+        );
+        // just a single node after collapse
+        check::<G>(data, Some(true), false);
+    }
+
+    pub fn single_node<G: RequiredMethods>() {
+        let data = collect!(hh; (0, []),);
+        check::<G>(data, Some(true), false);
+    }
+
+    pub fn circle5<G: RequiredMethods>() {
+        // 0 -- 1 -- 2 -- 3 -- 4
+        //  \_________________/
+        let data = collect!(hh;
+            (0, [1, 4]),
+            (1, [0, 2]),
+            (2, [1, 3]),
+            (3, [2, 4]),
+            (4, [0, 3]),
+        );
+        // all the cliques are the edges and they are all simplicial
+        check::<G>(data, Some(true), false);
+    }
+
+    pub fn first_prime_example_in_paper<G: RequiredMethods>() {
+        //         - 4 -
+        //       /       \
+        // 0 -- 1 -- 2 -- 3
+        //  \       /
+        //    - 5 -
+        let data = collect!(hh;
+            (0, [1, 5]),
+            (1, [0, 2, 4]),
+            (2, [1, 3, 5]),
+            (3, [2, 4]),
+            (4, [1, 3]),
+            (5, [0, 2]),
+        );
+        let tree = G::from_adj_list(data.clone()).modular_decomposition();
+        assert!(tree.module_is_fully_prime(tree.root));
+        // e.g., claw 1-0,2,4
+        check::<G>(data, None, true);
     }
 
     macro_rules! test_it {
@@ -88,6 +185,13 @@ pub mod tests {
                     claw_with_twins,
                     path_with_clique_end,
                     create_simplicial_clique_via_sibling_collapse,
+                    path2,
+                    path3,
+                    triangle,
+                    square,
+                    single_node,
+                    circle5,
+                    first_prime_example_in_paper,
                 );
             }
         };

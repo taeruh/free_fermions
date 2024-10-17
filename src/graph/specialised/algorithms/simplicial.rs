@@ -361,7 +361,7 @@ mod tests {
         //        /      \
         // 0 -- 1 -- 2    3 -- 5
         //       \     \     /
-        //         ------ 4 -
+        //         ----- 4 -
         let mut graph = Graph::<Custom>::from_edge_labels(collect!(v;
             (0, 1),
             (1, 2),
@@ -376,7 +376,6 @@ mod tests {
         assert!(tree.module_is_fully_prime(tree.root));
         let node = graph.get_index(VERTEX).unwrap();
         assert!(graph.set_is_clique([node].iter()));
-        println!("{:?}", graph.get_neighbours(node));
         assert!(graph.clique_is_simplicial(&[node]));
         graph.remove_node(node);
         let tree = graph.modular_decomposition();
