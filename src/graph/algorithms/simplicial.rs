@@ -1,9 +1,9 @@
 #[cfg(test)]
 pub mod tests {
+    use hashbrown::HashMap;
+
     use crate::graph::{
-        HLabels, Label,
-        algorithms::{modular_decomposition::Tree, test_impl::RequiredMethods},
-        test_utils::collect,
+        HLabels, Label, algorithms::test_impl::RequiredMethods, test_utils::collect,
     };
 
     fn check<G: RequiredMethods>(
@@ -66,6 +66,19 @@ pub mod tests {
         check::<G>(data, Some(true), false);
     }
 
+    pub fn create_simplicial_clique_via_sibling_collapse<G: RequiredMethods>() {
+        let data = collect!(hh;
+            (5, [0, 1, 2, 3, 4]),
+            (6, [0, 1, 2, 3, 4]),
+            (0, [5, 6, 3, 2]),
+            (3, [5, 6, 0, 1]),
+            (1, [5, 6, 3, 4]),
+            (4, [5, 6, 1, 2]),
+            (2, [5, 6, 4, 0]),
+        );
+        check::<G>(data, Some(true), true);
+    }
+
     macro_rules! test_it {
         ($module:ident, $typ:ty) => {
             mod $module {
@@ -74,11 +87,11 @@ pub mod tests {
                     $typ,
                     claw_with_twins,
                     path_with_clique_end,
+                    create_simplicial_clique_via_sibling_collapse,
                 );
             }
         };
     }
-    use hashbrown::HashMap;
     pub(crate) use test_it;
 
     macro_rules! wrap {

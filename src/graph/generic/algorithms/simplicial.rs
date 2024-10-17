@@ -353,26 +353,22 @@ mod tests {
     #[test]
     // this is the example in the paper that shows that removing siblings can indeed
     // create a simplicial clique; so let's keep it here
-    // TODO: clean it up with asserts instead of printlns
     fn create_simplicial_clique_via_sibling_collapse() {
+        // see graph in paper
         let data = collect!(vv;
             (5, [0, 1, 2, 3, 4]),
             (6, [0, 1, 2, 3, 4]),
-            (0, [5, 6, 4, 1]),
-            (1, [5, 6, 2, 0]),
-            (2, [5, 6, 3, 1]),
-            (3, [5, 6, 4, 2]),
-            (4, [5, 6, 0, 3]),
+            (0, [5, 6, 3, 2]),
+            (3, [5, 6, 0, 1]),
+            (1, [5, 6, 3, 4]),
+            (4, [5, 6, 1, 2]),
+            (2, [5, 6, 4, 0]),
         );
         let mut graph: Graph<Adj> = Graph::from_adjacency_labels(data.clone()).unwrap();
         let mut tree = graph.modular_decomposition();
-        println!("{:?}", tree);
-        println!("{:?}", graph.simplicial(&tree, None));
+        assert_eq!(graph.simplicial(&tree, None), Some(vec![vec![]]));
         graph.twin_collapse(&mut tree);
         let cliques = graph.simplicial(&tree, None).unwrap().pop().unwrap();
-        println!("{:?}", cliques.len());
-        let cliques_set = cliques.into_iter().collect::<HashSet<_>>();
-        println!("{:?}", cliques_set.len());
-        println!("{:?}", cliques_set);
+        assert!(cliques.contains(&vec![0, 2]));
     }
 }
