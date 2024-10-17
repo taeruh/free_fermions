@@ -354,8 +354,8 @@ pub mod tests {
     use crate::{
         fix_int::int,
         graph::{
-            generic::{self, AdjGraph, ImplGraph, PetGraph},
-            specialised::{self, data::IndexMap},
+            generic::{self, Adj, ImplGraph, Pet},
+            specialised::{self, IndexMap},
             test_utils::RandomMap,
         },
     };
@@ -389,12 +389,10 @@ pub mod tests {
         let num_edges = rng.gen_range(1..100);
         let mut edges = random_edges(rng, num_nodes, num_edges);
 
-        let gen_adj =
-            generic::Graph::<AdjGraph>::from_edge_labels(edges.clone()).unwrap();
+        let gen_adj = generic::Graph::<Adj>::from_edge_labels(edges.clone()).unwrap();
         let tree_gen_adj = gen_adj.modular_decomposition();
         edges.shuffle(rng);
-        let gen_pet =
-            generic::Graph::<PetGraph>::from_edge_labels(edges.clone()).unwrap();
+        let gen_pet = generic::Graph::<Pet>::from_edge_labels(edges.clone()).unwrap();
         let tree_gen_pet = gen_pet.modular_decomposition();
         edges.shuffle(rng);
         let spec_index =

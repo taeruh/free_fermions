@@ -344,10 +344,7 @@ mod tests {
     use crate::graph::{
         Label,
         algorithms::simplicial,
-        specialised::{
-            Graph,
-            data::{Custom, IndexMap},
-        },
+        specialised::{Custom, Graph, IndexMap},
         test_utils::collect,
     };
 

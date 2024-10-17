@@ -628,15 +628,12 @@ impl<'a, G: GraphData> IntoNeighbors for &'a Graph<G> {
 // }}}
 
 pub mod algorithms;
-pub mod data;
+mod data;
+pub use data::{custom::Custom, index_map::IndexMap};
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        super::test_utils::collect,
-        data::{Custom, IndexMap},
-        *,
-    };
+    use super::{super::test_utils::collect, Custom, IndexMap, *};
 
     #[test]
     fn test() {

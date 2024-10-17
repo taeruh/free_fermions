@@ -82,9 +82,9 @@ impl<G: ImplGraph> Graph<G> {
 mod tests {
     use crate::graph::{
         algorithms::twin_collapse,
-        generic::{AdjGraph, Graph, PetGraph},
+        generic::{Adj, Graph, Pet},
     };
 
-    twin_collapse::tests::test_it!(petgraph, Graph<PetGraph>);
-    twin_collapse::tests::test_it!(adjgraph, Graph<AdjGraph>);
+    twin_collapse::tests::test_it!(petgraph, Graph<Pet>);
+    twin_collapse::tests::test_it!(adjgraph, Graph<Adj>);
 }

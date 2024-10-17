@@ -153,9 +153,9 @@ mod tests {
     use super::*;
     use crate::graph::{
         algorithms::obstinate::{self},
-        generic::{AdjGraph, PetGraph},
+        generic::{Adj, Pet},
     };
 
-    obstinate::tests::test_it!(petgraph, Graph<PetGraph>);
-    obstinate::tests::test_it!(adjgraph, Graph<AdjGraph>);
+    obstinate::tests::test_it!(petgraph, Graph<Pet>);
+    obstinate::tests::test_it!(adjgraph, Graph<Adj>);
 }

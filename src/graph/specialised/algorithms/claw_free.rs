@@ -155,10 +155,7 @@ impl<G: GraphData> Graph<G> {
 mod tests {
     use crate::graph::{
         algorithms::claw_free,
-        specialised::{
-            Graph,
-            data::{Custom, IndexMap},
-        },
+        specialised::{Custom, Graph, IndexMap},
     };
 
     claw_free::tests::test_it!(custom, Graph<Custom>);

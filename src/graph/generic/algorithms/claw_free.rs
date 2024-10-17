@@ -292,9 +292,9 @@ mod tests {
     use super::*;
     use crate::graph::{
         algorithms::claw_free,
-        generic::{AdjGraph, PetGraph},
+        generic::{Adj, Pet},
     };
 
-    claw_free::tests::test_it!(adjgraph, Graph<AdjGraph>);
-    claw_free::tests::test_it!(petgraph, Graph<PetGraph>);
+    claw_free::tests::test_it!(adjgraph, Graph<Adj>);
+    claw_free::tests::test_it!(petgraph, Graph<Pet>);
 }

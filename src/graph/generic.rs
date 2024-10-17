@@ -5,9 +5,7 @@ use std::{
     ptr, slice,
 };
 
-pub use adj::AdjGraph;
 use hashbrown::{HashMap, HashSet, hash_set};
-pub use impl_petgraph::PetGraph;
 use petgraph::{
     Undirected,
     visit::{
@@ -23,7 +21,7 @@ use super::{
 
 /// Newtype around `impl `[ImplGraph] types that supports foreign traits.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Graph<G = AdjGraph>(G);
+pub struct Graph<G = Adj>(G);
 
 impl<G> Graph<G> {
     pub fn new(graph: G) -> Self {
@@ -690,6 +688,7 @@ impl NodeCollectionMut for HNodes {
     }
 }
 
-mod adj;
 pub mod algorithms;
-mod impl_petgraph;
+
+mod impl_graphs;
+pub use impl_graphs::{adj::Adj, impl_petgraph::Pet};

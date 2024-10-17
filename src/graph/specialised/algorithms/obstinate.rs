@@ -153,7 +153,7 @@ mod tests {
     use super::*;
     use crate::graph::{
         algorithms::obstinate,
-        specialised::data::{Custom, IndexMap},
+        specialised::{Custom, IndexMap},
     };
 
     obstinate::tests::test_it!(indexmap, Graph<IndexMap>);

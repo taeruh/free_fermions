@@ -10,10 +10,12 @@ mod test_impl {
 
     use super::claw_free::ClawFree;
     use crate::graph::{
+        HLabels, Label, Node, VLabels,
         algorithms::{
             modular_decomposition::Tree, obstinate::ObstinateMapped,
             test_impl::RequiredMethods,
-        }, generic::{Graph, ImplGraph}, HLabels, Label, Node, VLabels
+        },
+        generic::{Graph, ImplGraph},
     };
 
     impl<G: ImplGraph> RequiredMethods for Graph<G> {

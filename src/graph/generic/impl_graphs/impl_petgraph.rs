@@ -3,16 +3,18 @@ use std::{iter::Map, mem};
 use hashbrown::HashSet;
 use petgraph::{Undirected, graph::Neighbors, operator};
 
-use super::{CompactNodes, HNodes, ImplGraph, Node, NodeCollection, NodeCollectionRef};
-use crate::graph::{Label, LabelEdge};
+use crate::graph::{
+    Label, LabelEdge,
+    generic::{CompactNodes, HNodes, ImplGraph, Node, NodeCollection, NodeCollectionRef},
+};
 
 pub type NodeIndex = petgraph::graph::NodeIndex<Node>; // = int
 
-pub type PetGraph = petgraph::Graph<Label, (), Undirected, Node>;
+pub type Pet = petgraph::Graph<Label, (), Undirected, Node>;
 
-impl CompactNodes for PetGraph {}
+impl CompactNodes for Pet {}
 
-impl ImplGraph for PetGraph {
+impl ImplGraph for Pet {
     type Nodes = HNodes;
 
     type Neighbours<'a>
@@ -60,7 +62,7 @@ impl ImplGraph for PetGraph {
     }
 
     fn complement(&mut self) {
-        let mut complement = PetGraph::default();
+        let mut complement = Pet::default();
         operator::complement(self, &mut complement, ());
         mem::swap(self, &mut complement);
 
@@ -89,7 +91,7 @@ impl ImplGraph for PetGraph {
     }
 }
 
-fn insert_node(graph: &mut PetGraph, label: Label) -> NodeIndex {
+fn insert_node(graph: &mut Pet, label: Label) -> NodeIndex {
     if let Some(idx) = graph
         .node_indices()
         .find(|idx| *graph.node_weight(*idx).unwrap() == label)

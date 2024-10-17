@@ -180,10 +180,7 @@ impl<G: GraphData> Graph<G> {
 mod tests {
     use crate::graph::{
         algorithms::twin_collapse,
-        specialised::{
-            Graph,
-            data::{Custom, IndexMap},
-        },
+        specialised::{Custom, Graph, IndexMap},
     };
 
     twin_collapse::tests::test_it!(custom, Graph<Custom>);

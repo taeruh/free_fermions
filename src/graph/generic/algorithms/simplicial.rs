@@ -343,12 +343,12 @@ mod tests {
     use super::*;
     use crate::graph::{
         algorithms::simplicial,
-        generic::{AdjGraph, Graph, PetGraph},
+        generic::{Adj, Graph, Pet},
         test_utils::collect,
     };
 
-    simplicial::tests::test_it!(petgraph, Graph<PetGraph>);
-    simplicial::tests::test_it!(adjgraph, Graph<AdjGraph>);
+    simplicial::tests::test_it!(petgraph, Graph<Pet>);
+    simplicial::tests::test_it!(adjgraph, Graph<Adj>);
 
     #[test]
     // this is the example in the paper that shows that removing siblings can indeed
@@ -364,8 +364,7 @@ mod tests {
             (3, [5, 6, 4, 2]),
             (4, [5, 6, 0, 3]),
         );
-        let mut graph: Graph<AdjGraph> =
-            Graph::from_adjacency_labels(data.clone()).unwrap();
+        let mut graph: Graph<Adj> = Graph::from_adjacency_labels(data.clone()).unwrap();
         let mut tree = graph.modular_decomposition();
         println!("{:?}", tree);
         println!("{:?}", graph.simplicial(&tree, None));
