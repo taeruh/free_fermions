@@ -10,12 +10,10 @@ mod test_impl {
 
     use super::claw_free::ClawFree;
     use crate::graph::{
-        HLabels, Label, Node,
         algorithms::{
             modular_decomposition::Tree, obstinate::ObstinateMapped,
             test_impl::RequiredMethods,
-        },
-        generic::{Graph, ImplGraph},
+        }, generic::{Graph, ImplGraph}, HLabels, Label, Node, VLabels
     };
 
     impl<G: ImplGraph> RequiredMethods for Graph<G> {
@@ -34,6 +32,9 @@ mod test_impl {
         }
         fn is_claw_free(&self, tree: &Tree) -> Self::ClawFree {
             self.is_claw_free(tree)
+        }
+        fn simplicial(&self, tree: &Tree) -> Vec<Vec<VLabels>> {
+            self.simplicial(tree, None).unwrap()
         }
         fn get_label_mapping(&self) -> impl Fn(Node) -> Label + Copy {
             ImplGraph::get_label_mapping(self)

@@ -1,6 +1,7 @@
 pub mod claw_free;
 pub mod modular_decomposition;
 pub mod obstinate;
+pub mod simplicial;
 pub mod twin_collapse;
 
 #[cfg(test)]
@@ -10,7 +11,7 @@ pub mod test_impl {
     use hashbrown::HashMap;
 
     use super::{modular_decomposition::Tree, obstinate::ObstinateMapped};
-    use crate::graph::{HLabels, Label, Node};
+    use crate::graph::{HLabels, Label, Node, VLabels};
 
     pub trait RequiredMethods: Debug {
         type ClawFree: Into<bool> + Debug;
@@ -19,6 +20,7 @@ pub mod test_impl {
         fn twin_collapse(&mut self, tree: &mut Tree);
         fn obstinate(&self) -> ObstinateMapped;
         fn is_claw_free(&self, tree: &Tree) -> Self::ClawFree;
+        fn simplicial(&self, tree: &Tree) -> Vec<Vec<VLabels>>;
         fn get_label_mapping(&self) -> impl Fn(Node) -> Label + Copy;
         fn map_to_labels(&self) -> HashMap<Label, HLabels>;
     }

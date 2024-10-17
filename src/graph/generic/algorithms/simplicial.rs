@@ -341,46 +341,20 @@ impl<G: ImplGraph> Graph<G> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::{generic::adj::AdjGraph, test_utils::collect};
+    use crate::graph::{
+        algorithms::simplicial,
+        generic::{AdjGraph, Graph, PetGraph},
+        test_utils::collect,
+    };
+
+    simplicial::tests::test_it!(petgraph, Graph<PetGraph>);
+    simplicial::tests::test_it!(adjgraph, Graph<AdjGraph>);
 
     #[test]
-    fn test() {
-        //    - 1 -
-        //  /       \
-        // 0 -- 2 -- 4
-        //  \
-        //    - 3
-        let data = collect!(vv;
-                (0, [1, 2, 3]),
-                (1, [0, 4]),
-                (2, [0, 4]),
-                (3, [0]),
-                (4, [1, 2]),
-        );
-        let mut graph: Graph<AdjGraph> =
-            Graph::from_adjacency_labels(data.clone()).unwrap();
-        let mut tree = graph.modular_decomposition();
-        graph.twin_collapse(&mut tree);
-        let cliques = graph.simplicial(&tree, None);
-        println!("{:?}", cliques);
-
-        // 0 -- 1 -- 2
-        //  \
-        //    - 3,4,5,6 clique
-        let data = collect!(vv;
-                (0, [1, 3]),
-                (1, [0, 2]),
-                (2, [1]),
-                (3, [0, 4, 5, 6]),
-                (4, [0, 3, 5, 6]),
-                (5, [0, 3, 4, 6]),
-                (6, [0, 3, 4, 5]),
-        );
-        let graph: Graph<AdjGraph> = Graph::from_adjacency_labels(data.clone()).unwrap();
-        let tree = graph.modular_decomposition();
-        let cliques = graph.simplicial(&tree, None);
-        println!("{:?}", cliques);
-
+    // this is the example in the paper that shows that removing siblings can indeed
+    // create a simplicial clique; so let's keep it here
+    // TODO: clean it up with asserts instead of printlns
+    fn create_simplicial_clique_via_sibling_collapse() {
         let data = collect!(vv;
             (5, [0, 1, 2, 3, 4]),
             (6, [0, 1, 2, 3, 4]),
@@ -401,20 +375,5 @@ mod tests {
         let cliques_set = cliques.into_iter().collect::<HashSet<_>>();
         println!("{:?}", cliques_set.len());
         println!("{:?}", cliques_set);
-    }
-
-    #[test]
-    fn bipartition() {
-        let data = collect!(v;
-            (0, 1),
-            (2, 3),
-            (4, 5),
-            (1, 4),
-            (0, 2),
-            // (2, 5),
-        );
-        let graph: Graph<AdjGraph> = Graph::from_edge_labels(data).unwrap();
-        println!("{:?}", graph);
-        println!("{:?}", graph.try_bipartition());
     }
 }

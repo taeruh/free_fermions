@@ -343,17 +343,26 @@ mod tests {
 
     use crate::graph::{
         Label,
-        specialised::{Graph, data::Custom},
+        algorithms::simplicial,
+        specialised::{
+            Graph,
+            data::{Custom, IndexMap},
+        },
         test_utils::collect,
     };
 
+    simplicial::tests::test_it!(custom, Graph<Custom>);
+    simplicial::tests::test_it!(indexmap, Graph<IndexMap>);
+
     #[test]
+    // I forgot why I did this test, it is probably an example in the paper; so let's keep
+    // it
     fn simplicial_vertex_but_subgraph_not_prime() {
         const VERTEX: Label = 2; // the simplicial vertex we remove
         const MODULE: [Label; 2] = [3, 4]; // the module we then get
         //         ------
         //        /      \
-        // 0 -- 1 -- 2 -- 3 -- 5
+        // 0 -- 1 -- 2    3 -- 5
         //       \     \     /
         //         ------ 4 -
         let mut graph = Graph::<Custom>::from_edge_labels(collect!(v;
@@ -370,6 +379,7 @@ mod tests {
         assert!(tree.module_is_fully_prime(tree.root));
         let node = graph.get_index(VERTEX).unwrap();
         assert!(graph.set_is_clique([node].iter()));
+        println!("{:?}", graph.get_neighbours(node));
         assert!(graph.clique_is_simplicial(&[node]));
         graph.remove_node(node);
         let tree = graph.modular_decomposition();
