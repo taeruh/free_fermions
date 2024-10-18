@@ -69,11 +69,10 @@ impl<G: ImplGraph> Graph<G> {
 
         let new_root = (tree_map.map(root.index()) as u32).into();
         if num_children == 0 {
-            *tree.node_weight_mut(new_root).unwrap() =
-                ModuleKind::Node(remaining_leaf.unwrap().0);
-            tree.remove_node(
-                (tree_map.swap_remove(remaining_leaf.unwrap().1) as u32).into(),
-            );
+            // otherwise we would have never reached `num_children -= 1`
+            let remaining_leaf = remaining_leaf.unwrap();
+            *tree.node_weight_mut(new_root).unwrap() = ModuleKind::Node(remaining_leaf.0);
+            tree.remove_node((tree_map.swap_remove(remaining_leaf.1) as u32).into());
         }
     }
 }

@@ -84,7 +84,7 @@ impl<G: GraphData> Graph<G> {
         // we want to change the module to one of those leaves; we do this by potentially
         // storing one leaf and either remove it or change the module to it, in the end
         let mut remaining_leaf = None;
-        let mut to_remaining_leaf = true;
+        let mut module_may_become_remaining_leaf = true;
 
         #[inline(always)]
         fn get_weight<'t>(
@@ -147,7 +147,7 @@ impl<G: GraphData> Graph<G> {
                 if let ModuleKind::Node(node) = get_weight(tree, child, tree_map) {
                     full_remove(self, graph_map, tree, tree_map, child, *node);
                 } else {
-                    to_remaining_leaf = false;
+                    module_may_become_remaining_leaf = false;
                     break;
                 }
             }
@@ -165,7 +165,7 @@ impl<G: GraphData> Graph<G> {
 
         let new_root = (unsafe { tree_map.map_unchecked(module.index()) } as int).into();
         if let Some(new_leaf) = remaining_leaf {
-            if to_remaining_leaf {
+            if module_may_become_remaining_leaf {
                 *tree.node_weight_mut(new_root).unwrap() = ModuleKind::Node(new_leaf.0);
                 tree_remove(tree, tree_map, new_leaf.1);
             }
