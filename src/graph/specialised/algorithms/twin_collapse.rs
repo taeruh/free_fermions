@@ -126,13 +126,11 @@ impl<G: GraphData> Graph<G> {
 
         if let Some(child) = children.next() {
             if let ModuleKind::Node(node) = get_weight(tree, child, tree_map) {
-                remaining_leaf = Some(*node);
-                tree_remove(tree, tree_map, child);
+                remaining_leaf = Some((*node, child));
             } else {
                 self.recurse_collapse(tree, child, graph_map, tree_map);
                 if let ModuleKind::Node(node) = get_weight(tree, child, tree_map) {
-                    remaining_leaf = Some(*node);
-                    tree_remove(tree, tree_map, child);
+                    remaining_leaf = Some((*node, child));
                 } else {
                     remaining_leaf = None;
                 }
@@ -168,9 +166,8 @@ impl<G: GraphData> Graph<G> {
         let new_root = (unsafe { tree_map.map_unchecked(module.index()) } as int).into();
         if let Some(new_leaf) = remaining_leaf {
             if to_remaining_leaf {
-                *tree.node_weight_mut(new_root).unwrap() = ModuleKind::Node(new_leaf);
-            } else {
-                self.remove_node(unsafe { graph_map.swap_remove_unchecked(new_leaf) });
+                *tree.node_weight_mut(new_root).unwrap() = ModuleKind::Node(new_leaf.0);
+                tree_remove(tree, tree_map, new_leaf.1);
             }
         }
     }

@@ -50,8 +50,7 @@ impl<G: ImplGraph> Graph<G> {
             if let ModuleKind::Node(node) =
                 tree.node_weight((tree_map.map(child.index()) as u32).into()).unwrap()
             {
-                remaining_leaf = Some(*node);
-                tree.remove_node((tree_map.swap_remove(child.index()) as u32).into());
+                remaining_leaf = Some((*node, child.index()));
                 num_children -= 1;
                 break;
             }
@@ -71,9 +70,10 @@ impl<G: ImplGraph> Graph<G> {
         let new_root = (tree_map.map(root.index()) as u32).into();
         if num_children == 0 {
             *tree.node_weight_mut(new_root).unwrap() =
-                ModuleKind::Node(remaining_leaf.unwrap());
-        } else {
-            self.remove_node(graph_map.swap_remove(remaining_leaf.unwrap()));
+                ModuleKind::Node(remaining_leaf.unwrap().0);
+            tree.remove_node(
+                (tree_map.swap_remove(remaining_leaf.unwrap().1) as u32).into(),
+            );
         }
     }
 }

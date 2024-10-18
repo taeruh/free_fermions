@@ -38,6 +38,7 @@ pub mod tests {
             println!("{tree:?}");
             println!("cliques: {cliques:?}");
         }
+
         let result = cliques.into_iter().flatten().any(|c| !c.is_empty());
         assert_eq!(Some(result), expected);
     }
@@ -76,6 +77,8 @@ pub mod tests {
         check::<G>(data, Some(true), false);
     }
 
+    // paper example; this is also one of the minimal claw-free, non-simplicial graphs,
+    // but it has a twin
     pub fn create_simplicial_clique_via_sibling_collapse<G: RequiredMethods>() {
         let data = collect!(hh;
             (5, [0, 1, 2, 3, 4]),
@@ -176,6 +179,35 @@ pub mod tests {
         check::<G>(data, None, true);
     }
 
+    pub fn antihole7<G: RequiredMethods>() {
+        // see example_graphs/antihole7.png
+        let data = collect!(hh;
+            (0, [6, 1, 5, 2]),
+            (1, [0, 2, 6, 3]),
+            (2, [1, 3, 0, 4]),
+            (3, [2, 4, 1, 5]),
+            (4, [3, 5, 2, 6]),
+            (5, [4, 6, 3, 0]),
+            (6, [5, 0, 4, 1]),
+        );
+        // minimal example of sibling-free, claw-free, non-simplicial
+        check::<G>(data, Some(false), false);
+    }
+
+    pub fn five_non_simplicial<G: RequiredMethods>() {
+        // see example_graphs/five_non_simplicial.png
+        let data = collect!(hh;
+            (0, [3, 4]),
+            (1, [3, 4]),
+            (2, [3, 4]),
+            (3, [0, 1, 2]),
+            (4, [0, 1, 2]),
+        );
+        // this is just a square with one additional node connected to two non-adjacent
+        // nodes -> full collapse
+        check::<G>(data, Some(true), false);
+    }
+
     macro_rules! test_it {
         ($module:ident, $typ:ty) => {
             mod $module {
@@ -192,6 +224,8 @@ pub mod tests {
                     single_node,
                     circle5,
                     first_prime_example_in_paper,
+                    antihole7,
+                    five_non_simplicial,
                 );
             }
         };

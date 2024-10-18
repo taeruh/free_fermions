@@ -129,7 +129,7 @@ pub mod tests {
                 (representative, []),
             )
         });
-        check::<G>(input, collapsed, true);
+        check::<G>(input, collapsed, false);
     }
 
     pub fn independent<G: RequiredMethods>() {
@@ -149,6 +149,29 @@ pub mod tests {
         check::<G>(input, collapsed, false);
     }
 
+    pub fn create_simplicial_clique_via_sibling_collapse<G: RequiredMethods>() {
+        let data = collect!(hh;
+            (5, [0, 1, 2, 3, 4]),
+            (6, [0, 1, 2, 3, 4]),
+            (0, [5, 6, 3, 2]),
+            (3, [5, 6, 0, 1]),
+            (1, [5, 6, 3, 4]),
+            (4, [5, 6, 1, 2]),
+            (2, [5, 6, 4, 0]),
+        );
+        let collapsed = [5, 6].into_iter().map(|representative| {
+            collect!(hh;
+                (representative, [0, 1, 2, 3, 4]),
+                (0, [representative, 3, 2]),
+                (3, [representative, 0, 1]),
+                (1, [representative, 3, 4]),
+                (4, [representative, 1, 2]),
+                (2, [representative, 4, 0]),
+            )
+        });
+        check::<G>(data, collapsed, true);
+    }
+
     macro_rules! test_it {
         ($module:ident, $typ:ty) => {
             mod $module {
@@ -160,7 +183,8 @@ pub mod tests {
                     complete,
                     independent,
                     cotree,
-                    // TODO: more
+                    create_simplicial_clique_via_sibling_collapse,
+                    // TODO: more DEFINITELY NEEDED!!!!!!!!!!!!!
                 );
             }
         };
