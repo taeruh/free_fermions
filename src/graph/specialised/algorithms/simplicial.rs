@@ -218,7 +218,11 @@ impl<G: GraphData> Graph<G> {
                     // PERF: maybe we can construct the "subtree" frome `tree`
                     // -> do this after the testing suite is set up and everything works
                     let tree = graph.modular_decomposition();
-                    graph.prime_simplicial(&tree)
+                    graph
+                        .prime_simplicial(&tree)
+                        .into_iter()
+                        .map(|clique| graph.to_parent_map(self, clique))
+                        .collect()
                 },
                 NonTrivialChild::Parallel(child) => {
                     #[cfg(debug_assertions)]

@@ -4,7 +4,9 @@ pub mod tests {
     use modular_decomposition::ModuleKind;
 
     use crate::graph::{
-        HLabels, Label, algorithms::test_impl::RequiredMethods, test_utils::collect,
+        HLabels, Label,
+        algorithms::test_impl::RequiredMethods,
+        test_utils::{RandomMap, collect},
     };
 
     fn check<G: RequiredMethods>(
@@ -35,7 +37,9 @@ pub mod tests {
 
         let cliques = graph.simplicial(&tree);
         if show_info {
-            println!("{tree:?}");
+            // // println!("{:?}", graph.map_to_labels());
+            // println!("{:?}", graph);
+            // println!("{tree:?}");
             println!("cliques: {cliques:?}");
         }
 
@@ -50,7 +54,7 @@ pub mod tests {
         // 0 -- 2 -- 4
         //  \
         //    - 3
-        let data = collect!(hh;
+        let data = collect!(hh, RandomMap::new(42, 42);
                 (0, [1, 2, 3]),
                 (1, [0, 4]),
                 (2, [0, 4]),
@@ -65,7 +69,7 @@ pub mod tests {
         // 0 -- 1 -- 2
         //  \
         //    - 3,4,5,6 clique
-        let data = collect!(hh;
+        let data = collect!(hh, RandomMap::new(42, 42);
                 (0, [1, 3, 4, 5, 6]),
                 (1, [0, 2]),
                 (2, [1]),
@@ -77,10 +81,10 @@ pub mod tests {
         check::<G>(data, Some(true), false);
     }
 
-    // paper example; this is also one of the minimal claw-free, non-simplicial graphs,
-    // but it has a twin
+    // paper example; this is also one of the (two) minimal claw-free, non-simplicial
+    // graphs, but this one has a twin
     pub fn create_simplicial_clique_via_sibling_collapse<G: RequiredMethods>() {
-        let data = collect!(hh;
+        let data = collect!(hh, RandomMap::new(42, 42);
             (5, [0, 1, 2, 3, 4]),
             (6, [0, 1, 2, 3, 4]),
             (0, [5, 6, 3, 2]),
@@ -94,7 +98,7 @@ pub mod tests {
 
     pub fn path2<G: RequiredMethods>() {
         // 0 -- 1
-        let data = collect!(hh;
+        let data = collect!(hh, RandomMap::new(42, 42);
             (0, [1]),
             (1, [0]),
         );
@@ -104,7 +108,7 @@ pub mod tests {
 
     pub fn path3<G: RequiredMethods>() {
         // 0 -- 1 -- 2
-        let data = collect!(hh;
+        let data = collect!(hh, RandomMap::new(42, 42);
             (0, [1]),
             (1, [0, 2]),
             (2, [1]),
@@ -117,7 +121,7 @@ pub mod tests {
         // 0 -- 1
         //  \ /
         //    2
-        let data = collect!(hh;
+        let data = collect!(hh, RandomMap::new(42, 42);
             (0, [1, 2]),
             (1, [0, 2]),
             (2, [0, 1]),
@@ -130,7 +134,7 @@ pub mod tests {
         // 0 -- 1
         // |    |
         // 2 -- 3
-        let data = collect!(hh;
+        let data = collect!(hh, RandomMap::new(42, 42);
             (0, [1, 2]),
             (1, [0, 3]),
             (2, [0, 3]),
@@ -141,14 +145,14 @@ pub mod tests {
     }
 
     pub fn single_node<G: RequiredMethods>() {
-        let data = collect!(hh; (0, []),);
+        let data = collect!(hh, RandomMap::new(42, 42); (0, []),);
         check::<G>(data, Some(true), false);
     }
 
     pub fn circle5<G: RequiredMethods>() {
         // 0 -- 1 -- 2 -- 3 -- 4
         //  \_________________/
-        let data = collect!(hh;
+        let data = collect!(hh, RandomMap::new(42, 42);
             (0, [1, 4]),
             (1, [0, 2]),
             (2, [1, 3]),
@@ -165,7 +169,7 @@ pub mod tests {
         // 0 -- 1 -- 2 -- 3
         //  \       /
         //    - 5 -
-        let data = collect!(hh;
+        let data = collect!(hh, RandomMap::new(42, 42);
             (0, [1, 5]),
             (1, [0, 2, 4]),
             (2, [1, 3, 5]),
@@ -181,7 +185,7 @@ pub mod tests {
 
     pub fn antihole7<G: RequiredMethods>() {
         // see example_graphs/antihole7.png
-        let data = collect!(hh;
+        let data = collect!(hh, RandomMap::new(42, 42);
             (0, [6, 1, 5, 2]),
             (1, [0, 2, 6, 3]),
             (2, [1, 3, 0, 4]),
@@ -196,7 +200,7 @@ pub mod tests {
 
     pub fn five_non_simplicial<G: RequiredMethods>() {
         // see example_graphs/five_non_simplicial.png
-        let data = collect!(hh;
+        let data = collect!(hh, RandomMap::new(42, 42);
             (0, [3, 4]),
             (1, [3, 4]),
             (2, [3, 4]),
@@ -205,6 +209,85 @@ pub mod tests {
         );
         // this is just a square with one additional node connected to two non-adjacent
         // nodes -> full collapse
+        check::<G>(data, Some(true), false);
+    }
+
+    pub fn six0<G: RequiredMethods>() {
+        // see example_graphs/six0.png
+        let data = collect!(hh, RandomMap::new(42, 42);
+            (0, [3, 4, 5]),
+            (1, [3, 4, 5]),
+            (2, [4, 5]),
+            (3, [0, 1, 5]),
+            (4, [0, 1, 2]),
+            (5, [0, 1, 2, 3]),
+        );
+        // 5-0,1,2 is a claw, but 0,1 are twins; 3, for example, is after the collapse a
+        // simp clique
+        check::<G>(data, Some(true), false);
+    }
+
+    pub fn six1<G: RequiredMethods>() {
+        // see example_graphs/six1.png
+        let data = collect!(hh, RandomMap::new(42, 42);
+            (0, [3, 4, 5]),
+            (1, [3, 4, 5]),
+            (2, [3, 4, 5]),
+            (3, [0, 1, 2, 5]),
+            (4, [0, 1, 2]),
+            (5, [0, 1, 2, 3]),
+        );
+        // 0,1,2 collapse to 0; 3,5 collapse to 3; now 3-0-4 are are path that collapses
+        check::<G>(data, Some(true), false);
+    }
+
+    pub fn eight0<G: RequiredMethods>() {
+        let data = collect!(hh, RandomMap::new(42, 42);
+            (0, [2, 4, 5, 6]),
+            (1, [3, 4, 6, 7]),
+            (2, [0, 4, 5, 7]),
+            (3, [1, 5, 6, 7]),
+            (4, [0, 1, 2, 6]),
+            (5, [0, 2, 3, 7]),
+            (6, [0, 1, 3, 4]),
+            (7, [1, 2, 3, 5]),
+        );
+        // this example was generated as claw-free, non-simplicial; and I cannot see any
+        // siblings
+        check::<G>(data, Some(false), false);
+    }
+
+    pub fn eight1<G: RequiredMethods>() {
+        let data = collect!(hh, RandomMap::new(42, 42);
+            (0, [2, 4, 5, 6]),
+            (1, [3, 4, 6, 7]),
+            (2, [0, 4, 5, 7]),
+            (3, [1, 5, 6, 7]),
+            (4, [0, 1, 2, 6, 7]),
+            (5, [0, 2, 3, 6, 7]),
+            (6, [0, 1, 3, 4, 5]),
+            (7, [1, 2, 3, 4, 5]),
+        );
+        // this example was generated as claw-free, non-simplicial; and I cannot see any
+        // siblings
+        check::<G>(data, Some(false), false);
+    }
+
+    pub fn eight2<G: RequiredMethods>() {
+        // let data = collect!(hh, RandomMap::new(24, 42);
+        let data = collect!(hh, RandomMap::Identity;
+            (0, [2, 3, 5, 6, 7]),
+            (1, [3, 4, 5, 6, 7]),
+            (2, [0, 4, 5, 6, 7]),
+            (3, [0, 1, 5, 6, 7]),
+            (4, [1, 2, 5, 6, 7]),
+            (5, [0, 1, 2, 3, 4, 7]),
+            (6, [0, 1, 2, 3, 4, 7]),
+            (7, [0, 1, 2, 3, 4, 5, 6]),
+        );
+        // 5,6,7 are a module and they are a path that collapses; this results in a 5-hole
+        // with one vertex in the middle connected to al the other vertices; every edge of
+        // the hole is a simplicial clique
         check::<G>(data, Some(true), false);
     }
 
@@ -226,6 +309,11 @@ pub mod tests {
                     first_prime_example_in_paper,
                     antihole7,
                     five_non_simplicial,
+                    six0,
+                    six1,
+                    eight0,
+                    eight1,
+                    eight2,
                 );
             }
         };
