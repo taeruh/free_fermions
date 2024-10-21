@@ -13,7 +13,15 @@ pub mod test_impl {
     use super::{modular_decomposition::Tree, obstinate::ObstinateMapped};
     use crate::graph::{HLabels, Label, Node, VLabels};
 
-    pub trait RequiredMethods: Debug {
+    /// Helper to call parts of generic tests only once (cf. the `check` in
+    /// simplicial.rs).
+    pub trait DoItOnce {
+        /// Only one graph should return true; all the other types should return false. We
+        /// choose `Custom` to be the one that returns true.
+        fn once() -> bool;
+    }
+
+    pub trait RequiredMethods: Debug + DoItOnce {
         type ClawFree: Into<bool> + Debug;
         fn from_adj_list(adj_list: HashMap<Label, HLabels>) -> Self;
         fn modular_decomposition(&self) -> Tree;

@@ -118,7 +118,7 @@ impl<G: GraphData> Graph<G> {
         let mut cliques: HashSet<VNodes> = HashSet::new();
 
         // we keep track of the cliques that we have already checked (duplicates happen;
-        // see note in generic version); while this require 1 clone + 2 potential clones
+        // see note in generic version); while this requires 1 clone + 2 potential clones
         // (instead of 1 potential clone), we do not do any duplicate checks which are
         // something like O(n^3)
         let mut checked_cliques: HashSet<VNodes> = HashSet::new();

@@ -1,11 +1,13 @@
 #[cfg(test)]
 pub mod tests {
-    use hashbrown::HashMap;
+    use hashbrown::{HashMap, HashSet};
     use modular_decomposition::ModuleKind;
 
     use crate::graph::{
-        HLabels, Label,
+        HLabels, Label, VLabels,
         algorithms::test_impl::RequiredMethods,
+        generic::{self, Adj, Pet},
+        specialised::{self, Custom, IndexMap},
         test_utils::{RandomMap, collect},
     };
 
@@ -14,7 +16,7 @@ pub mod tests {
         expected: Option<bool>, // cf. claw_free->check comment; None if not claw-free
         show_info: bool,
     ) {
-        let mut graph = G::from_adj_list(data);
+        let mut graph = G::from_adj_list(data.clone());
         let mut tree = graph.modular_decomposition();
 
         // the specialised version requires that if something can be collapsed, it has
@@ -39,12 +41,38 @@ pub mod tests {
         if show_info {
             // // println!("{:?}", graph.map_to_labels());
             // println!("{:?}", graph);
-            // println!("{tree:?}");
-            println!("cliques: {cliques:?}");
+            println!("{tree:?}");
+            // println!("cliques: {cliques:?}");
         }
 
         let result = cliques.into_iter().flatten().any(|c| !c.is_empty());
         assert_eq!(Some(result), expected);
+
+        if expected.unwrap() && G::once() {
+            fn get_cliques<G: RequiredMethods>(
+                data: HashMap<Label, HLabels>,
+            ) -> HashSet<VLabels> {
+                let mut graph = G::from_adj_list(data);
+                let mut tree = graph.modular_decomposition();
+                graph.twin_collapse(&mut tree);
+                graph
+                    .simplicial(&tree)
+                    .into_iter()
+                    .flatten()
+                    .map(|mut clique| {
+                        clique.sort_unstable();
+                        clique
+                    })
+                    .collect()
+            }
+            let cliques = get_cliques::<specialised::Graph<IndexMap>>(data.clone());
+            let other = [
+                get_cliques::<specialised::Graph<Custom>>(data.clone()),
+                get_cliques::<generic::Graph<Pet>>(data.clone()),
+                get_cliques::<generic::Graph<Adj>>(data),
+            ];
+            assert!(other.into_iter().all(|c| c == cliques));
+        }
     }
 
     pub fn claw_with_twins<G: RequiredMethods>() {

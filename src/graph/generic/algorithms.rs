@@ -12,13 +12,17 @@ mod test_impl {
     use crate::graph::{
         HLabels, Label, Node, VLabels,
         algorithms::{
-            modular_decomposition::Tree, obstinate::ObstinateMapped,
-            test_impl::RequiredMethods,
+            modular_decomposition::Tree,
+            obstinate::ObstinateMapped,
+            test_impl::{DoItOnce, RequiredMethods},
         },
-        generic::{Graph, ImplGraph},
+        generic::{Adj, Graph, ImplGraph, Pet},
     };
 
-    impl<G: ImplGraph> RequiredMethods for Graph<G> {
+    impl<G: ImplGraph> RequiredMethods for Graph<G>
+    where
+        Graph<G>: DoItOnce,
+    {
         type ClawFree = ClawFree;
         fn from_adj_list(adj_list: HashMap<Label, HLabels>) -> Self {
             Graph::from_adjacency_labels(adj_list).unwrap()
@@ -43,6 +47,17 @@ mod test_impl {
         }
         fn map_to_labels(&self) -> HashMap<Label, HLabels> {
             ImplGraph::map_to_labels(self)
+        }
+    }
+
+    impl DoItOnce for Graph<Pet> {
+        fn once() -> bool {
+            false
+        }
+    }
+    impl DoItOnce for Graph<Adj> {
+        fn once() -> bool {
+            false
         }
     }
 
