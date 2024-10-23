@@ -1,4 +1,5 @@
 use modular_decomposition::ModuleKind;
+use ndarray::Array2;
 use petgraph::Direction;
 
 use crate::{
@@ -8,8 +9,10 @@ use crate::{
         generic::{Graph, ImplGraph, NodeCollection},
         int,
     },
-    mat_mul::Matrix,
+    matrix::MatrixTools,
 };
+
+type Matrix = Array2<int>;
 
 #[derive(Debug, Clone)]
 pub enum ClawFree {
@@ -95,7 +98,7 @@ impl<G: ImplGraph> Graph<G> {
                 let (indices, matrix) = to_matrix(&complement_representative_graph);
                 let counts = matrix.diag_cube();
                 for c in counts.iter() {
-                    if c != 0 {
+                    if *c != 0 {
                         return ClawFree::No(FailKind::SeriesCase(Triangles {
                             indices,
                             counts: counts.into_iter().map(|c| c as int).collect(),
@@ -255,7 +258,7 @@ impl<G: ImplGraph> Graph<G> {
             let (indices, matrix) = to_matrix(&graph);
             let counts = matrix.diag_cube();
             for c in counts.iter() {
-                if c != 0 {
+                if *c != 0 {
                     return ClawFreeNaive::No(Claw {
                         center: self.get_label(node).expect("fo"),
                         leaves: Triangles {
@@ -284,7 +287,7 @@ fn to_matrix<G: ImplGraph>(graph: &Graph<G>) -> (Vec<Label>, Matrix) {
             array[col * len + row] = has_edge.into();
         }
     }
-    (indices, Matrix::from_vec_with_shape(array, (len, len)))
+    (indices, Matrix::from_vec_with_shape(array, (len, len)).unwrap())
 }
 
 #[cfg(test)]

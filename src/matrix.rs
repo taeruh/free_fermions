@@ -10,7 +10,7 @@ pub trait MatrixTools<T> {
     where
         Self: Sized;
 
-    fn diagonal_of_cubed(&self) -> Vec<T>;
+    fn diag_cube(&self) -> Vec<T>;
 }
 
 pub mod ndarray;

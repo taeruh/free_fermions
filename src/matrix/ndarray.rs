@@ -19,7 +19,7 @@ where
         Array2::from_shape_vec(shape, vec)
     }
 
-    fn diagonal_of_cubed(&self) -> Vec<T>
+    fn diag_cube(&self) -> Vec<T>
     where
         Self: Dot<Self, Output = Self>,
     {
