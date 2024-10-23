@@ -214,7 +214,7 @@ pub mod tests {
                 collect!(
                     hh, map;
                     (0, [1, co_b]),
-                    (1, [0, co_a]),
+                    (1, [0, co_a, 2]),
                     (2, [1, co_b, 10]),
                     (co_a, [1]),
                     (co_b, [0, 2]),
