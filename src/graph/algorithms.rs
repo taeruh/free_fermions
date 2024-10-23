@@ -5,7 +5,7 @@ pub mod simplicial;
 pub mod twin_collapse;
 
 #[cfg(test)]
-pub mod test_impl {
+pub mod test_impls {
     use std::fmt::Debug;
 
     use hashbrown::HashMap;

@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod tests {
     use crate::graph::{
-        algorithms::{modular_decomposition::Tree, test_impl::RequiredMethods},
+        algorithms::{modular_decomposition::Tree, test_impls::RequiredMethods},
         test_utils::collect,
     };
 

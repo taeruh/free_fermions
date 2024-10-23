@@ -46,7 +46,7 @@ pub mod tests {
     use crate::{
         fix_int::int,
         graph::{
-            algorithms::{obstinate::ObstinateKind, test_impl::RequiredMethods},
+            algorithms::{obstinate::ObstinateKind, test_impls::RequiredMethods},
             test_utils::collect,
         },
     };

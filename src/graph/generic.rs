@@ -400,6 +400,10 @@ impl<G: ImplGraph> ImplGraph for Graph<G> {
     fn get_neighbours(&self, node: Node) -> Option<Self::Neighbours<'_>> {
         self.0.get_neighbours(node)
     }
+    #[inline]
+    fn find_node(&self, label: Label) -> Option<Node> {
+        self.0.find_node(label)
+    }
     // #[inline]
     // fn get_neighbours_mut(&mut self, node: int) -> Option<&mut Self::Nodes> {
     //     self.0.get_neighbours_mut(node)

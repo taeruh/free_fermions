@@ -7,7 +7,7 @@ pub mod tests {
 
     use crate::graph::{
         HLabels, Label,
-        algorithms::{modular_decomposition::Tree, test_impl::RequiredMethods},
+        algorithms::{modular_decomposition::Tree, test_impls::RequiredMethods},
         test_utils::{RandomMap, collect},
     };
 

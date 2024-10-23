@@ -163,7 +163,7 @@ pub mod specialised;
 pub mod test_utils {
 
     use hashbrown::HashMap;
-    use rand::{Rng, SeedableRng, seq::IteratorRandom};
+    use rand::{Rng, SeedableRng, distributions::Uniform, seq::IteratorRandom};
     use rand_pcg::Pcg64;
 
     use super::*;
@@ -192,6 +192,32 @@ pub mod test_utils {
                 RandomMap::Identity => label,
             }
         }
+    }
+
+    pub fn random_data(
+        rng: &mut impl Rng,
+        num_nodes: int,
+        num_edges: int, // not really, since duplicates are dropped
+    ) -> HashMap<Label, HLabels> {
+        assert!(num_nodes >= 1);
+        if num_nodes == 1 {
+            return HashMap::from_iter([(0, HLabels::new())]);
+        }
+        let map = RandomMap::with_rng(num_nodes, num_nodes * 5, rng);
+        let dist = Uniform::new(0, num_nodes);
+        let mut ret =
+            HashMap::from_iter((0..num_nodes).map(|i| (map.map(i), HLabels::new())));
+        for _ in 0..num_edges {
+            loop {
+                let (a, b) = (rng.sample(dist), rng.sample(dist));
+                if a != b {
+                    ret.get_mut(&map.map(a)).unwrap().insert(map.map(b));
+                    ret.get_mut(&map.map(b)).unwrap().insert(map.map(a));
+                    break;
+                }
+            }
+        }
+        ret
     }
 
     macro_rules! adj_map {

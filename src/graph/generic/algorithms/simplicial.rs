@@ -145,7 +145,7 @@ impl<G: ImplGraph> Graph<G> {
         cliques
     }
 
-    fn clique_is_simplicial(&self, clique: &[Node]) -> bool {
+    pub fn clique_is_simplicial(&self, clique: &[Node]) -> bool {
         for node in clique {
             let mut neighbours = self.get_neighbours(*node).unwrap().collect();
             for n in clique {
@@ -158,7 +158,7 @@ impl<G: ImplGraph> Graph<G> {
         true
     }
 
-    fn set_is_clique<C, I>(&self, set: C) -> bool
+    pub fn set_is_clique<C, I>(&self, set: C) -> bool
     where
         C: IntoIterator<IntoIter = I>,
         I: Iterator<Item = Node> + Clone,
@@ -253,12 +253,10 @@ impl<G: ImplGraph> Graph<G> {
         // the outer loop is just for unconnected graphs, but it is actually not
         // necessary, because we will pass in connected graphs ...
         while let Some(&node) = unvisited.iter().next() {
-            // println!("false: {:?}", node);
             a.push(node);
             marked.insert(node, false);
             assert!(unvisited.remove(&node));
             let neighbours = self.get_neighbours(node).unwrap();
-            // println!("true: {:?}", neighbours);
             for neighbour in neighbours.iter() {
                 stack.push((neighbour, true));
                 marked.insert(neighbour, true);
@@ -266,10 +264,8 @@ impl<G: ImplGraph> Graph<G> {
             }
 
             while let Some((node, mark)) = stack.pop() {
-                // println!("{mark}: {:?}", node);
                 let neg_mark = !mark;
                 let neighbours = self.get_neighbours(node).unwrap();
-                // println!("{neg_mark}: {:?}", neighbours);
                 for neighbour in neighbours.iter() {
                     if let Some(&neighbour_mark) = marked.get(&neighbour) {
                         if !(neighbour_mark ^ mark) {

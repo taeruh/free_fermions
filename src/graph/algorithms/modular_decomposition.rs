@@ -347,59 +347,33 @@ impl Tree {
 
 #[cfg(test)]
 pub mod tests {
-    use rand::{Rng, SeedableRng, seq::SliceRandom};
+    use rand::{Rng, SeedableRng};
     use rand_pcg::Pcg64;
 
     use super::*;
-    use crate::{
-        fix_int::int,
-        graph::{
-            generic::{self, Adj, ImplGraph, Pet},
-            specialised::{self, IndexMap},
-            test_utils::RandomMap,
-        },
+    use crate::graph::{
+        // algorithms::test_utils,
+        generic::{self, Adj, ImplGraph, Pet},
+        specialised::{self, IndexMap},
+        test_utils,
     };
-
-    fn random_edges(
-        rng: &mut impl Rng,
-        num_nodes: int,
-        num_edges: int,
-    ) -> Vec<(Label, Label)> {
-        assert!(num_nodes > 1); // otherwise, the loop below will never terminate
-        let map = RandomMap::with_rng(num_nodes, num_nodes * 2, rng);
-        let dist = rand::distributions::Uniform::new(0, num_nodes);
-        let mut edges = Vec::with_capacity(num_edges as usize);
-        for _ in 0..num_edges {
-            loop {
-                let (a, b) = (rng.sample(dist), rng.sample(dist));
-                if a != b {
-                    edges.push((map.map(a), map.map(b)));
-                    break;
-                }
-            }
-        }
-        edges
-    }
 
     #[test]
     fn positive_equivalences() {
         let rng = &mut Pcg64::from_entropy();
-        // modular decomposition fails if there are no nodes or no edges
-        let num_nodes = rng.gen_range(2..50);
-        let num_edges = rng.gen_range(1..100);
-        let mut edges = random_edges(rng, num_nodes, num_edges);
+        let num_nodes = rng.gen_range(1..50);
+        let num_edges = rng.gen_range(0..100);
+        let data = test_utils::random_data(rng, num_nodes, num_edges);
 
-        let gen_adj = generic::Graph::<Adj>::from_edge_labels(edges.clone()).unwrap();
+        let gen_adj = generic::Graph::<Adj>::from_adjacency_labels(data.clone()).unwrap();
         let tree_gen_adj = gen_adj.modular_decomposition();
-        edges.shuffle(rng);
-        let gen_pet = generic::Graph::<Pet>::from_edge_labels(edges.clone()).unwrap();
+        let gen_pet = generic::Graph::<Pet>::from_adjacency_labels(data.clone()).unwrap();
         let tree_gen_pet = gen_pet.modular_decomposition();
-        edges.shuffle(rng);
         let spec_index =
-            specialised::Graph::<IndexMap>::from_edge_labels(edges.clone()).unwrap();
+            specialised::Graph::<IndexMap>::from_adjacency_labels(data.clone()).unwrap();
         let tree_spec_index = spec_index.modular_decomposition();
-        edges.shuffle(rng);
-        let spec_cus = specialised::Graph::<IndexMap>::from_edge_labels(edges).unwrap();
+        let spec_cus =
+            specialised::Graph::<IndexMap>::from_adjacency_labels(data).unwrap();
         let tree_spec_cus = spec_cus.modular_decomposition();
 
         assert!(Tree::is_equivalent(
@@ -422,7 +396,7 @@ pub mod tests {
         ));
 
         // // the following does not make sense, since modules can be collapsed onto
-        // // different representatives; however, I it succeeds quite often (and it did
+        // // different representatives; however, it succeeds quite often (and it did
         // // indeed collapse some stuff in these cases), and also in the cases where it
         // // failed, the smaller graphs (checked manually) where same up to labelling, which
         // // is a good positive indication:
@@ -454,22 +428,22 @@ pub mod tests {
     #[test]
     fn negative_equivalences() {
         let rng = &mut Pcg64::from_entropy();
-        let num_nodes_a = rng.gen_range(2..50);
-        let num_nodes_b = rng.gen_range(2..50);
-        let num_edges_a = rng.gen_range(1..100);
-        let num_edges_b = rng.gen_range(1..100);
-        let (edges_a, edges_b) = loop {
-            let edges_a = random_edges(rng, num_nodes_a, num_edges_a);
-            let edges_b = random_edges(rng, num_nodes_b, num_edges_b);
-            if HashSet::<_>::from_iter(edges_a.iter().cloned())
-                != HashSet::<_>::from_iter(edges_b.iter().cloned())
-            {
-                break (edges_a, edges_b);
+        let num_nodes_a = rng.gen_range(1..50);
+        let num_nodes_b = rng.gen_range(1..50);
+        let num_edges_a = rng.gen_range(0..100);
+        let num_edges_b = rng.gen_range(0..100);
+        let (data_a, data_b) = loop {
+            let data_a = test_utils::random_data(rng, num_nodes_a, num_edges_a);
+            let data_b = test_utils::random_data(rng, num_nodes_b, num_edges_b);
+            if data_a != data_b {
+                break (data_a, data_b);
             }
         };
-        let graph_a = specialised::Graph::<IndexMap>::from_edge_labels(edges_a).unwrap();
+        let graph_a =
+            specialised::Graph::<IndexMap>::from_adjacency_labels(data_a).unwrap();
         let tree_a = graph_a.modular_decomposition();
-        let graph_b = specialised::Graph::<IndexMap>::from_edge_labels(edges_b).unwrap();
+        let graph_b =
+            specialised::Graph::<IndexMap>::from_adjacency_labels(data_b).unwrap();
         let tree_b = graph_b.modular_decomposition();
         assert!(!Tree::is_equivalent(
             &tree_a,

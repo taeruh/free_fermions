@@ -2,15 +2,39 @@
 pub mod tests {
     use hashbrown::{HashMap, HashSet};
     use modular_decomposition::ModuleKind;
+    use rand::{Rng, SeedableRng};
+    use rand_pcg::Pcg64;
 
     use crate::graph::{
-        HLabels, Label, VLabels,
-        algorithms::test_impl::RequiredMethods,
-        generic::{self, Adj, Pet},
+        HLabels, Label, VLabels, VNodes,
+        algorithms::test_impls::RequiredMethods,
+        generic::{self, Adj, ImplGraph, Pet},
         specialised::{self, Custom, IndexMap},
-        test_utils::{RandomMap, collect},
+        test_utils::{self, RandomMap, collect},
     };
 
+    fn sort_cliques(cliques: Vec<Vec<VLabels>>) -> HashSet<VLabels> {
+        cliques
+            .into_iter()
+            .flatten()
+            .map(|mut clique| {
+                clique.sort();
+                clique
+            })
+            .collect()
+    }
+
+    fn get_cliques<G: RequiredMethods>(
+        data: HashMap<Label, HLabels>,
+    ) -> HashSet<VLabels> {
+        let graph = G::from_adj_list(data);
+        // println!("{:?}", graph);
+        let tree = graph.modular_decomposition();
+        sort_cliques(graph.simplicial(&tree))
+    }
+
+    // current implementation of the consistency check does not account for when we get
+    // different bipartitions!
     fn check<G: RequiredMethods>(
         data: HashMap<Label, HLabels>,
         expected: Option<bool>, // cf. claw_free->check comment; None if not claw-free
@@ -49,23 +73,10 @@ pub mod tests {
         assert_eq!(Some(result), expected);
 
         if expected.unwrap() && G::once() {
-            fn get_cliques<G: RequiredMethods>(
-                data: HashMap<Label, HLabels>,
-            ) -> HashSet<VLabels> {
-                let mut graph = G::from_adj_list(data);
-                let mut tree = graph.modular_decomposition();
-                graph.twin_collapse(&mut tree);
-                graph
-                    .simplicial(&tree)
-                    .into_iter()
-                    .flatten()
-                    .map(|mut clique| {
-                        clique.sort_unstable();
-                        clique
-                    })
-                    .collect()
-            }
-            let cliques = get_cliques::<specialised::Graph<IndexMap>>(data.clone());
+            // already use the collapsed graph, so that we can be sure to have the same
+            // labels
+            let data = graph.map_to_labels();
+            let cliques = sort_cliques(graph.simplicial(&tree));
             let other = [
                 get_cliques::<specialised::Graph<Custom>>(data.clone()),
                 get_cliques::<generic::Graph<Pet>>(data.clone()),
@@ -359,4 +370,76 @@ pub mod tests {
         };
     }
     pub(crate) use wrap;
+
+    #[test]
+    fn consistency() {
+        let rng = &mut Pcg64::from_entropy();
+        'outer: for _ in 0..20 {
+            let mut counter = 0;
+            let (graph, tree) = loop {
+                // most go through with that
+                if counter == 10 {
+                    continue 'outer;
+                } else {
+                    counter += 1;
+                }
+
+                let num_nodes = rng.gen_range(1..50);
+                let num_edges = rng.gen_range(0..100);
+                let data = test_utils::random_data(rng, num_nodes, num_edges);
+
+                let mut graph = generic::Graph::<Pet>::from_adj_list(data);
+                let mut tree = graph.modular_decomposition();
+                graph.twin_collapse(&mut tree);
+
+                if !bool::from(graph.is_claw_free(&tree)) {
+                    continue;
+                } else if let ModuleKind::Parallel =
+                    tree.graph.node_weight(tree.root).unwrap()
+                {
+                    continue;
+                } else {
+                    break (graph, tree);
+                }
+            };
+
+            let data = RequiredMethods::map_to_labels(&graph);
+            let cliques = [
+                get_cliques::<specialised::Graph<Custom>>(data.clone()),
+                get_cliques::<specialised::Graph<IndexMap>>(data.clone()),
+                get_cliques::<generic::Graph<Adj>>(data.clone()),
+                sort_cliques(RequiredMethods::simplicial(&graph, &tree)),
+            ];
+
+            let this = &cliques[3];
+            if !cliques.iter().all(|c| *c == *this) {
+                // in that case, all of them should be bipartitions of the the complement
+                // graph, and we just got different bipartitions; let's check whether that
+                // is correct
+                for c in cliques.iter() {
+                    assert_eq!(c.len(), 2);
+
+                    let get_nodes = |set: &VLabels| {
+                        set.iter()
+                            .map(|l| graph.find_node(*l).unwrap())
+                            .collect::<VNodes>()
+                    };
+                    let bipartition = c.iter().map(get_nodes).collect::<Vec<_>>();
+
+                    let mut complement = graph.clone();
+                    complement.complement();
+                    let check_independence =
+                        |set: &VNodes| complement.set_is_independent(set.iter().copied());
+
+                    bipartition.iter().for_each(|set| {
+                        assert!(
+                            check_independence(set)
+                                && graph.set_is_clique(set.iter().copied())
+                                && graph.clique_is_simplicial(set)
+                        )
+                    });
+                }
+            }
+        }
+    }
 }

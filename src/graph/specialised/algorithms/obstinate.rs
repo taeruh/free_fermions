@@ -90,11 +90,6 @@ impl<G: GraphData> Graph<G> {
             || !graph.set_is_independent(a_part.iter().copied())
             || !graph.set_is_independent(b_part.iter().copied())
         {
-            println!("{:?}", "FOOOOOOOOOOO");
-            println!("{:?}", a_part.intersection(b_part).count());
-            println!("{:?}", kind);
-            println!("{:?}", a_part);
-            println!("{:?}", b_part);
             return Obstinate::False;
         }
 

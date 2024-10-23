@@ -13,7 +13,7 @@ mod test_impl {
         algorithms::{
             modular_decomposition::Tree,
             obstinate::ObstinateMapped,
-            test_impl::{DoItOnce, RequiredMethods},
+            test_impls::{DoItOnce, RequiredMethods},
         },
         specialised::{Custom, Graph, GraphData, IndexMap},
     };
