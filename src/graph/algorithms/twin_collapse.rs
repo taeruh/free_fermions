@@ -2,8 +2,6 @@
 pub mod tests {
 
     use hashbrown::HashMap;
-    use rand::SeedableRng;
-    use rand_pcg::Pcg64;
 
     use crate::graph::{
         HLabels, Label,
@@ -28,7 +26,8 @@ pub mod tests {
         graph.twin_collapse(&mut tree);
         if show_info {
             println!("AFTER graph: {graph:?}");
-            println!("AFTER tree: {tree:?}\n");
+            println!("AFTER tree: {tree:?}");
+            println!("{:?}", graph.map_to_labels());
         }
 
         let sanity_tree = graph.modular_decomposition();
@@ -52,30 +51,6 @@ pub mod tests {
             graph.get_label_mapping(),
             equivalent_graph.get_label_mapping()
         ));
-    }
-
-    pub fn some_test<G: RequiredMethods>() {
-        let rng = &mut Pcg64::from_entropy();
-        let map = RandomMap::with_rng(24, 42, rng);
-        let input = collect!(
-            hh, map;
-            (0, [1]),
-            (1, [0, 2]),
-            (2, [1, 3, 4, 5]),
-            (3, [2, 4]),
-            (4, [2, 3]),
-            (5, [2]),
-        );
-        let collapsed = [3, 4, 5].into_iter().map(|representative| {
-            collect!(
-                hh, map;
-                (0, [1]),
-                (1, [0, 2]),
-                (2, [1, representative]),
-                (representative, [2]),
-            )
-        });
-        check::<G>(input, collapsed, false);
     }
 
     pub fn path4<G: RequiredMethods>() {
@@ -169,7 +144,84 @@ pub mod tests {
                 (2, [representative, 4, 0]),
             )
         });
-        check::<G>(data, collapsed, true);
+        check::<G>(data, collapsed, false);
+    }
+
+    pub fn some_test0<G: RequiredMethods>() {
+        let map = RandomMap::new(24, 42);
+        let input = collect!(hh, map;
+            (0, [1]),
+            (1, [0, 2]),
+            (2, [1, 3, 4, 5]),
+            (3, [2, 4]),
+            (4, [2, 3]),
+            (5, [2]),
+        );
+        let collapsed = [3, 4, 5].into_iter().map(|representative| {
+            collect!(
+                hh, map;
+                (0, [1]),
+                (1, [0, 2]),
+                (2, [1, representative]),
+                (representative, [2]),
+            )
+        });
+        check::<G>(input, collapsed, false);
+    }
+
+    pub fn some_test1<G: RequiredMethods>() {
+        let map = RandomMap::new(24, 42);
+        let input = collect!(hh, map;
+            (0, [1]),
+            (1, [0, 2, 3, 4]),
+            (2, [1, 3, 5]),
+            (3, [1, 2, 5]),
+            (4, [1, 5]),
+            (5, [2, 3, 4]),
+        );
+        let collapsed = [2, 3, 4].into_iter().map(|representative| {
+            collect!(
+                hh, map;
+                (0, [1]),
+                (1, [0, representative]),
+                (representative, [1, 5]),
+                (5, [representative]),
+            )
+        });
+        check::<G>(input, collapsed, false);
+    }
+
+    pub fn some_test2<G: RequiredMethods>() {
+        // let map = RandomMap::new(24, 42);
+        let map = RandomMap::Identity;
+        let input = collect!(hh, map;
+            (0, [1, 6, 7, 8, 9]),
+            (1, [0, 2, 3, 4, 5]),
+            (2, [1, 6, 7, 8, 9, 10]),
+            (3, [1, 4, 5]),
+            (4, [1, 3]),
+            (5, [1, 3]),
+            (6, [0, 2]),
+            (7, [0, 2, 8, 9]),
+            (8, [0, 2, 7, 9]),
+            (9, [0, 2, 7, 8]),
+            (10, [2]),
+        );
+        let collapsed = [3, 4, 5]
+            .into_iter()
+            .flat_map(|co_a| [6, 7, 8, 9].into_iter().map(move |co_b| (co_a, co_b)))
+            .map(|(co_a, co_b)| {
+                collect!(
+                    hh, map;
+                    (0, [1, co_b]),
+                    (1, [0, co_a]),
+                    (2, [1, co_b, 10]),
+                    (co_a, [1]),
+                    (co_b, [0, 2]),
+                    (10, [2]),
+                )
+            });
+        check::<G>(input, collapsed, false);
     }
 
     macro_rules! test_it {
@@ -178,13 +230,14 @@ pub mod tests {
                 use super::*;
                 crate::graph::algorithms::twin_collapse::tests::wrap!(
                     $typ,
-                    some_test,
                     path4,
                     complete,
                     independent,
                     cotree,
                     create_simplicial_clique_via_sibling_collapse,
-                    // TODO: more DEFINITELY NEEDED!!!!!!!!!!!!!
+                    some_test0,
+                    some_test1,
+                    some_test2,
                 );
             }
         };
