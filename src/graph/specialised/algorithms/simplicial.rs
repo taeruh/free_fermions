@@ -302,7 +302,7 @@ impl<G: GraphData> Graph<G> {
             unvisited.remove(&node);
             // safety: unvisited->node was created from the graph itself
             for neighbour in unsafe { self.get_neighbours_unchecked(node) } {
-                stack.push((node, true));
+                stack.push((*neighbour, true));
                 marked.insert(*neighbour, true);
                 #[cfg(debug_assertions)]
                 assert!(unvisited.remove(neighbour));
