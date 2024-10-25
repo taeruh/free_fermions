@@ -159,7 +159,7 @@ pub mod algorithms;
 pub mod generic;
 pub mod specialised;
 
-#[cfg(test)]
+// #[cfg(test)]
 pub mod test_utils {
 
     use hashbrown::HashMap;

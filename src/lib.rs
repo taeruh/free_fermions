@@ -60,8 +60,8 @@ macro_rules! debug_unreachable_unchecked {
 
 pub mod enumerate_offset;
 pub mod graph;
-pub mod hamiltonian;
+// pub mod hamiltonian;
 pub mod mat_mul;
 pub mod matrix;
-pub mod playing_around;
+// pub mod playing_around;
 pub mod run;

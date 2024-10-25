@@ -1,5 +1,6 @@
 use std::{collections::HashSet, hash::Hash};
 
+use bitvec::vec::BitVec;
 use num::integer;
 use rand::{
     RngCore, SeedableRng,
@@ -13,9 +14,9 @@ use rand::{
 use rand_pcg::Pcg64;
 
 #[derive(Clone, Copy)]
-pub struct Probability(f64);
+pub struct Density(f64);
 
-impl Probability {
+impl Density {
     pub fn new(f: f64) -> Self {
         assert!((0.0..=1.0).contains(&f));
         Self(f)
@@ -29,6 +30,10 @@ pub fn num_ops(n: usize) -> usize {
         return 0;
     }
     n * 3 + n * (n - 1) / 2 * 3 * 3
+}
+
+pub trait Commutator {
+    fn commute(&self, other: &Self) -> bool;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -45,24 +50,24 @@ impl Default for Pauli {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 // indices go from 1 to n; we include single particle operators, setting their second
 // index to 0 and the corresponding data entry to X (no need to introduce an additional
 // enum I variant); this way, their second index never matches any other index; doing
 // this introduces an overhead for the single particle, however, there are much more two
 // particle operators, so this is probably better than introducing an enum to separate
 // the two cases or using trait objects opertors
-pub struct Operator {
-    pub index: [usize; 2],
-    pub data: [Pauli; 2],
+pub struct LocalOperator<const N: usize> {
+    index: [usize; N],
+    pauli: [Pauli; N],
 }
 
-impl Operator {
-    pub fn commute(&self, other: &Self) -> bool {
+impl<const N: usize> Commutator for LocalOperator<N> {
+    fn commute(&self, other: &Self) -> bool {
         let mut res = false;
-        for s in 0..2 {
-            for o in 0..2 {
-                if self.index[s] == other.index[o] && self.data[s] != other.data[o] {
+        for s in 0..N {
+            for o in 0..N {
+                if self.index[s] == other.index[o] && self.pauli[s] != other.pauli[o] {
                     res ^= true;
                 }
             }
@@ -71,79 +76,101 @@ impl Operator {
     }
 }
 
+pub struct OperatorString {
+    len: usize,
+    z: BitVec,
+    x: BitVec,
+}
+
+impl Commutator for OperatorString {
+    fn commute(&self, other: &Self) -> bool {
+        debug_assert_eq!(self.len, other.len);
+        let r = self.z.clone() & &other.x;
+        r.count_ones() % 2 == 1
+    }
+}
+
+impl OperatorString {
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    // pub fn new(
+}
+
 /// # About the draw_.*sets methods
 ///
 /// For enough samples, there shouldn't be a real difference, but we might see some
 /// effects in edge cases. The ...
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct OperatorPool<R> {
-    pub ops: Vec<Operator>,
+pub struct OperatorPool<O, R> {
+    pub ops: Vec<O>,
     pub rng: R,
     pub len: usize,
 }
 
-impl<R> AsRef<[Operator]> for OperatorPool<R> {
-    fn as_ref(&self) -> &[Operator] {
+impl<O, R> AsRef<[O]> for OperatorPool<O, R> {
+    fn as_ref(&self) -> &[O] {
         &self.ops
     }
 }
 
 impl<R> OperatorPool<R> {
-    fn new_pool(n: usize) -> Vec<Operator> {
+    fn new_pool(n: usize) -> Vec<LocalOperator> {
         let mut ops = Vec::with_capacity(num_ops(n));
 
         for i in 1..(n + 1) {
             // single particle
-            ops.push(Operator {
+            ops.push(LocalOperator {
                 index: [i, 0],
-                data: [Pauli::X, Pauli::X],
+                pauli: [Pauli::X, Pauli::X],
             });
-            ops.push(Operator {
+            ops.push(LocalOperator {
                 index: [i, 0],
-                data: [Pauli::Y, Pauli::X],
+                pauli: [Pauli::Y, Pauli::X],
             });
-            ops.push(Operator {
+            ops.push(LocalOperator {
                 index: [i, 0],
-                data: [Pauli::Z, Pauli::X],
+                pauli: [Pauli::Z, Pauli::X],
             });
 
             // two particle
             for j in (1 + i)..(n + 1) {
-                ops.push(Operator {
+                ops.push(LocalOperator {
                     index: [i, j],
-                    data: [Pauli::X, Pauli::X],
+                    pauli: [Pauli::X, Pauli::X],
                 });
-                ops.push(Operator {
+                ops.push(LocalOperator {
                     index: [i, j],
-                    data: [Pauli::X, Pauli::Y],
+                    pauli: [Pauli::X, Pauli::Y],
                 });
-                ops.push(Operator {
+                ops.push(LocalOperator {
                     index: [i, j],
-                    data: [Pauli::X, Pauli::Z],
+                    pauli: [Pauli::X, Pauli::Z],
                 });
-                ops.push(Operator {
+                ops.push(LocalOperator {
                     index: [i, j],
-                    data: [Pauli::Y, Pauli::X],
+                    pauli: [Pauli::Y, Pauli::X],
                 });
-                ops.push(Operator {
+                ops.push(LocalOperator {
                     index: [i, j],
-                    data: [Pauli::Y, Pauli::Y],
+                    pauli: [Pauli::Y, Pauli::Y],
                 });
-                ops.push(Operator {
+                ops.push(LocalOperator {
                     index: [i, j],
-                    data: [Pauli::Y, Pauli::Z],
+                    pauli: [Pauli::Y, Pauli::Z],
                 });
-                ops.push(Operator {
+                ops.push(LocalOperator {
                     index: [i, j],
-                    data: [Pauli::Z, Pauli::X],
+                    pauli: [Pauli::Z, Pauli::X],
                 });
-                ops.push(Operator {
+                ops.push(LocalOperator {
                     index: [i, j],
-                    data: [Pauli::Z, Pauli::Y],
+                    pauli: [Pauli::Z, Pauli::Y],
                 });
-                ops.push(Operator {
+                ops.push(LocalOperator {
                     index: [i, j],
-                    data: [Pauli::Z, Pauli::Z],
+                    pauli: [Pauli::Z, Pauli::Z],
                 });
             }
         }
@@ -181,39 +208,42 @@ impl<R> OperatorPool<R> {
 
 #[derive(Debug)]
 pub struct OperatorIter<'l> {
-    ops: &'l Vec<Operator>,
+    ops: &'l Vec<LocalOperator>,
     ind: std::collections::hash_set::IntoIter<usize>,
 }
 
 impl<'l> Iterator for OperatorIter<'l> {
-    type Item = &'l Operator;
+    type Item = &'l LocalOperator;
     fn next(&mut self) -> Option<Self::Item> {
         self.ind.next().map(|i| &self.ops[i])
     }
 }
 
 pub fn draw_with_rate<'l>(
-    ops: &'l [Operator],
+    ops: &'l [LocalOperator],
     rng: &mut impl RngCore,
     dist: &impl Distribution<f64>,
-    acceptance_probability: Probability,
-) -> Vec<&'l Operator> {
+    acceptance_probability: Density,
+) -> Vec<&'l LocalOperator> {
     ops.iter()
         .filter(|_| dist.sample(rng) < acceptance_probability.0)
         .collect()
 }
 
 impl<R: RngCore> OperatorPool<R> {
-    pub fn draw_set_with_probability(&mut self, density: Probability) -> Vec<&Operator> {
+    pub fn draw_set_with_probability(
+        &mut self,
+        density: Density,
+    ) -> Vec<&LocalOperator> {
         let dist = Uniform::new_inclusive(0.0, 1.0);
         draw_with_rate(&self.ops, &mut self.rng, &dist, density)
     }
 
     pub fn draw_multiple_sets_with_probability(
         &mut self,
-        density: Probability,
+        density: Density,
         amount: usize,
-    ) -> Vec<Vec<&Operator>> {
+    ) -> Vec<Vec<&LocalOperator>> {
         let dist = Uniform::new_inclusive(0.0, 1.0);
         let mut res = Vec::with_capacity(amount);
         for _ in 0..amount {
@@ -223,7 +253,7 @@ impl<R: RngCore> OperatorPool<R> {
     }
 
     /// Draw `amount` many distinct operators from the pool.
-    pub fn draw(&mut self, amount: usize) -> impl Iterator<Item = &Operator> {
+    pub fn draw(&mut self, amount: usize) -> impl Iterator<Item = &LocalOperator> {
         self.ops.choose_multiple(&mut self.rng, amount)
     }
 
@@ -239,7 +269,7 @@ impl<R: RngCore> OperatorPool<R> {
         &mut self,
         amount: usize,
         set_size: usize,
-    ) -> impl Iterator<Item = impl Iterator<Item = &Operator>> {
+    ) -> impl Iterator<Item = impl Iterator<Item = &LocalOperator>> {
         #[cfg(debug_assertions)]
         if self.num_ops() <= 67 {
             assert!(
@@ -273,7 +303,7 @@ impl<R: RngCore> OperatorPool<R> {
         &mut self,
         amount: usize,
         set_size: usize,
-    ) -> impl Iterator<Item = impl Iterator<Item = &Operator>> {
+    ) -> impl Iterator<Item = impl Iterator<Item = &LocalOperator>> {
         let mut sets = Vec::<HashSet<_>>::new();
         'outer: for _ in 0..amount {
             let set =
@@ -297,7 +327,7 @@ impl<R: RngCore> OperatorPool<R> {
         &mut self,
         amount: usize,
         set_size: usize,
-    ) -> impl Iterator<Item = impl Iterator<Item = &Operator>> {
+    ) -> impl Iterator<Item = impl Iterator<Item = &LocalOperator>> {
         let mut sets = Vec::with_capacity(amount);
         for _ in 0..amount {
             sets.push(self.ops.choose_multiple(&mut self.rng, set_size));
@@ -340,7 +370,7 @@ pub mod tests {
 
     #[test]
     fn correct_pool() {
-        fn equal<A: AsRef<[Operator]>, B: AsRef<[Operator]>>(a: A, b: B) {
+        fn equal<A: AsRef<[LocalOperator]>, B: AsRef<[LocalOperator]>>(a: A, b: B) {
             assert_eq!(
                 HashSet::<_>::from_iter(a.as_ref()),
                 HashSet::from_iter(b.as_ref())

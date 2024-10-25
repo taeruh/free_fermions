@@ -74,18 +74,6 @@ impl<G: GraphData> Graph<G> {
             _ => {},
         }
 
-        let mut children = tree
-            .neighbors_directed(updated_module, Direction::Outgoing)
-            .collect::<Vec<_>>()
-            .into_iter();
-
-        // we cannot just directly remove every leaf, because if all children are leaves,
-        // then the module is suddenly empty, which would be wrong; instead, in that case,
-        // we want to change the module to one of those leaves; we do this by potentially
-        // storing one leaf and either remove it or change the module to it, in the end
-        let mut remaining_leaf = None;
-        let mut module_may_become_remaining_leaf = true;
-
         #[inline(always)]
         fn get_weight<'t>(
             tree: &'t TreeGraph,
@@ -160,14 +148,18 @@ impl<G: GraphData> Graph<G> {
                 self.recurse_collapse(tree, child, graph_map, tree_map);
                 if let ModuleKind::Node(node) = get_weight(tree, child, tree_map) {
                     full_remove(self, graph_map, tree, tree_map, child, *node);
+                } else {
+                    module_may_become_remaining_leaf = false;
                 }
             }
         }
 
-        let new_root = (unsafe { tree_map.map_unchecked(module.index()) } as int).into();
+        let new_module_root =
+            (unsafe { tree_map.map_unchecked(module.index()) } as int).into();
         if let Some(new_leaf) = remaining_leaf {
             if module_may_become_remaining_leaf {
-                *tree.node_weight_mut(new_root).unwrap() = ModuleKind::Node(new_leaf.0);
+                *tree.node_weight_mut(new_module_root).unwrap() =
+                    ModuleKind::Node(new_leaf.0);
                 tree_remove(tree, tree_map, new_leaf.1);
             }
         }
@@ -179,6 +171,7 @@ mod tests {
     use crate::graph::{
         algorithms::twin_collapse,
         specialised::{Custom, Graph, IndexMap},
+        test_utils::collect,
     };
 
     twin_collapse::tests::test_it!(custom, Graph<Custom>);

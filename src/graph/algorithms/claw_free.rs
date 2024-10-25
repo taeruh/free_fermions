@@ -149,6 +149,8 @@ pub mod tests {
             }
         };
     }
+    use rand::SeedableRng;
+    use rand_pcg::Pcg64;
     pub(crate) use test_it;
 
     macro_rules! wrap {
