@@ -21,13 +21,14 @@ pub mod tests {
         let mut tree = graph.modular_decomposition();
         if show_info {
             println!("BEFORE graph: {graph:?}");
-            println!("BEFORE tree: {tree:?}\n");
+            println!("BEFORE tree: {tree:?}");
+            println!("BEFORE labels: {:?}\n", graph.map_to_labels());
         }
         graph.twin_collapse(&mut tree);
         if show_info {
             println!("AFTER graph: {graph:?}");
             println!("AFTER tree: {tree:?}");
-            println!("{:?}", graph.map_to_labels());
+            println!("AFTER labels: {:?}", graph.map_to_labels());
         }
 
         let sanity_tree = graph.modular_decomposition();

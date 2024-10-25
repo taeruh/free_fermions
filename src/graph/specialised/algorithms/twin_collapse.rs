@@ -124,31 +124,32 @@ impl<G: GraphData> Graph<G> {
             );
         }
 
-        if let Some(child) = children.next() {
+        let mut children = tree
+            .neighbors_directed(updated_module, Direction::Outgoing)
+            .collect::<Vec<_>>()
+            .into_iter();
+
+        // we cannot just directly remove every leaf, because if all children are leaves,
+        // then the module is suddenly empty, which would be wrong; instead, in that case,
+        // we want to change the module to one of those leaves; we do this by potentially
+        // storing one leaf and either remove it or change the module to it, in the end
+        let mut remaining_leaf = None;
+        let mut module_may_become_remaining_leaf = true;
+
+        // break the loop into two loops to so that we only have the `to_remaining_leaf`
+        // logic once
+
+        for child in children.by_ref() {
             if let ModuleKind::Node(node) = get_weight(tree, child, tree_map) {
                 remaining_leaf = Some((*node, child));
+                break;
             } else {
                 self.recurse_collapse(tree, child, graph_map, tree_map);
                 if let ModuleKind::Node(node) = get_weight(tree, child, tree_map) {
                     remaining_leaf = Some((*node, child));
-                } else {
-                    remaining_leaf = None;
-                }
-            }
-        }
-
-        // break the loop into two loops to so that we only have the `to_remaining_leaf`
-        // logic once
-        for child in children.by_ref() {
-            if let ModuleKind::Node(node) = get_weight(tree, child, tree_map) {
-                full_remove(self, graph_map, tree, tree_map, child, *node);
-            } else {
-                self.recurse_collapse(tree, child, graph_map, tree_map);
-                if let ModuleKind::Node(node) = get_weight(tree, child, tree_map) {
-                    full_remove(self, graph_map, tree, tree_map, child, *node);
+                    break;
                 } else {
                     module_may_become_remaining_leaf = false;
-                    break;
                 }
             }
         }
