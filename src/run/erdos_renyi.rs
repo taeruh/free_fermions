@@ -19,11 +19,12 @@ use crate::{
 type GenGraph = generic::Graph<Pet>;
 type Graph = specialised::Graph<Custom>;
 
+const CONSIDER_PARALLEL_GRAPHS: bool = true;
+
 #[derive(Serialize)]
 struct Results {
-    size: Vec<int>,
     sweep: Vec<Sweep>,
-    num_samples: Vec<usize>,
+    consider_parallel_graphs: bool,
 }
 
 // all f64 values are percentages w.r.t. the size
@@ -35,15 +36,13 @@ struct Sweep {
     avg_collapsed_nodes: Vec<f64>,        // average
     claw_free: Vec<f64>,
     simplicial: Vec<f64>,
+    num_samples: usize,
 }
 
 fn num_samples(_size: int) -> usize {
     // TODO: make this an actual appropriate function depending on the graph size
     20
 }
-
-const CONSIDER_EMPTY_GRAPHS: bool = true;
-// const CONSIDER_PARALLEL: bool = false;
 
 pub fn run() {
     const MAX_SIZE: int = 10;
@@ -53,12 +52,11 @@ pub fn run() {
     // let rng = &mut Pcg64::from_seed([0; 32]);
 
     let mut results = Results {
-        size: Vec::with_capacity(MAX_SIZE as usize),
         sweep: Vec::with_capacity(MAX_SIZE as usize),
-        num_samples: Vec::with_capacity(MAX_SIZE as usize),
+        consider_parallel_graphs: CONSIDER_PARALLEL_GRAPHS,
     };
 
-    for size in 1..MAX_SIZE + 1 {
+    for size in 4..MAX_SIZE + 1 {
         let edge_pool = (0..size).flat_map(|i| (i + 1..size).map(move |j| (i, j)));
         let num_samples = num_samples(size);
 
@@ -69,6 +67,7 @@ pub fn run() {
             avg_collapsed_nodes: Vec::with_capacity(NUM_DENSITIES),
             claw_free: Vec::with_capacity(NUM_DENSITIES),
             simplicial: Vec::with_capacity(NUM_DENSITIES),
+            num_samples,
         };
 
         for d in 1..NUM_DENSITIES {
@@ -78,43 +77,38 @@ pub fn run() {
             let mut avg_collapsed_nodes = 0.;
             let mut claw_free = 0;
             let mut simplicial = 0;
-            let mut effective_num_samples = 0;
 
-            'sample: for i in 0..num_samples {
+            let mut i = 0;
+            while i < num_samples {
                 // need to collect because we want to reuse the same edges, but the filter
                 // depends on the random number generator
                 let edges: Vec<(Label, Label)> =
                     edge_pool.clone().filter(|_| rng.gen::<f64>() < density).collect();
-                println!("{:?}", (size, d, i));
+
+                let mut gen_graph =
+                    GenGraph::from_edge_labels(edges.iter().copied()).unwrap();
 
                 // note that the from_edge_labels does not ensure that the graph has
                 // actually `size` nodes, since if a node does not appear in any edge, it
                 // is not added to the graph
-                let mut gen_graph =
-                    GenGraph::from_edge_labels(edges.iter().copied()).unwrap();
-                if gen_graph.is_empty() {
-                    debug_assert!(
-                        Graph::from_edge_labels(edges.iter().copied())
-                            .unwrap()
-                            .is_empty()
-                    );
-                    if CONSIDER_EMPTY_GRAPHS {
-                        effective_num_samples += 1;
-                        claw_free += 1;
-                    }
-                    continue 'sample;
+                if gen_graph.len() != size as usize {
+                    // instead we could sample the subgraphs and append them to the
+                    // results with the appropriate size, but I runs fast enough
+                    continue;
                 }
-                let mut gen_tree = gen_graph.modular_decomposition();
-                // if !CONSIDER_PARALLEL
-                //     && matches!(
-                //         gen_tree.graph.node_weight(gen_tree.root).unwrap(),
-                //         ModuleKind::Parallel
-                //     )
-                // {
-                //     continue 'sample;
-                // }
 
-                effective_num_samples += 1;
+                let mut gen_tree = gen_graph.modular_decomposition();
+
+                if !CONSIDER_PARALLEL_GRAPHS
+                    && matches!(
+                        gen_tree.graph.node_weight(gen_tree.root).unwrap(),
+                        ModuleKind::Parallel
+                    )
+                {
+                    continue;
+                }
+
+                i += 1;
 
                 let gen_check = do_gen_check(&gen_graph, &gen_tree);
                 if gen_check.claw_free {
@@ -151,24 +145,18 @@ pub fn run() {
             sweep.density.push(density);
             sweep
                 .before_collapse_claw_free
-                .push(before_collapse_claw_free as f64 / effective_num_samples as f64);
+                .push(before_collapse_claw_free as f64 / i as f64);
             sweep
                 .before_collapse_simplicial
-                .push(before_collapse_simplicial as f64 / effective_num_samples as f64);
-            sweep
-                .avg_collapsed_nodes
-                .push(avg_collapsed_nodes / effective_num_samples as f64);
+                .push(before_collapse_simplicial as f64 / i as f64);
+            sweep.avg_collapsed_nodes.push(avg_collapsed_nodes / i as f64);
             println!("{:?}", claw_free);
-            println!("{:?}", claw_free as f64 / effective_num_samples as f64);
-            sweep.claw_free.push(claw_free as f64 / effective_num_samples as f64);
-            sweep
-                .simplicial
-                .push(simplicial as f64 / effective_num_samples as f64);
+            println!("{:?}", claw_free as f64 / i as f64);
+            sweep.claw_free.push(claw_free as f64 / i as f64);
+            sweep.simplicial.push(simplicial as f64 / i as f64);
         }
 
-        results.size.push(size);
         results.sweep.push(sweep);
-        results.num_samples.push(num_samples);
     }
 
     fs::write("output/erdos_renyi.json", serde_json::to_string_pretty(&results).unwrap())
