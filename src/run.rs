@@ -1,6 +1,16 @@
 use std::fs;
 
+use crate::graph::{
+    generic::{self, Pet},
+    specialised::{self, Custom},
+};
+
+mod check;
 mod erdos_renyi;
+
+// TODO: roughly test which implementations is the fastest
+type GenGraph = generic::Graph<Pet>;
+type Graph = specialised::Graph<Custom>;
 
 pub fn run() {
     fs::create_dir_all("output").unwrap();

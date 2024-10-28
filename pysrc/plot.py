@@ -2,32 +2,59 @@
 
 import json
 import matplotlib.pyplot as plt
+import numpy as np
+
+CONSIDER_PARALLEL_GRAPHS = "true"
+# CONSIDER_PARALLEL_GRAPHS = "false"
 
 
 def main():
-    with open("output/erdos_renyi.json") as f:
+    with open(f"output/erdos_renyi_{CONSIDER_PARALLEL_GRAPHS}.json") as f:
         data = json.load(f)
 
     fig = plt.figure()
-    gs = fig.add_gridspec(4, 1)
+    gs = fig.add_gridspec(3, 2)
     acs = []
-    for i in range(4):
-        acs.append(fig.add_subplot(gs[i, 0]))
+    for i in range(3):
+        acs.append([])
+        for j in range(2):
+            acs[i].append(fig.add_subplot(gs[i, j]))
 
-    for i, d in enumerate(
-        [
-            "before_collapse_claw_free",
-            "claw_free",
-            "before_collapse_simplicial",
-            "simplicial",
-        ]
-    ):
-        dat = []
-        for size in range(4, 11):
-            dat.append(data["sweep"][size][d])
-        acs[i].imshow(dat)
+    size_start = 4
+    size_end = 15
+    size_len = size_end + 1 - size_start
+    size_step = 2
+    size_ticks = [s for s in range(size_start, size_end + 1, size_step)]
 
-    plt.savefig("output/erdos_renyi.pdf")
+    density_len = len(data["densities"])
+    density_step = 3
+    density_ticks = [data["densities"][d] for d in range(0, density_len, density_step)]
+
+    for i in range(3):
+        for j in range(2):
+            acs[i][j].set_xticks(range(0, density_len, density_step))
+            acs[i][j].set_xticklabels(density_ticks)
+            acs[i][j].set_yticks(range(0, size_len, size_step))
+            acs[i][j].set_yticklabels(size_ticks)
+
+    dat = {}
+    for i, j, d in [
+        (0, 0, "before_collapse_claw_free"),
+        (0, 1, "claw_free"),
+        (1, 0, "before_collapse_simplicial"),
+        (1, 1, "simplicial"),
+    ]:
+        da = []
+        for size in range(size_start, size_end + 1):
+            da.append(data["sweep"][size][d])
+        acs[i][j].imshow(da)
+        dat[d] = np.array(da)
+    acs[2][0].imshow(
+        dat["before_collapse_claw_free"] - dat["before_collapse_simplicial"]
+    )
+    acs[2][1].imshow(dat["claw_free"] - dat["simplicial"])
+
+    plt.savefig(f"output/erdos_renyi_{CONSIDER_PARALLEL_GRAPHS}.pdf")
 
 
 if __name__ == "__main__":

@@ -24,3 +24,7 @@ thiserror = "1.0.61"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(lsp_rust_analyzer)'] }
+
+[profile.perf]
+inherits = "release"
+debug = 1

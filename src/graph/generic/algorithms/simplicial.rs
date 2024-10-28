@@ -185,12 +185,7 @@ impl<G: ImplGraph> Graph<G> {
         let mut count = 0;
         let mut update_count = || {
             count += 1;
-            if count == 2 {
-                println!("more than one non-node child but no bipartition found");
-                true
-            } else {
-                false
-            }
+            count == 2
         };
         let mut ret: Vec<VLabels> = Vec::new();
         let mut non_trivial_child: Option<NodeIndex> = None;

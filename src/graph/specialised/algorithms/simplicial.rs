@@ -138,6 +138,12 @@ impl<G: GraphData> Graph<G> {
             let mut graph = self.clone();
             // safety: we are in bounds because node comes from the graph itself
             unsafe { graph.remove_node_unchecked(node) };
+            // PERF: this is very costly, because it is in a loop over potentially all
+            // nodes, in a recursive function which can stack up to the number of nodens
+            // (roughly); aha, but I think it is cheap to remove nodes in the tree (adding
+            // nodes would be costly because that might screw up modules, but removing
+            // nodes leaves the modules intact)
+            // TODO: that above
             let tree = graph.modular_decomposition();
             if !tree.module_is_fully_prime(tree.root) {
                 continue;
@@ -217,6 +223,8 @@ impl<G: GraphData> Graph<G> {
                         unsafe { self.subgraph(module_nodes.len(), module_nodes) };
                     // PERF: maybe we can construct the "subtree" frome `tree`
                     // -> do this after the testing suite is set up and everything works
+                    // EDIT: this modular_decomposition is not really the problem, because
+                    // it's called only once
                     let tree = graph.modular_decomposition();
                     graph
                         .prime_simplicial(&tree)
