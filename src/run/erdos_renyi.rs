@@ -28,7 +28,7 @@ struct Results {
 }
 
 // all f64 values are percentages w.r.t. the size
-#[derive(Serialize)]
+#[derive(Serialize, Default)]
 struct Sweep {
     density: Vec<f64>,
     before_collapse_claw_free: Vec<f64>,
@@ -55,6 +55,11 @@ pub fn run() {
         sweep: Vec::with_capacity(MAX_SIZE as usize),
         consider_parallel_graphs: CONSIDER_PARALLEL_GRAPHS,
     };
+
+    let start = 4;
+    for _ in 0..start {
+        results.sweep.push(Sweep::default());
+    }
 
     for size in 4..MAX_SIZE + 1 {
         let edge_pool = (0..size).flat_map(|i| (i + 1..size).map(move |j| (i, j)));
@@ -150,8 +155,6 @@ pub fn run() {
                 .before_collapse_simplicial
                 .push(before_collapse_simplicial as f64 / i as f64);
             sweep.avg_collapsed_nodes.push(avg_collapsed_nodes / i as f64);
-            println!("{:?}", claw_free);
-            println!("{:?}", claw_free as f64 / i as f64);
             sweep.claw_free.push(claw_free as f64 / i as f64);
             sweep.simplicial.push(simplicial as f64 / i as f64);
         }
