@@ -32,11 +32,85 @@ impl<G: GraphData> Graph<G> {
         }
     }
 
+    #[cfg(not(debug_assertions))]
+    #[inline]
     fn prime_simplicial(&self, tree: &Tree) -> HashSet<VNodes> {
+        self._prime_simplicial(tree)
+    }
+
+    // for the consistency tests to succeed
+    #[cfg(debug_assertions)]
+    fn prime_simplicial(&self, tree: &Tree) -> HashSet<VNodes> {
+        let ret = self._prime_simplicial_debug(tree);
+        let check = self._prime_simplicial(tree);
+        for c in check.iter() {
+            assert!(ret.contains(c));
+        }
+        ret
+    }
+
+    #[cfg(debug_assertions)]
+    fn _prime_simplicial_debug(&self, tree: &Tree) -> HashSet<VNodes> {
         // no need to get a representative graph, because we collapsed everything
         debug_assert!(tree.module_is_fully_prime(tree.root));
         // safety: we will only pass in labels from a subgraph (which has a subset of the
         // labels)
+        self.prime_recurse(self)
+    }
+
+    fn _prime_simplicial(&self, tree: &Tree) -> HashSet<VNodes> {
+        // no need to get a representative graph, because we collapsed everything
+        debug_assert!(tree.module_is_fully_prime(tree.root));
+        // safety: we will only pass in labels from a subgraph (which has a subset of the
+        // labels)
+
+        // {{ before we recurse, we try to early return on success; there are some
+        // comments on the implemenation in prime_recurse
+        let mut checked_cliques: HashSet<VNodes> = HashSet::new();
+        for node in self.iter_nodes() {
+            if self.clique_is_simplicial(&[node]) {
+                return HashSet::from_iter([vec![node]]);
+            }
+        }
+        for node in self.iter_nodes() {
+            let mut graph = self.clone();
+            unsafe { graph.remove_node_unchecked(node) };
+            let tree = graph.modular_decomposition();
+            if !tree.module_is_fully_prime(tree.root) {
+                continue;
+            }
+            let subcliques = graph.prime_recurse(self);
+            for mut clique in subcliques.into_iter() {
+                match checked_cliques.entry(clique.clone()) {
+                    Entry::Occupied(_) => {},
+                    Entry::Vacant(e) => {
+                        let clique = e.get();
+                        if self.clique_is_simplicial(clique) {
+                            return HashSet::from_iter([clique.clone()]);
+                        } else {
+                            e.insert();
+                        }
+                    },
+                }
+                clique.push(node);
+                clique.sort_unstable();
+                match checked_cliques.entry(clique) {
+                    Entry::Occupied(_) => {},
+                    Entry::Vacant(e) => {
+                        let clique = e.get();
+                        if self.set_is_clique(clique.iter())
+                            && self.clique_is_simplicial(clique)
+                        {
+                            return HashSet::from_iter([clique.clone()]);
+                        } else {
+                            e.insert();
+                        }
+                    },
+                }
+            }
+        }
+        // }}
+
         self.prime_recurse(self)
     }
 
@@ -53,33 +127,18 @@ impl<G: GraphData> Graph<G> {
         clique
     }
 
-    #[inline]
-    fn clone_to_parent_map(&self, parent: &Self, clique: &[Node]) -> VNodes {
-        let mut clique = Vec::from_iter((*clique).iter().map(|n| {
-            unsafe {
-                // safety: cf. `to_parent_map`
-                parent.get_index_unchecked(self.get_label_unchecked(*n))
-            }
-        }));
-        clique.sort_unstable();
-        clique
-    }
-
-    // PERF: we could/should seperate the first call of the recursion and early return
-    // from it as soon as we find one simplicial clique
-    // -> do this after the testing suite is set up and everything works
-    fn prime_recurse(&self, parent: &Self) -> HashSet<VNodes> {
+    fn check_obstinate(&self, parent: &Self) -> Option<HashSet<VNodes>> {
         match self.obstinate() {
             Obstinate::True(ObstinateKind::Itself, (a, b)) => {
                 let len = self.len();
                 if len == 2 {
-                    return HashSet::from_iter(
+                    Some(HashSet::from_iter(
                         [vec![a[0]], vec![b[0]], vec![a[0], b[0]]]
                             .into_iter()
                             .map(|c| self.to_parent_map(parent, c)),
-                    );
+                    ))
                 } else if len == 4 {
-                    return HashSet::from_iter(
+                    Some(HashSet::from_iter(
                         [
                             vec![a[0]],
                             vec![a[0], b[0]],
@@ -89,7 +148,7 @@ impl<G: GraphData> Graph<G> {
                         ]
                         .into_iter()
                         .map(|c| self.to_parent_map(parent, c)),
-                    );
+                    ))
                 } else {
                     unsafe {
                         // safety: assume the claw_free and obstinate algorithms are
@@ -108,11 +167,29 @@ impl<G: GraphData> Graph<G> {
                     cliques.push(a[i..].to_vec());
                     cliques.push(b[..i + 1].to_vec());
                 }
-                return HashSet::from_iter(
+                Some(HashSet::from_iter(
                     cliques.into_iter().map(|c| self.to_parent_map(parent, c)),
-                );
+                ))
             },
-            Obstinate::False => {},
+            Obstinate::False => None,
+        }
+    }
+
+    #[inline]
+    fn clone_to_parent_map(&self, parent: &Self, clique: &[Node]) -> VNodes {
+        let mut clique = Vec::from_iter((*clique).iter().map(|n| {
+            unsafe {
+                // safety: cf. `to_parent_map`
+                parent.get_index_unchecked(self.get_label_unchecked(*n))
+            }
+        }));
+        clique.sort_unstable();
+        clique
+    }
+
+    fn prime_recurse(&self, parent: &Self) -> HashSet<VNodes> {
+        if let Some(cliques) = self.check_obstinate(parent) {
+            return cliques;
         }
 
         let mut cliques: HashSet<VNodes> = HashSet::new();
@@ -138,12 +215,10 @@ impl<G: GraphData> Graph<G> {
             let mut graph = self.clone();
             // safety: we are in bounds because node comes from the graph itself
             unsafe { graph.remove_node_unchecked(node) };
-            // PERF: this is very costly, because it is in a loop over potentially all
-            // nodes, in a recursive function which can stack up to the number of nodens
-            // (roughly); aha, but I think it is cheap to remove nodes in the tree (adding
-            // nodes would be costly because that might screw up modules, but removing
-            // nodes leaves the modules intact)
-            // TODO: that above
+            // PERF: that's where we loose performance, but there's not really a way
+            // around it; the only way I see to improve things is to try to implement our
+            // own modular decomposition algorithm specialised for claw-free graphs, but
+            // that's not trivial and I do not know how much faster it would be
             let tree = graph.modular_decomposition();
             if !tree.module_is_fully_prime(tree.root) {
                 continue;
@@ -365,7 +440,8 @@ mod tests {
 
     #[test]
     // I forgot why I did this test, it is probably an example in the paper; so let's keep
-    // it
+    // it -> search for it in the specialised implementation of the simplicial cliques
+    // serach
     fn simplicial_vertex_but_subgraph_not_prime() {
         const VERTEX: Label = 2; // the simplicial vertex we remove
         const MODULE: [Label; 2] = [3, 4]; // the module we then get
