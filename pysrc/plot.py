@@ -21,13 +21,13 @@ def main():
             acs[i].append(fig.add_subplot(gs[i, j]))
 
     size_start = 4
-    size_end = 15
+    size_end = 12
     size_len = size_end + 1 - size_start
     size_step = 2
     size_ticks = [s for s in range(size_start, size_end + 1, size_step)]
 
     density_len = len(data["densities"])
-    density_step = 3
+    density_step = 10
     density_ticks = [data["densities"][d] for d in range(0, density_len, density_step)]
 
     for i in range(3):

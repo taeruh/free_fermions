@@ -36,6 +36,7 @@ impl<G: GraphData> Graph<G> {
     #[inline]
     fn prime_simplicial(&self, tree: &Tree) -> HashSet<VNodes> {
         self._prime_simplicial(tree)
+        // self._prime_simplicial_debug(tree)
     }
 
     // for the consistency tests to succeed

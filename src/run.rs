@@ -2,7 +2,7 @@ use std::fs;
 
 use crate::graph::{
     generic::{self, Pet},
-    specialised::{self, Custom},
+    specialised::{self, Custom, IndexMap},
 };
 
 mod check;
