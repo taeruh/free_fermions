@@ -13,9 +13,9 @@ def main():
         data = json.load(f)
 
     fig = plt.figure()
-    gs = fig.add_gridspec(3, 2)
+    gs = fig.add_gridspec(4, 2)
     acs = []
-    for i in range(3):
+    for i in range(4):
         acs.append([])
         for j in range(2):
             acs[i].append(fig.add_subplot(gs[i, j]))
@@ -27,7 +27,7 @@ def main():
     size_ticks = [s for s in range(size_start, size_end + 1, size_step)]
 
     density_len = len(data["densities"])
-    density_step = 10
+    density_step = 20
     density_ticks = [data["densities"][d] for d in range(0, density_len, density_step)]
 
     for i in range(3):
@@ -53,6 +53,12 @@ def main():
         dat["before_collapse_claw_free"] - dat["before_collapse_simplicial"]
     )
     acs[2][1].imshow(dat["claw_free"] - dat["simplicial"])
+
+    da = []
+    for size in range(size_start, size_end + 1):
+        da.append(data["sweep"][size]["avg_collapsed_nodes"])
+    acs[3][0].imshow(da)
+        
 
     plt.savefig(f"output/erdos_renyi_{CONSIDER_PARALLEL_GRAPHS}.pdf")
 

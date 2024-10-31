@@ -1,4 +1,9 @@
-use std::{fs, thread};
+use std::{
+    fs,
+    ops::Range,
+    sync::{Arc, Mutex},
+    thread,
+};
 
 use hashbrown::HashSet;
 use modular_decomposition::ModuleKind;
@@ -15,10 +20,31 @@ use crate::{
 const NUM_THREADS: usize = 8;
 
 const MAX_SIZE: int = 12;
-const NUM_DENSITIES: usize = 30;
+const START_SIZE: int = 4;
+const NUM_SIZES: usize = (MAX_SIZE - START_SIZE + 1) as usize;
+const SIZES_RANGE: Range<int> = START_SIZE..MAX_SIZE + 1;
+const INVERSE_DENSITY_INTERVAL: usize = 30;
+const NUM_DENSITIES: usize = INVERSE_DENSITY_INTERVAL - 1;
+const NUM_SAMPLES_PER_THREAD: usize = 30;
 const CONSIDER_PARALLEL_GRAPHS: bool = true;
-const NUM_SAMPLES_PER_THREAD: usize = 10;
 // const CONSIDER_PARALLEL_GRAPHS: bool = false;
+
+struct Notification {
+    jobs_per_size: Vec<usize>,
+}
+
+impl Notification {
+    fn new() -> Self {
+        Self {
+            jobs_per_size: vec![NUM_THREADS; NUM_SIZES],
+        }
+    }
+
+    fn update(&mut self, size: int) {
+        self.jobs_per_size[(size - START_SIZE) as usize] -= 1;
+        println!("{:?}", self.jobs_per_size);
+    }
+}
 
 #[derive(Serialize)]
 struct Results {
@@ -28,7 +54,7 @@ struct Results {
 }
 
 // all f64 values are percentages w.r.t. the size
-#[derive(Serialize, Default)]
+#[derive(Serialize, Default, Debug)]
 struct Sweep {
     before_collapse_claw_free: Vec<f64>,
     before_collapse_simplicial: Vec<f64>, // and claw_free of course
@@ -59,25 +85,27 @@ pub fn run() {
         seeds.into_iter().collect::<Vec<_>>()
     };
 
+    let notification = Arc::new(Mutex::new(Notification::new()));
+
     let mut results = Results {
         sweep: Vec::with_capacity(MAX_SIZE as usize),
         consider_parallel_graphs: CONSIDER_PARALLEL_GRAPHS,
         densities: Vec::with_capacity(NUM_DENSITIES),
     };
 
-    let start = 4;
-    for _ in 0..start {
+    for _ in 0..START_SIZE {
         results.sweep.push(Sweep::default());
     }
 
-    let densities = (1..NUM_DENSITIES).map(|d| d as f64 / NUM_DENSITIES as f64);
+    let densities =
+        (1..INVERSE_DENSITY_INTERVAL).map(|d| d as f64 / INVERSE_DENSITY_INTERVAL as f64);
 
     let job = |id| {
-        let mut ret = Vec::with_capacity(MAX_SIZE as usize);
-
+        let mut ret = Vec::with_capacity(NUM_SIZES);
+        let notification = notification.clone();
         let rng = &mut Pcg64::from_seed(seeds[id]);
 
-        for size in start..MAX_SIZE + 1 {
+        for size in SIZES_RANGE {
             let edge_pool = (0..size).flat_map(|i| (i + 1..size).map(move |j| (i, j)));
             let num_samples = num_samples(size);
 
@@ -215,7 +243,9 @@ pub fn run() {
             }
 
             ret.push(sweep);
+            notification.lock().unwrap().update(size);
         }
+        println!("thread {id} finished");
         ret
     };
 
@@ -235,6 +265,8 @@ pub fn run() {
             simplicial: vec![0.; NUM_DENSITIES],
             num_samples: 0,
         };
+        println!("{:?}", sweep.avg_collapsed_nodes.len());
+        println!("{:?}", rets[0][i].avg_collapsed_nodes.len());
         for ret in rets.iter() {
             add_vecs(
                 &mut sweep.before_collapse_claw_free,
