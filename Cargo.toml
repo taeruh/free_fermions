@@ -7,6 +7,7 @@ edition = "2021"
 bitvec = { version = "1.0.1", default-features = false, features = ["alloc"] }
 hashbrown = "0.14.5"
 indexmap = "2.2.6"
+itertools = { version = "0.13.0", default-features = false, features = ["use_alloc"] }
 modular-decomposition = "0.2.0"
 ndarray = { version = "0.15.6", default-features = false }
 num = { version = "0.4.1", default-features = false }

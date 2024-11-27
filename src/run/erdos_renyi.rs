@@ -13,21 +13,25 @@ use serde::Serialize;
 
 use crate::{
     fix_int::int,
-    graph::{Label, generic::ImplGraph},
+    graph::{
+        Label, Node,
+        generic::{ImplGraph, algorithms::claw_free::ClawFreeNaive},
+    },
     run::{GenGraph, Graph, check},
 };
 
 const NUM_THREADS: usize = 8;
 
-const MAX_SIZE: int = 12;
+const MAX_SIZE: int = 4;
 const START_SIZE: int = 4;
-const NUM_SIZES: usize = (MAX_SIZE - START_SIZE + 1) as usize;
-const SIZES_RANGE: Range<int> = START_SIZE..MAX_SIZE + 1;
-const INVERSE_DENSITY_INTERVAL: usize = 30;
-const NUM_DENSITIES: usize = INVERSE_DENSITY_INTERVAL - 1;
-const NUM_SAMPLES_PER_THREAD: usize = 30;
+const INVERSE_DENSITY_INTERVAL: usize = 11;
+const NUM_SAMPLES_PER_THREAD: usize = 300;
 const CONSIDER_PARALLEL_GRAPHS: bool = true;
 // const CONSIDER_PARALLEL_GRAPHS: bool = false;
+
+const NUM_SIZES: usize = (MAX_SIZE - START_SIZE + 1) as usize;
+const SIZES_RANGE: Range<int> = START_SIZE..MAX_SIZE + 1;
+const NUM_DENSITIES: usize = INVERSE_DENSITY_INTERVAL - 1;
 
 struct Notification {
     jobs_per_size: Vec<usize>,
@@ -119,6 +123,7 @@ pub fn run() {
             };
 
             for density in densities.clone() {
+                let mut naive_before_collapse_claw_free = 0;
                 let mut before_collapse_claw_free = 0;
                 let mut before_collapse_simplicial = 0;
                 let mut avg_collapsed_nodes = 0.;
@@ -135,17 +140,19 @@ pub fn run() {
                     // filter depends on the random number generator
                     let edges: Vec<(Label, Label)> = edge_pool
                         .clone()
-                        .filter(|_| rng.gen::<f64>() < density)
+                        .filter(|_| rng.gen::<f64>() <= density)
                         .collect();
 
                     if edges.is_empty() {
                         if CONSIDER_PARALLEL_GRAPHS {
                             before_collapse_simplicial += 1;
                             before_collapse_claw_free += 1;
+                            naive_before_collapse_claw_free += 1;
                             // avg_collapsed_nodes += 0.;
                             claw_free += 1;
                             simplicial += 1;
                             i += 1;
+                            continue;
                         } else {
                             continue;
                         }
@@ -159,7 +166,7 @@ pub fn run() {
                     // it is not added to the graph
                     let fill_up = if gen_graph.len() != size as usize {
                         // instead we could sample the subgraphs and append them to the
-                        // results with the appropriate size, but I runs fast enough
+                        // results with the appropriate size, but it runs fast enough
                         if CONSIDER_PARALLEL_GRAPHS {
                             // need to fill up
                             let nodes = gen_graph.iter_labels().collect::<HashSet<_>>();
@@ -195,7 +202,41 @@ pub fn run() {
                     let gen_check = check::do_gen_check(&gen_graph, &gen_tree);
                     if gen_check.claw_free {
                         before_collapse_claw_free += 1;
+                        // debug_assert!(matches!(
+                        //     gen_graph.is_claw_free_naive(),
+                        //     ClawFreeNaive::Yes
+                        // ))
+                    } else {
+                        // debug_assert!(!matches!(
+                        //     gen_graph.is_claw_free_naive(),
+                        //     ClawFreeNaive::Yes
+                        // ))
                     }
+
+                    // let mut naive_claw_free = true;
+                    // 'outer: for a in 0..size {
+                    //     for b in a + 1..size {
+                    //         for c in b + 1..size {
+                    //             for d in c + 1..size {
+                    //                 if check::contains_claw(
+                    //                     &gen_graph, a as Node, b as Node, c as Node,
+                    //                     d as Node,
+                    //                 ) {
+                    //                     naive_claw_free = false;
+                    //                     break 'outer;
+                    //                 }
+                    //             }
+                    //         }
+                    //     }
+                    // }
+                    // if naive_claw_free {
+                    //     naive_before_collapse_claw_free += 1;
+                    // }
+                    // assert_eq!(
+                    //     before_collapse_claw_free,
+                    //     naive_before_collapse_claw_free,
+                    // );
+
                     if gen_check.simplicial {
                         before_collapse_simplicial += 1;
                     }
@@ -265,8 +306,8 @@ pub fn run() {
             simplicial: vec![0.; NUM_DENSITIES],
             num_samples: 0,
         };
-        println!("{:?}", sweep.avg_collapsed_nodes.len());
-        println!("{:?}", rets[0][i].avg_collapsed_nodes.len());
+        // println!("{:?}", sweep.avg_collapsed_nodes.len());
+        // println!("{:?}", rets[0][i].avg_collapsed_nodes.len());
         for ret in rets.iter() {
             add_vecs(
                 &mut sweep.before_collapse_claw_free,

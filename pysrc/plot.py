@@ -21,7 +21,7 @@ def main():
             acs[i].append(fig.add_subplot(gs[i, j]))
 
     size_start = 4
-    size_end = 12
+    size_end = 4
     size_len = size_end + 1 - size_start
     size_step = 2
     size_ticks = [s for s in range(size_start, size_end + 1, size_step)]
@@ -30,7 +30,7 @@ def main():
     density_step = 20
     density_ticks = [data["densities"][d] for d in range(0, density_len, density_step)]
 
-    for i in range(3):
+    for i in range(4):
         for j in range(2):
             acs[i][j].set_xticks(range(0, density_len, density_step))
             acs[i][j].set_xticklabels(density_ticks)
@@ -58,7 +58,19 @@ def main():
     for size in range(size_start, size_end + 1):
         da.append(data["sweep"][size]["avg_collapsed_nodes"])
     acs[3][0].imshow(da)
-        
+
+    da = []
+    length = int(dat["before_collapse_claw_free"].shape[1] // 2)
+    for size in range(len(dat["before_collapse_claw_free"])):
+        d = []
+        for i in range(length):
+            print(size, i)
+            d.append(
+                dat["before_collapse_claw_free"][size][-i]
+                - dat["before_collapse_claw_free"][size][i]
+            )
+        da.append(d)
+    acs[3][1].imshow(da)
 
     plt.savefig(f"output/erdos_renyi_{CONSIDER_PARALLEL_GRAPHS}.pdf")
 

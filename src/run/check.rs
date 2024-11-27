@@ -1,10 +1,19 @@
+use hashbrown::HashSet;
+use itertools::Itertools;
 use modular_decomposition::ModuleKind;
-use petgraph::Direction;
+use petgraph::{Direction, Undirected, graph::NodeIndex};
 
 use super::{GenGraph, Graph};
-use crate::graph::{
-    algorithms::modular_decomposition::Tree,
-    generic::{ImplGraph, algorithms::claw_free::ClawFree},
+use crate::{
+    fix_int::int,
+    graph::{
+        Node,
+        algorithms::modular_decomposition::Tree,
+        generic::{
+            ImplGraph, NodeCollection,
+            algorithms::claw_free::{ClawFree, ClawFreeNaive},
+        },
+    },
 };
 
 // Default: bool defaults to false
@@ -97,4 +106,72 @@ pub fn do_check(graph: &Graph, tree: &Tree) -> Check {
         }
     }
     ret
+}
+
+pub fn contains_claw(graph: &GenGraph, a: Node, b: Node, c: Node, d: Node) -> bool {
+    let a_neighbours = graph.get_neighbours(a).unwrap();
+    let b_neighbours = graph.get_neighbours(b).unwrap();
+    let c_neighbours = graph.get_neighbours(c).unwrap();
+    let d_neighbours = graph.get_neighbours(d).unwrap();
+    (a_neighbours.contains(b)
+        && a_neighbours.contains(c)
+        && a_neighbours.contains(d)
+        && !b_neighbours.contains(c)
+        && !b_neighbours.contains(d)
+        && !c_neighbours.contains(d))
+        || (b_neighbours.contains(a)
+            && b_neighbours.contains(c)
+            && b_neighbours.contains(d)
+            && !a_neighbours.contains(c)
+            && !a_neighbours.contains(d)
+            && !c_neighbours.contains(d))
+        || (c_neighbours.contains(a)
+            && c_neighbours.contains(b)
+            && c_neighbours.contains(d)
+            && !a_neighbours.contains(b)
+            && !a_neighbours.contains(d)
+            && !b_neighbours.contains(d))
+        || (d_neighbours.contains(a)
+            && d_neighbours.contains(b)
+            && d_neighbours.contains(c)
+            && !a_neighbours.contains(b)
+            && !a_neighbours.contains(c)
+            && !b_neighbours.contains(c))
+}
+
+pub fn pet_contains_claw(
+    graph: &petgraph::Graph<(), (), Undirected, int>,
+    a: NodeIndex,
+    b: NodeIndex,
+    c: NodeIndex,
+    d: NodeIndex,
+) -> bool {
+    let a_neighbours = graph.neighbors(a).collect_vec();
+    let b_neighbours = graph.neighbors(b).collect_vec();
+    let c_neighbours = graph.neighbors(c).collect_vec();
+    let d_neighbours = graph.neighbors(d).collect_vec();
+    (a_neighbours.contains(&b)
+        && a_neighbours.contains(&c)
+        && a_neighbours.contains(&d)
+        && !b_neighbours.contains(&c)
+        && !b_neighbours.contains(&d)
+        && !c_neighbours.contains(&d))
+        || (b_neighbours.contains(&a)
+            && b_neighbours.contains(&c)
+            && b_neighbours.contains(&d)
+            && !a_neighbours.contains(&c)
+            && !a_neighbours.contains(&d)
+            && !c_neighbours.contains(&d))
+        || (c_neighbours.contains(&a)
+            && c_neighbours.contains(&b)
+            && c_neighbours.contains(&d)
+            && !a_neighbours.contains(&b)
+            && !a_neighbours.contains(&d)
+            && !b_neighbours.contains(&d))
+        || (d_neighbours.contains(&a)
+            && d_neighbours.contains(&b)
+            && d_neighbours.contains(&c)
+            && !a_neighbours.contains(&b)
+            && !a_neighbours.contains(&c)
+            && !b_neighbours.contains(&c))
 }
