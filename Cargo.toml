@@ -7,7 +7,9 @@ edition = "2021"
 bitvec = { version = "1.0.1", default-features = false, features = ["alloc"] }
 hashbrown = "0.14.5"
 indexmap = "2.2.6"
-itertools = { version = "0.13.0", default-features = false, features = ["use_alloc"] }
+itertools = { version = "0.13.0", default-features = false, features = [
+  "use_alloc",
+] }
 modular-decomposition = "0.2.0"
 ndarray = { version = "0.15.6", default-features = false }
 num = { version = "0.4.1", default-features = false }
@@ -15,7 +17,10 @@ petgraph = "0.6.5"
 rand = { version = "0.8.5", default-features = false, features = [
   "alloc",
   "getrandom",
+  "std",
+  "std_rng",
 ] }
+rand_chacha = { version = "0.3.1", default-features = false }
 rand_pcg = { version = "0.3.1", default-features = false }
 serde = { version = "1.0.213", default-features = false, features = ["derive"] }
 serde_json = { version = "1.0.132", default-features = false, features = [
@@ -26,9 +31,7 @@ thiserror = "1.0.61"
 [dev-dependencies]
 
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = [
-  'cfg(lsp_rust_analyzer)',
-] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(lsp_rust_analyzer)'] }
 
 [profile.perf]
 inherits = "release"
