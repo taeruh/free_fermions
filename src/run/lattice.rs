@@ -4,6 +4,7 @@ use std::{
     fs,
     sync::{Arc, Mutex},
     thread,
+    time::Instant,
 };
 
 use rand::{Rng, SeedableRng};
@@ -17,12 +18,12 @@ use crate::{
     run::{GenGraph, check},
 };
 
-const NUM_THREADS: usize = 30; // adjust to hpc_run ncpus
-const NUM_SAMPLES: usize = 30; // per thread
+const NUM_THREADS: usize = 50; // adjust to hpc_run ncpus
+const NUM_SAMPLES: usize = 10; // per thread
 
 const DENSITY_START: f64 = 0.01;
-const DENSITY_END: f64 = 0.4;
-const NUM_DENSITY_STEPS: usize = 40;
+const DENSITY_END: f64 = 0.35;
+const NUM_DENSITY_STEPS: usize = 70;
 
 const NUM_TOTAL_SAMPLES: usize = NUM_THREADS * NUM_SAMPLES;
 
@@ -120,16 +121,22 @@ impl Results {
 
 struct Notification {
     remaining: Vec<(f64, usize)>,
+    start_time: Instant,
 }
 impl Notification {
     fn new(densities: impl Iterator<Item = f64>) -> Self {
         Self {
             remaining: densities.map(|d| (d, NUM_THREADS)).collect(),
+            start_time: Instant::now(),
         }
     }
     fn update(&mut self, density_index: usize) {
         self.remaining[density_index].1 -= 1;
-        println!("{:?}", self.remaining);
+        println!(
+            "{:?}: {:?}",
+            (Instant::now() - self.start_time).as_secs_f64() / 3600.,
+            self.remaining
+        );
     }
 }
 
