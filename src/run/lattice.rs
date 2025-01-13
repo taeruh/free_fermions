@@ -18,8 +18,10 @@ use crate::{
     run::{GenGraph, check},
 };
 
-const NUM_THREADS: usize = 50; // adjust to hpc_run ncpus
-const NUM_SAMPLES: usize = 10; // per thread
+// adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
+// much) (64 * 79 = 5056 approx 5000)
+const NUM_THREADS: usize = 64;
+const NUM_SAMPLES: usize = 79; // per thread
 
 const DENSITY_START: f64 = 0.01;
 const DENSITY_END: f64 = 0.35;

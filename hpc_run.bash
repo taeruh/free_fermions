@@ -1,14 +1,16 @@
 #!/usr/bin/bash
 
 # don't define anything before the PBS options
+# don't put any directly comments behind the PBS options
 
 #PBS -m eba
 #PBS -M jannis.ruh@student.uts.edu.au
 #PBS -N free_fermions
 
-#PBS -l ncpus=50
-#PBS -l mem=130GB
-#PBS -l walltime=130:00:00
+#PBS -l ncpus=64
+#PBS -l mem=300GB
+# 200h is the maximum, otherwise the job doesn't even get queued
+#PBS -l walltime=200:00:00 
 
 # this is relative to the final workdir which is ./=${PBS_O_WORKDIR}, so we don't have
 # to move it from the scratch
