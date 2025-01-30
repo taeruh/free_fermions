@@ -4,13 +4,43 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 
+data_dir = "output"
+# data_dir = "results"
 
 def main():
-    with open(f"output/periodic_square_lattice.json") as f:
+    with open(f"{data_dir}/periodic_bricks_0.json") as f:
         data = json.load(f)
 
-    for key, value in data.items():
-        data[key] = np.array(value) * 100  # percentage
+    densities = data["densities"]
+    density_len = len(densities)
+
+    results = {
+        "before_claw_free": np.array(np.zeros(density_len)),
+        "after_claw_free": np.array(np.zeros(density_len)),
+        "before_simplicial": np.array(np.zeros(density_len)),
+        "after_simplicial": np.array(np.zeros(density_len)),
+        "collapsed": np.array(np.zeros(density_len)),
+    }
+
+    num_sample_files = 20
+    num_total_samples = 0
+
+    for i in range(num_sample_files):
+        try:
+            with open(f"{data_dir}/periodic_bricks_{i}.json") as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            print(f"File {i} not found")
+            continue
+        num_samples = data["num_samples"]
+        num_total_samples += num_samples
+        for key, value in results.items():
+            value += num_samples * np.array(data[key])
+            # value += np.array(data[key])
+
+    print(f"num_total_samples: {num_total_samples}")
+    for key, value in results.items():
+        value *= 100. / num_total_samples  # percentage
 
     paper_setup()
 
@@ -34,39 +64,37 @@ def main():
     axr.set_ylabel(labels[1], color=colors[1])
     ax.tick_params(axis="y", labelcolor=colors[0])
     axr.tick_params(axis="y", labelcolor=colors[1])
-    axr.spines['left'].set_color(colors[0])  # axr's spines overdraws ax's spines ...
-    axr.spines['right'].set_color(colors[1])
+    axr.spines["left"].set_color(colors[0])  # axr's spines overdraws ax's spines ...
+    axr.spines["right"].set_color(colors[1])
     inset.set_ylabel(r"cf - scf $\Delta$")
 
-    densities = data["densities"]
-    density_len = len(densities)
     density_step = 20
-    density_ticks = [data["densities"][d] for d in range(0, density_len, density_step)]
+    density_ticks = [densities[d] for d in range(0, density_len, density_step)]
 
     ax.plot(
         densities,
-        data["after_simplicial"],
+        results["after_simplicial"],
         label=labels[0],
         color=colors[0],
         linestyle=linestyles[0],
     )
     axr.plot(
         densities,
-        data["after_simplicial"] - data["before_simplicial"],
+        results["after_simplicial"] - results["before_simplicial"],
         label=labels[1],
         color=colors[1],
         linestyle=linestyles[1],
     )
     inset.plot(
         densities,
-        data["before_claw_free"] - data["before_simplicial"],
+        results["before_claw_free"] - results["before_simplicial"],
         label=labels[2],
         color=colors[2],
         linestyle=linestyles[2],
     )
     inset.plot(
         densities,
-        data["after_claw_free"] - data["after_simplicial"],
+        results["after_claw_free"] - results["after_simplicial"],
         label=labels[3],
         color=colors[3],
         linestyle=linestyles[3],
@@ -86,8 +114,8 @@ def main():
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels, loc=(0.75, 0.42))
 
-    plt.subplots_adjust(top=0.98, bottom=0.08, left=0.06, right=0.935)
-    plt.savefig(f"output/periodic_square_lattice.pdf")
+    # plt.subplots_adjust(top=0.98, bottom=0.08, left=0.06, right=0.935)
+    plt.savefig(f"output/periodic_bricks.pdf")
 
 
 def paper_setup():

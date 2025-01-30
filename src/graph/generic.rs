@@ -21,7 +21,7 @@ use super::{
 
 /// Newtype around `impl `[ImplGraph] types that supports foreign traits.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Graph<G = Adj>(G);
+pub struct Graph<G = Adj>(pub G);
 
 impl<G> Graph<G> {
     pub fn new(graph: G) -> Self {

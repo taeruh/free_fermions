@@ -7,10 +7,11 @@
 #PBS -M jannis.ruh@student.uts.edu.au
 #PBS -N free_fermions
 
-#PBS -l ncpus=64
-#PBS -l mem=300GB
 # 200h is the maximum, otherwise the job doesn't even get queued
-#PBS -l walltime=200:00:00 
+#PBS -l walltime=50:00:00 
+# see for max possible resource on a single node: https://hpc.research.uts.edu.au/status/
+# (select=1 is probably the default (putting stuff onto one chunk(/host?)))
+#PBS -l select=1:ncpus=6:mem=700GB
 
 # this is relative to the final workdir which is ./=${PBS_O_WORKDIR}, so we don't have
 # to move it from the scratch
@@ -18,6 +19,7 @@
 #PBS -o ./log/
 
 bin="free_fermions"
+id="3"
 
 cd ${PBS_O_WORKDIR}
 mkdir -p log
@@ -29,7 +31,7 @@ cp target/release/${bin} ${scratch}
 
 cd ${scratch}
 
-./${bin}
+./${bin} ${id}
 # NOTE: `cd ${PBS_O_WORKDIR}; mv ${scratch}/output/* output` doesn't work; it's the wild
 # card that makes problems in this case, but I don't know why (maybe the ${scratch} name
 # is too weird)?

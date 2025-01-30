@@ -10,6 +10,7 @@ type LocalOperator = super::LocalOperator<2>;
 #[derive(Debug)]
 pub struct PeriodicLattice {
     pub operators: Vec<LocalOperator>,
+    pub is_2d: bool,
 }
 
 impl PeriodicLattice {
@@ -26,6 +27,8 @@ impl PeriodicLattice {
         let ee_horizontal = super::draw_doubles(ee_density.0, rng);
         let ee_vertical = super::draw_doubles(ee_density.0, rng);
         let en_interactions = super::draw_doubles(en_density.0, rng);
+
+        let is_2d = !ee_horizontal.is_empty() && !ee_vertical.is_empty();
 
         let mut operators = Vec::with_capacity(
             electrons.len() * 9
@@ -75,7 +78,7 @@ impl PeriodicLattice {
             }
         }
 
-        Self { operators }
+        Self { operators, is_2d }
     }
 
     pub fn get_graph(&self) -> Vec<(int, int)> {

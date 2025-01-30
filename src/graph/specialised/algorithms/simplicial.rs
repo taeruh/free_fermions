@@ -1,3 +1,5 @@
+use std::ptr;
+
 use hashbrown::{HashMap, HashSet, hash_set::Entry};
 use modular_decomposition::ModuleKind;
 use petgraph::Direction;
@@ -42,6 +44,7 @@ impl<G: GraphData> Graph<G> {
     // for the consistency tests to succeed
     #[cfg(debug_assertions)]
     fn prime_simplicial(&self, tree: &Tree) -> HashSet<VNodes> {
+
         let ret = self._prime_simplicial_debug(tree);
         let check = self._prime_simplicial(tree);
         for c in check.iter() {
@@ -233,6 +236,11 @@ impl<G: GraphData> Graph<G> {
                     }
                     clique.to_vec()
                 });
+                // // FIXME: this breaks some tests, but can potentially improve the
+                // // performance
+                // if ptr::eq(self, parent) && !cliques.is_empty() {
+                //     return cliques;
+                // }
                 clique.push(node);
                 clique.sort_unstable();
                 match checked_cliques.entry(clique) {

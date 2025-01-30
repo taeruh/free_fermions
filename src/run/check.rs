@@ -30,6 +30,20 @@ pub fn do_gen_check(graph: &GenGraph, tree: &Tree) -> Check {
     if matches!(graph.is_claw_free(tree), ClawFree::Yes) {
         ret.claw_free = true;
     }
+    // naive first order check
+    if ret.claw_free {
+        for (a, b) in graph
+            .0
+            .raw_edges()
+            .iter()
+            .map(|e| (e.source().index(), e.target().index()))
+        {
+            if graph.clique_is_simplicial(&[a, b]) {
+                ret.simplicial = true;
+                return ret;
+            }
+        }
+    }
     if let ModuleKind::Parallel = tree.graph.node_weight(tree.root).unwrap() {
         #[cfg(debug_assertions)]
         {

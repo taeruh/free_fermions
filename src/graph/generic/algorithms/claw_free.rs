@@ -63,7 +63,6 @@ pub struct Triangles {
     pub counts: Vec<int>,
 }
 
-// impl<G: ImplGraph> Graph<G> {
 impl<G: ImplGraph> Graph<G> {
     pub fn is_claw_free(&self, tree: &Tree) -> ClawFree {
         match self.has_right_structure(tree) {

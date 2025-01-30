@@ -1,31 +1,33 @@
 //! 2d square lattice
 
 use std::{
-    fs,
+    env, fs,
     sync::{Arc, Mutex},
     thread,
     time::Instant,
 };
 
+use itertools::Itertools;
+use modular_decomposition::ModuleKind;
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
 use serde::Serialize;
 
 use crate::{
     graph::generic::ImplGraph,
-    hamiltonian::{Density, square_lattice::PeriodicLattice},
+    hamiltonian::{Density, bricks::Bricks},
     rand_helper,
     run::{GenGraph, check},
 };
 
 // adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
 // much) (64 * 79 = 5056 approx 5000)
-const NUM_THREADS: usize = 64;
-const NUM_SAMPLES: usize = 79; // per thread
+const NUM_THREADS: usize = 5;
+const NUM_SAMPLES: usize = 10; // per thread
 
-const DENSITY_START: f64 = 0.01;
-const DENSITY_END: f64 = 0.35;
-const NUM_DENSITY_STEPS: usize = 70;
+const DENSITY_START: f64 = 1. / 9.;
+const DENSITY_END: f64 = 0.40;
+const NUM_DENSITY_STEPS: usize = 60;
 
 const NUM_TOTAL_SAMPLES: usize = NUM_THREADS * NUM_SAMPLES;
 
@@ -40,6 +42,7 @@ fn get_densities() -> Vec<f64> {
 struct Results {
     densities: Vec<f64>,
     seed: u64,
+    num_samples: usize,
     // {{ averaged over the samples
     before_claw_free: Vec<f64>,
     before_simplicial: Vec<f64>,
@@ -89,6 +92,7 @@ impl Results {
         Self {
             densities: Vec::new(),
             seed: 0,
+            num_samples: NUM_TOTAL_SAMPLES,
             before_claw_free: vec![0.0; NUM_DENSITY_STEPS],
             before_simplicial: vec![0.0; NUM_DENSITY_STEPS],
             after_claw_free: vec![0.0; NUM_DENSITY_STEPS],
@@ -143,6 +147,12 @@ impl Notification {
 }
 
 pub fn periodic() {
+    let id = env::args()
+        .nth(1)
+        .expect("id not provided")
+        .parse::<usize>()
+        .expect("id not a number");
+
     // let seed = 0;
     let seed = Pcg64::from_entropy().gen();
 
@@ -156,10 +166,8 @@ pub fn periodic() {
         let mut ret = CountResults::init();
 
         for (density_idx, density) in densities.iter().copied().enumerate() {
-            let e_density = Density::new(density);
-            let n_density = Density::new(density);
-            let ee_density = Density::new(density);
-            let en_density = Density::new(density);
+            let (e1d, e2d, e3d, e4d, e5d) =
+                (0..5).map(|_| Density::new(density)).collect_tuple().unwrap();
             let mut before_claw_free = 0;
             let mut before_simplicial = 0;
             let mut claw_free = 0;
@@ -168,9 +176,10 @@ pub fn periodic() {
 
             let mut i = 0;
             while i < NUM_SAMPLES {
-                let lattice = PeriodicLattice::draw(
-                    e_density, n_density, ee_density, en_density, rng,
-                );
+                println!("{:?}", i);
+                let lattice = Bricks::draw(e1d, e2d, e3d, e4d, e5d, rng);
+
+
                 let mut graph = GenGraph::from_edge_labels(lattice.get_graph()).unwrap();
 
                 if graph.is_empty() {
@@ -179,6 +188,20 @@ pub fn periodic() {
 
                 let orig_len = graph.len();
                 let mut tree = graph.modular_decomposition();
+
+                // // don't do this; non-connected frustration graphs does not necessarily
+                // // mean the problem is trivial
+                // if matches!(
+                //     tree.graph.node_weight(tree.root).unwrap(),
+                //     ModuleKind::Parallel
+                // ) {
+                //     continue;
+                // }
+
+                // TODO: (maybe) in the connected case, we could switch to the specialised
+                // algorithms, however, at the moment I'm doing a first order simplicial
+                // check (in do_gen_check) which is not yet implement for the specialised
+                // representation
 
                 let check = check::do_gen_check(&graph, &tree);
                 if check.claw_free {
@@ -227,7 +250,7 @@ pub fn periodic() {
     );
 
     fs::write(
-        "output/periodic_square_lattice.json",
+        format!("output/periodic_bricks_{id}.json"),
         serde_json::to_string_pretty(&results).unwrap(),
     )
     .unwrap();

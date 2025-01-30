@@ -4,7 +4,7 @@ use std::{
 };
 
 use modular_decomposition::ModuleKind;
-use petgraph::Direction;
+use petgraph::{visit::NodeCount, Direction};
 
 use super::claw_free::ClawFree;
 use crate::graph::{
@@ -48,6 +48,7 @@ impl<G: ImplGraph> Graph<G> {
                             ret.push(self.map_simplicial_cliques(vec![vec![*node]]));
                         },
                         ModuleKind::Prime => {
+
                             // not really efficient here (e.g., instead of re-doing the
                             // modular partition for the subtree, we could just take the
                             // subtree and update the labels)
