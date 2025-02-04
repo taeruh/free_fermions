@@ -8,7 +8,6 @@ use std::{
 };
 
 use itertools::Itertools;
-use modular_decomposition::ModuleKind;
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
 use serde::Serialize;
@@ -21,13 +20,13 @@ use crate::{
 };
 
 // adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
-// much) (64 * 79 = 5056 approx 5000)
-const NUM_THREADS: usize = 5;
-const NUM_SAMPLES: usize = 10; // per thread
+// much)
+const NUM_THREADS: usize = 50;
+const NUM_SAMPLES: usize = 100000; // per thread
 
 const DENSITY_START: f64 = 1. / 9.;
 const DENSITY_END: f64 = 0.40;
-const NUM_DENSITY_STEPS: usize = 60;
+const NUM_DENSITY_STEPS: usize = 2000;
 
 const NUM_TOTAL_SAMPLES: usize = NUM_THREADS * NUM_SAMPLES;
 
@@ -138,11 +137,11 @@ impl Notification {
     }
     fn update(&mut self, density_index: usize) {
         self.remaining[density_index].1 -= 1;
-        println!(
-            "{:?}: {:?}",
-            (Instant::now() - self.start_time).as_secs_f64() / 3600.,
-            self.remaining
-        );
+        // println!(
+        //     "{:?}: {:?}",
+        //     (Instant::now() - self.start_time).as_secs_f64() / 3600.,
+        //     self.remaining
+        // );
     }
 }
 
@@ -176,9 +175,8 @@ pub fn periodic() {
 
             let mut i = 0;
             while i < NUM_SAMPLES {
-                println!("{:?}", i);
+                // println!("{:?}", i);
                 let lattice = Bricks::draw(e1d, e2d, e3d, e4d, e5d, rng);
-
 
                 let mut graph = GenGraph::from_edge_labels(lattice.get_graph()).unwrap();
 
@@ -198,11 +196,6 @@ pub fn periodic() {
                 //     continue;
                 // }
 
-                // TODO: (maybe) in the connected case, we could switch to the specialised
-                // algorithms, however, at the moment I'm doing a first order simplicial
-                // check (in do_gen_check) which is not yet implement for the specialised
-                // representation
-
                 let check = check::do_gen_check(&graph, &tree);
                 if check.claw_free {
                     before_claw_free += 1;
@@ -210,6 +203,11 @@ pub fn periodic() {
                 if check.simplicial {
                     before_simplicial += 1;
                 }
+
+                // TODO: (maybe) in the connected case, we could switch to the specialised
+                // algorithms, however, at the moment I'm doing a first order simplicial
+                // check (in do_gen_check) which is not yet implement for the specialised
+                // representation
 
                 graph.twin_collapse(&mut tree);
                 collapsed += (orig_len - graph.len()) as f64 / orig_len as f64;

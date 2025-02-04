@@ -4,7 +4,7 @@ use std::{
 };
 
 use modular_decomposition::ModuleKind;
-use petgraph::{visit::NodeCount, Direction};
+use petgraph::Direction;
 
 use super::claw_free::ClawFree;
 use crate::graph::{
@@ -48,7 +48,6 @@ impl<G: ImplGraph> Graph<G> {
                             ret.push(self.map_simplicial_cliques(vec![vec![*node]]));
                         },
                         ModuleKind::Prime => {
-
                             // not really efficient here (e.g., instead of re-doing the
                             // modular partition for the subtree, we could just take the
                             // subtree and update the labels)
@@ -141,6 +140,8 @@ impl<G: ImplGraph> Graph<G> {
                     cliques.push(clique);
                 }
             }
+            // well, not having this here was a painful misunderstanding from the paper
+            break;
         }
 
         cliques
@@ -348,19 +349,24 @@ mod tests {
     fn create_simplicial_clique_via_sibling_collapse() {
         // see graph in paper
         let data = collect!(vv;
-            (5, [0, 1, 2, 3, 4]),
-            (6, [0, 1, 2, 3, 4]),
-            (0, [5, 6, 3, 2]),
-            (3, [5, 6, 0, 1]),
-            (1, [5, 6, 3, 4]),
-            (4, [5, 6, 1, 2]),
-            (2, [5, 6, 4, 0]),
+            (1, [0, 6, 5, 2]),
+            (2, [0, 6, 1, 3]),
+            (3, [0, 6, 2, 4]),
+            (4, [0, 6, 3, 5]),
+            (5, [0, 6, 4, 1]),
+            (0, [1, 2, 3, 4, 5]),
+            (6, [1, 2, 3, 4, 5]),
         );
         let mut graph: Graph<Adj> = Graph::from_adjacency_labels(data.clone()).unwrap();
         let mut tree = graph.modular_decomposition();
         assert_eq!(graph.simplicial(&tree, None), Some(vec![vec![]]));
         graph.twin_collapse(&mut tree);
         let cliques = graph.simplicial(&tree, None).unwrap().pop().unwrap();
-        assert!(cliques.contains(&vec![0, 2]));
+        let cliques: HashSet<Vec<u32>> =
+            HashSet::from_iter(cliques.into_iter().map(|mut clique| {
+                clique.sort();
+                clique
+            }));
+        assert!(cliques.contains(&vec![1, 2]));
     }
 }

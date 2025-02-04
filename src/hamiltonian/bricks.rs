@@ -1,5 +1,5 @@
-//! 2d shifted bricks:
-//!
+//! 2d shifted bricks: (without the ``ignore, rust wants to run compile that ...)
+//! ```ignore 
 //! -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 //!   |           |           |           |           |           |
 //! -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
@@ -11,10 +11,11 @@
 //! -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 //!   |           |           |           |           |           |
 //! -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+//! ```
 //!
 //! we do it periodic again; 2 rows are sufficient -> check: draw the line graph of it to
 //! see how big cliques and where the claws could be
-//!
+//! ```ignore
 //!                 |                           |
 //! row 0  --6------7------0--e1--1--e2--2--e3--3--e4--4------5--
 //!                        |                           |
@@ -22,6 +23,7 @@
 //!                        |                           |
 //! row 1         --6------7------0------1------2------3------4------5--
 //!                               |                           |
+//! ```
 
 use itertools::Itertools;
 use rand::{Rng, seq::SliceRandom};

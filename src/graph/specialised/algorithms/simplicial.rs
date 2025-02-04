@@ -256,6 +256,8 @@ impl<G: GraphData> Graph<G> {
                     },
                 }
             }
+            // well, not having this here was a painful misunderstanding from the paper
+            break;
         }
 
         cliques
