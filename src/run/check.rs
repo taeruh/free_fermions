@@ -1,3 +1,5 @@
+use std::cmp;
+
 use hashbrown::HashSet;
 use itertools::Itertools;
 use modular_decomposition::ModuleKind;
@@ -21,28 +23,44 @@ use crate::{
 pub struct Check {
     pub claw_free: bool,
     pub simplicial: bool,
+    pub sc_size: usize,
     #[cfg(debug_assertions)]
     pub parallel: bool,
+}
+
+fn first_order_simplicial(graph: &GenGraph) -> Option<usize> {
+    for a in graph.0.node_indices().map(|n| n.index()) {
+        if graph.clique_is_simplicial(&[a]) {
+            return Some(1);
+        }
+    }
+    for (a, b) in graph
+        .0
+        .raw_edges()
+        .iter()
+        .map(|e| (e.source().index(), e.target().index()))
+    {
+        if graph.clique_is_simplicial(&[a, b]) {
+            return Some(2);
+        }
+    }
+    None
+}
+
+fn full_simplicial(graph: &GenGraph, tree: &Tree) -> Option<usize> {
+    graph
+        .simplicial(tree, Some(&ClawFree::Yes))
+        .unwrap()
+        .into_iter()
+        .flatten()
+        .find(|clique| !clique.is_empty())
+        .map(|clique| clique.len())
 }
 
 pub fn do_gen_check(graph: &GenGraph, tree: &Tree) -> Check {
     let mut ret = Check::default();
     if matches!(graph.is_claw_free(tree), ClawFree::Yes) {
         ret.claw_free = true;
-    }
-    // naive first order check
-    if ret.claw_free {
-        for (a, b) in graph
-            .0
-            .raw_edges()
-            .iter()
-            .map(|e| (e.source().index(), e.target().index()))
-        {
-            if graph.clique_is_simplicial(&[a, b]) {
-                ret.simplicial = true;
-                return ret;
-            }
-        }
     }
     if let ModuleKind::Parallel = tree.graph.node_weight(tree.root).unwrap() {
         #[cfg(debug_assertions)]
@@ -58,29 +76,28 @@ pub fn do_gen_check(graph: &GenGraph, tree: &Tree) -> Check {
             .neighbors_directed(tree.root, Direction::Outgoing)
             .map(|child| graph.subgraph(&tree.module_nodes(child, None)))
         {
+            if let Some(size) = first_order_simplicial(&subgraph) {
+                ret.sc_size = cmp::max(ret.sc_size, size);
+                continue;
+            }
             let subtree = subgraph.modular_decomposition();
             // we already checked that the whole graph is claw-free, but we required that
             // each subgraph is simplicial (each one has to be solved independently)
-            if !subgraph
-                .simplicial(&subtree, Some(&ClawFree::Yes))
-                .unwrap()
-                .into_iter()
-                .flatten()
-                .any(|clique| !clique.is_empty())
-            {
+            if let Some(size) = full_simplicial(&subgraph, &subtree) {
+                ret.sc_size = cmp::max(ret.sc_size, size);
+            } else {
                 ret.simplicial = false;
                 break;
             }
         }
-    } else if ret.claw_free
-        && graph
-            .simplicial(tree, Some(&ClawFree::Yes))
-            .unwrap()
-            .into_iter()
-            .flatten()
-            .any(|clique| !clique.is_empty())
-    {
-        ret.simplicial = true;
+    } else if ret.claw_free {
+        if let Some(size) = first_order_simplicial(graph) {
+            ret.sc_size = size;
+            ret.simplicial = true;
+        } else if let Some(size) = full_simplicial(graph, tree) {
+            ret.sc_size = size;
+            ret.simplicial = true;
+        }
     }
     ret
 }

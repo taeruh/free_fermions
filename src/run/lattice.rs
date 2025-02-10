@@ -1,7 +1,7 @@
 //! 2d square lattice
 
 use std::{
-    env, fs,
+    cmp, env, fs,
     sync::{Arc, Mutex},
     thread,
     time::Instant,
@@ -22,10 +22,11 @@ use crate::{
 // adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
 // much)
 const NUM_THREADS: usize = 50;
-const NUM_SAMPLES: usize = 100000; // per thread
+const NUM_SAMPLES: usize = 10000; // per thread
 
 const DENSITY_START: f64 = 1. / 9.;
-const DENSITY_END: f64 = 0.40;
+// const DENSITY_END: f64 = 0.40;
+const DENSITY_END: f64 = 1.00;
 const NUM_DENSITY_STEPS: usize = 2000;
 
 const NUM_TOTAL_SAMPLES: usize = NUM_THREADS * NUM_SAMPLES;
@@ -50,6 +51,7 @@ struct Results {
     // relative to the number of nodes
     collapsed: Vec<f64>,
     // }}
+    max_sc_size: usize,
 }
 
 struct CountResults {
@@ -58,6 +60,7 @@ struct CountResults {
     claw_free: Vec<usize>,
     simplicial: Vec<usize>,
     collapsed: Vec<f64>,
+    max_sc_size: usize,
 }
 
 impl CountResults {
@@ -68,6 +71,7 @@ impl CountResults {
             claw_free: vec![0; NUM_DENSITY_STEPS],
             simplicial: vec![0; NUM_DENSITY_STEPS],
             collapsed: vec![0.0; NUM_DENSITY_STEPS],
+            max_sc_size: 0,
         }
     }
 
@@ -81,6 +85,7 @@ impl CountResults {
                 ret.simplicial[i] += result.simplicial[i];
                 ret.collapsed[i] += result.collapsed[i];
             }
+            ret.max_sc_size = cmp::max(ret.max_sc_size, result.max_sc_size);
         }
         ret
     }
@@ -97,6 +102,7 @@ impl Results {
             after_claw_free: vec![0.0; NUM_DENSITY_STEPS],
             after_simplicial: vec![0.0; NUM_DENSITY_STEPS],
             collapsed: vec![0.0; NUM_DENSITY_STEPS],
+            max_sc_size: 0,
         }
     }
 
@@ -108,6 +114,7 @@ impl Results {
         let mut ret = Self::init();
         ret.densities = densities;
         ret.seed = seed;
+        ret.max_sc_size = results.max_sc_size;
 
         for i in 0..NUM_DENSITY_STEPS {
             ret.before_claw_free[i] =
@@ -177,6 +184,9 @@ pub fn periodic() {
             while i < NUM_SAMPLES {
                 // println!("{:?}", i);
                 let lattice = Bricks::draw(e1d, e2d, e3d, e4d, e5d, rng);
+                // let lattice = crate::hamiltonian::square_lattice::PeriodicLattice::draw(
+                //     Density::new(0.), Density::new(0.), e3d, e4d, rng,
+                // );
 
                 let mut graph = GenGraph::from_edge_labels(lattice.get_graph()).unwrap();
 
@@ -202,6 +212,7 @@ pub fn periodic() {
                 }
                 if check.simplicial {
                     before_simplicial += 1;
+                    ret.max_sc_size = cmp::max(ret.max_sc_size, check.sc_size);
                 }
 
                 // TODO: (maybe) in the connected case, we could switch to the specialised
@@ -248,7 +259,7 @@ pub fn periodic() {
     );
 
     fs::write(
-        format!("output/periodic_bricks_{id}.json"),
+        format!("output/periodic_bricks_full_{id}.json"),
         serde_json::to_string_pretty(&results).unwrap(),
     )
     .unwrap();
