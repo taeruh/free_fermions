@@ -49,33 +49,45 @@ def main():
     print(f"num_total_samples: {num_total_samples}")
     for key, value in results.items():
         # value *= 100.0 / num_total_samples  # percentage
-        value /= num_total_samples
+        value /=  num_total_samples  # percentage
 
     print(f"max_sc_size: {max_sc_size}")
 
     paper_setup()
 
-    fig = plt.figure(figsize=set_size(height_in_width=0.8))
-    gs = fig.add_gridspec(2, 1)
+    fig = plt.figure(figsize=set_size(height_in_width=0.7))
+    gs = fig.add_gridspec(1, 1)
     ax = fig.add_subplot(gs[0, 0])
-    axl = fig.add_subplot(gs[1, 0])
-    gs.update(hspace=0.005)
+    axr = ax.twinx()
+    inset = fig.add_axes((0.56, 0.63, 0.35, 0.25))
 
     rc_colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
-    colors = [rc_colors[0], rc_colors[3], rc_colors[2]]
+    colors = [rc_colors[0], rc_colors[2], rc_colors[3], rc_colors[5]]
     linestyles = [
         "solid",
         "dashed",
         "dotted",
+        # "solid",
+        # "dotted",
     ]
     labels = [
         r"SCF",
         r"$\Delta \mathrm{SCF}$",
-        # r"$\Xi$",
         r"\# collapsed nodes",
+        # r"$\Delta$ before collapse",
+        # r"$\Delta$ after collapse",
     ]
 
-    ax.set_ylabel(labels[0])
+    ax.set_ylabel(labels[0], color=colors[0])
+    axr.set_ylabel(labels[1], color=colors[1])
+    ax.tick_params(axis="y", labelcolor=colors[0])
+    axr.tick_params(axis="y", labelcolor=colors[1])
+    axr.spines["left"].set_color(colors[0])  # axr's spines overdraws ax's spines ...
+    axr.spines["right"].set_color(colors[1])
+
+    density_step = 20
+    density_ticks = [densities[d] for d in range(0, density_len, density_step)]
+
     ax.plot(
         densities,
         results["after_simplicial"],
@@ -83,22 +95,29 @@ def main():
         color=colors[0],
         linestyle=linestyles[0],
     )
-
-    axl.set_ylabel(r"[\%]")
-    axl.plot(
+    axr.plot(
         densities,
-        (results["after_simplicial"] - results["before_simplicial"]) * 100,
+        results["after_simplicial"] - results["before_simplicial"],
         label=labels[1],
         color=colors[1],
         linestyle=linestyles[1],
     )
-    axl.plot(
-        densities,
-        results["collapsed"] * 100,
-        label=labels[2],
-        color=colors[2],
-        linestyle=linestyles[2],
-    )
+
+    # inset.set_ylabel(r"cf - scf $\Delta$")
+    # inset.plot(
+    #     densities,
+    #     results["before_claw_free"] - results["before_simplicial"],
+    #     label=labels[2],
+    #     color=colors[2],
+    #     linestyle=linestyles[2],
+    # )
+    # inset.plot(
+    #     densities,
+    #     results["after_claw_free"] - results["after_simplicial"],
+    #     label=labels[3],
+    #     color=colors[3],
+    #     linestyle=linestyles[3],
+    # )
 
     print(
         f"before sum(|scf - cf|) = {np.abs(results["before_claw_free"] -
@@ -109,22 +128,31 @@ def main():
         results["after_simplicial"]).sum()}"
     )
 
-    for a in [ax, axl]:
+    inset.set_ylabel(r"\# collapsed nodes")
+    inset.plot(
+        densities,
+        results["collapsed"],
+        label=labels[2],
+        color=colors[2],
+        linestyle=linestyles[2],
+    )
+
+    for a in [ax, axr, inset]:
         a.grid()
         ymax = a.get_ylim()[1]
         a.set_ylim(0, ymax)
-    axl.set_xlabel(r"$d$")
-    ax.tick_params(axis="x", which="both", bottom=True, top=True, labelbottom=False)
-    axl.tick_params(axis="x", which="both", top=True)
+        if a != axr:
+            a.set_xlabel(r"$d$")
 
-    handles, labels = axl.get_legend_handles_labels()
-    axl.legend(handles, labels, loc="upper right")
+    # legend dummies
+    # for i in range(1, 4):
+    for i in range(1, 3):
+        ax.plot([], [], color=colors[i], linestyle=linestyles[i], label=labels[i])
+
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles, labels, loc="upper right")
+    ax.legend(handles, labels, loc=(0.720, 0.40))
 
-    axl.set_yticks([0.0, 2.5, 5.0])
-    plt.subplots_adjust(top=0.96, bottom=0.13, left=0.14, right=0.970)
-
+    plt.subplots_adjust(top=0.96, bottom=0.07, left=0.07, right=0.940)
     plt.savefig(f"output/periodic_bricks.pdf")
 
 
