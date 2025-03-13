@@ -33,10 +33,10 @@ impl<G: GraphData> Graph<G> {
         // cf. comment in fn full_remove
         for node in tree.graph.node_weights_mut() {
             if let ModuleKind::Node(ref mut node) = node {
-                *node = unsafe { graph_map.map_unchecked(*node) };
+                *node = unsafe { graph_map.mapped_unchecked(*node) };
             }
         }
-        tree.root = (unsafe { tree_map.map_unchecked(tree.root.index()) } as int).into();
+        tree.root = (unsafe { tree_map.mapped_unchecked(tree.root.index()) } as int).into();
     }
 
     fn recurse_collapse(
@@ -49,7 +49,7 @@ impl<G: GraphData> Graph<G> {
         // we might already have removed some earlier children, so the module index might
         // be wrong
         let updated_module =
-            (unsafe { tree_map.map_unchecked(module.index()) } as int).into();
+            (unsafe { tree_map.mapped_unchecked(module.index()) } as int).into();
 
         // in the leaf or prime case, we know that the module wont be collapsed
         match tree.node_weight(updated_module).unwrap() {
@@ -80,7 +80,7 @@ impl<G: GraphData> Graph<G> {
             node: NodeIndex,
             tree_map: &SwapRemoveMap,
         ) -> &'t ModuleKind<Node> {
-            tree.node_weight((tree_map.map(node.index()) as int).into()).unwrap()
+            tree.node_weight((tree_map.mapped(node.index()) as int).into()).unwrap()
         }
 
         #[inline(always)]
@@ -155,7 +155,7 @@ impl<G: GraphData> Graph<G> {
         }
 
         let new_module_root =
-            (unsafe { tree_map.map_unchecked(module.index()) } as int).into();
+            (unsafe { tree_map.mapped_unchecked(module.index()) } as int).into();
         if let Some(new_leaf) = remaining_leaf {
             if module_may_become_remaining_leaf {
                 *tree.node_weight_mut(new_module_root).unwrap() =

@@ -50,9 +50,9 @@ impl InvalidGraph<Node> {
     }
 }
 
-/// A helper to keep track of swap-removals. Basically has to be used when some nodes to
-/// remove are fixed and then we iterate over them and remove them one by one (cf. default
-/// implemenation of retain nodes).
+/// A helper to keep track of swap-removals. Basically has to be used when some of the
+/// nodes to remove are fixed and we then iterate over them and remove them one by one
+/// (cf. default implemenation of retain nodes).
 #[derive(Clone, Debug)]
 pub struct SwapRemoveMap {
     map: Vec<Node>,
@@ -83,15 +83,15 @@ impl SwapRemoveMap {
     /// # Safety
     /// The `node` must be in bounds, i.e., less than the `len` initialiser.
     #[inline(always)]
-    pub unsafe fn map_unchecked(&self, node: Node) -> Node {
+    pub unsafe fn mapped_unchecked(&self, node: Node) -> Node {
         debug_assert!(node < self.map.len(), "node: {}, map: {:?}", node, self.map);
         unsafe { *self.map.get_unchecked(node) }
     }
 
     #[inline]
-    pub fn map(&self, node: Node) -> Node {
+    pub fn mapped(&self, node: Node) -> Node {
         assert!(node < self.map.len());
-        unsafe { self.map_unchecked(node) }
+        unsafe { self.mapped_unchecked(node) }
     }
 
     // _Statement_:
@@ -125,7 +125,7 @@ impl SwapRemoveMap {
             // safety: every node can only be removed once, according to the safety
             // invariant, so self.len > 0
             self.len = self.len.unchecked_sub(1);
-            let mapped = self.map_unchecked(node);
+            let mapped = self.mapped_unchecked(node);
             // safety: position was initialised to have more then `len` elements and we
             // never remove elements from it
             let position_last = *self.position.get_unchecked(self.len);

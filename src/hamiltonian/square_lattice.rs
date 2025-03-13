@@ -5,7 +5,7 @@ use rand::Rng;
 use super::{Density, Pauli};
 use crate::fix_int::int;
 
-type LocalOperator = super::LocalOperator<2>;
+type LocalOperator = super::LocalOperator<2, Pauli>;
 
 #[derive(Debug)]
 pub struct PeriodicLattice {

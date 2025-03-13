@@ -13,10 +13,10 @@ impl<G: ImplGraph> Graph<G> {
         self.recurse_collapse(&mut tree.graph, tree.root, &mut graph_map, &mut tree_map);
         for weight in tree.graph.node_weights_mut() {
             if let ModuleKind::Node(ref mut node) = weight {
-                *node = graph_map.map(*node);
+                *node = graph_map.mapped(*node);
             }
         }
-        tree.root = (tree_map.map(tree.root.index()) as u32).into();
+        tree.root = (tree_map.mapped(tree.root.index()) as u32).into();
     }
 
     fn recurse_collapse(
@@ -26,7 +26,7 @@ impl<G: ImplGraph> Graph<G> {
         graph_map: &mut SwapRemoveMap,
         tree_map: &mut SwapRemoveMap,
     ) {
-        let new_root = (tree_map.map(root.index()) as u32).into();
+        let new_root = (tree_map.mapped(root.index()) as u32).into();
         if let ModuleKind::Node(_) = tree.node_weight(new_root).unwrap() {
             return;
         }
@@ -48,7 +48,7 @@ impl<G: ImplGraph> Graph<G> {
         for child in children.by_ref() {
             self.recurse_collapse(tree, child, graph_map, tree_map);
             if let ModuleKind::Node(node) =
-                tree.node_weight((tree_map.map(child.index()) as u32).into()).unwrap()
+                tree.node_weight((tree_map.mapped(child.index()) as u32).into()).unwrap()
             {
                 remaining_leaf = Some((*node, child.index()));
                 num_children -= 1;
@@ -59,7 +59,7 @@ impl<G: ImplGraph> Graph<G> {
         for child in children {
             self.recurse_collapse(tree, child, graph_map, tree_map);
             if let ModuleKind::Node(node) =
-                tree.node_weight((tree_map.map(child.index()) as u32).into()).unwrap()
+                tree.node_weight((tree_map.mapped(child.index()) as u32).into()).unwrap()
             {
                 self.remove_node(graph_map.swap_remove(*node));
                 tree.remove_node((tree_map.swap_remove(child.index()) as u32).into());
@@ -67,7 +67,7 @@ impl<G: ImplGraph> Graph<G> {
             }
         }
 
-        let new_root = (tree_map.map(root.index()) as u32).into();
+        let new_root = (tree_map.mapped(root.index()) as u32).into();
         if num_children == 0 {
             // otherwise we would have never reached `num_children -= 1`
             let remaining_leaf = remaining_leaf.unwrap();

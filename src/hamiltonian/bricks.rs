@@ -28,10 +28,10 @@
 use itertools::Itertools;
 use rand::{Rng, seq::SliceRandom};
 
-use super::Density;
+use super::{Density, Pauli};
 use crate::{fix_int::int, hamiltonian::DOUBLES};
 
-type LocalOperator = super::LocalOperator<2>;
+type LocalOperator = super::LocalOperator<2, Pauli>;
 
 #[derive(Debug)]
 pub struct Bricks {

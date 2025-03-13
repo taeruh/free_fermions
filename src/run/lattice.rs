@@ -14,20 +14,24 @@ use serde::Serialize;
 
 use crate::{
     graph::generic::ImplGraph,
-    hamiltonian::{Density, bricks::Bricks},
+    hamiltonian::{bricks::Bricks, electronic_structure::ElectronicStructure, Density},
     rand_helper,
-    run::{GenGraph, check},
+    run::{check, GenGraph},
 };
 
 // adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
 // much)
-const NUM_THREADS: usize = 50;
-const NUM_SAMPLES: usize = 10000; // per thread
+// const NUM_THREADS: usize = 50;
+const NUM_THREADS: usize = 5;
+// const NUM_SAMPLES: usize = 10000; // per thread
+const NUM_SAMPLES: usize = 50; // per thread
 
-const DENSITY_START: f64 = 1. / 9.;
+// const DENSITY_START: f64 = 1. / 9.;
+const DENSITY_START: f64 = 0.01;
 // const DENSITY_END: f64 = 0.40;
 const DENSITY_END: f64 = 1.00;
-const NUM_DENSITY_STEPS: usize = 2000;
+// const NUM_DENSITY_STEPS: usize = 2000;
+const NUM_DENSITY_STEPS: usize = 10;
 
 const NUM_TOTAL_SAMPLES: usize = NUM_THREADS * NUM_SAMPLES;
 
@@ -182,11 +186,12 @@ pub fn periodic() {
 
             let mut i = 0;
             while i < NUM_SAMPLES {
-                // println!("{:?}", i);
-                let lattice = Bricks::draw(e1d, e2d, e3d, e4d, e5d, rng);
+                println!("{:?}", i);
+                // let lattice = Bricks::draw(e1d, e2d, e3d, e4d, e5d, rng);
                 // let lattice = crate::hamiltonian::square_lattice::PeriodicLattice::draw(
                 //     Density::new(0.), Density::new(0.), e3d, e4d, rng,
                 // );
+                let lattice = ElectronicStructure::draw(e1d, 7, rng);
 
                 let mut graph = GenGraph::from_edge_labels(lattice.get_graph()).unwrap();
 
@@ -259,7 +264,8 @@ pub fn periodic() {
     );
 
     fs::write(
-        format!("output/periodic_bricks_full_{id}.json"),
+        // format!("output/periodic_bricks_full_{id}.json"),
+        format!("output/e_structure_{id}.json"),
         serde_json::to_string_pretty(&results).unwrap(),
     )
     .unwrap();

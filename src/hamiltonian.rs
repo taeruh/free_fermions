@@ -31,9 +31,9 @@ pub enum Pauli {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct LocalOperator<const N: usize> {
+pub struct LocalOperator<const N: usize, Op> {
     index: [usize; N],
-    pauli: [Pauli; N],
+    pauli: [Op; N],
 }
 // }}}
 
@@ -44,28 +44,36 @@ impl Default for Pauli {
     }
 }
 
-impl<const N: usize> Commutator for LocalOperator<N> {
+impl Commutator for Pauli {
     fn commute(&self, other: &Self) -> bool {
-        let mut res = false;
-        for s in 0..N {
-            for o in 0..N {
-                if self.index[s] == other.index[o] && self.pauli[s] != other.pauli[o] {
-                    res ^= true;
-                }
-            }
-        }
-        res
+        self == other
     }
 }
 
-fn get_edges<const N: usize>(ops: &[LocalOperator<N>]) -> Vec<(int, int)> {
+impl<const N: usize, Op: Commutator> Commutator for LocalOperator<N, Op> {
+    fn commute(&self, other: &Self) -> bool {
+        let mut negated_res = false;
+        for s in 0..N {
+            for o in 0..N {
+                if self.index[s] == other.index[o]
+                    && !self.pauli[s].commute(&other.pauli[o])
+                {
+                    negated_res ^= true;
+                }
+            }
+        }
+        !negated_res
+    }
+}
+
+fn get_edges<Op: Commutator>(ops: &[Op]) -> Vec<(int, int)> {
     let mut ret = Vec::new();
     if ops.is_empty() {
         return ret;
     }
     for i in 0..ops.len() - 1 {
         for j in i + 1..ops.len() {
-            if ops[i].commute(&ops[j]) {
+            if !ops[i].commute(&ops[j]) {
                 ret.push((i as int, j as int));
             }
         }
@@ -86,32 +94,30 @@ const DOUBLES: [(Pauli, Pauli); 9] = [
     (Pauli::Z, Pauli::Z),
 ];
 
+pub fn draw_from_iter<'a, I: Copy + 'a>(
+    density: f64,
+    rng: &mut impl Rng,
+    iter: impl Iterator<Item = &'a I>,
+) -> Vec<I> {
+    iter.filter_map(|&p| {
+        if rng.gen::<f64>() < density {
+            Some(p)
+        } else {
+            None
+        }
+    })
+    .collect()
+}
+
 fn draw_singles(density: f64, rng: &mut impl Rng) -> Vec<Pauli> {
-    SINGLES
-        .iter()
-        .filter_map(|&p| {
-            if rng.gen::<f64>() < density {
-                Some(p)
-            } else {
-                None
-            }
-        })
-        .collect()
+    draw_from_iter(density, rng, SINGLES.iter())
 }
 
 fn draw_doubles(density: f64, rng: &mut impl Rng) -> Vec<(Pauli, Pauli)> {
-    DOUBLES
-        .iter()
-        .filter_map(|&p| {
-            if rng.gen::<f64>() < density {
-                Some(p)
-            } else {
-                None
-            }
-        })
-        .collect()
+    draw_from_iter(density, rng, DOUBLES.iter())
 }
 
+pub mod bricks;
+pub mod electronic_structure;
 pub mod oned_chain;
 pub mod square_lattice;
-pub mod bricks;

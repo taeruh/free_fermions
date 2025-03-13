@@ -6,8 +6,9 @@ import numpy as np
 
 data_dir = "output"
 # data_dir = "results"
-file = "periodic_bricks_"
+# file = "periodic_bricks_"
 # file = "periodic_bricks_full_"
+file = "e_structure_"
 
 
 def main():
@@ -69,10 +70,9 @@ def main():
         "dotted",
     ]
     labels = [
-        r"SCF",
-        r"$\Delta \mathrm{SCF}$",
-        # r"$\Xi$",
-        r"\# collapsed nodes",
+        r"$p_{\mathrm{SCF}}$",
+        r"$\Delta p_{\mathrm{SCF}}$",
+        r"$\Delta \Xi$",
     ]
 
     ax.set_ylabel(labels[0])
@@ -122,10 +122,11 @@ def main():
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels, loc="upper right")
 
-    axl.set_yticks([0.0, 2.5, 5.0])
+    # axl.set_yticks([0.0, 2.5, 5.0])
     plt.subplots_adjust(top=0.96, bottom=0.13, left=0.14, right=0.970)
 
-    plt.savefig(f"output/periodic_bricks.pdf")
+    # plt.savefig(f"output/periodic_bricks.pdf")
+    plt.savefig(f"output/e_structure_.pdf")
 
 
 def paper_setup():
