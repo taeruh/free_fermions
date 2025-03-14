@@ -5,11 +5,12 @@ use crate::graph::{
     specialised::{self, Custom, IndexMap},
 };
 
-mod check;
-mod erdos_renyi;
 mod all_of_them;
 mod chain;
+mod check;
+mod erdos_renyi;
 mod lattice;
+mod majoranas;
 mod removal_examples;
 
 // TODO: roughly test which implementations is the fastest
@@ -19,7 +20,8 @@ type Graph = specialised::Graph<Custom>;
 pub fn run() {
     fs::create_dir_all("output").unwrap();
     // chain::run();
-    lattice::run();
+    // lattice::run();
+    majoranas::run();
     // erdos_renyi::run();
     // all_of_them::run();
     // removal_examples::run();
