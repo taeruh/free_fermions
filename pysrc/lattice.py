@@ -64,8 +64,8 @@ def main():
     rc_colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
     colors = [rc_colors[0], rc_colors[3], rc_colors[2]]
     linestyles = [
-        "solid",
         "dashed",
+        "solid",
         "dotted",
     ]
     labels = [

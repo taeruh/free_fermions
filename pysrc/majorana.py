@@ -9,61 +9,93 @@ data_dir = "output"
 # data_dir = "results"
 file = "e_structure_"
 
-# suffixes = ["first_", "second_"]
-suffixes = ["", "second_"]
-
 
 def main():
-    first = Data(suffixes[0])
-    second = Data(suffixes[0])
+    first = Data("first_")
+    second = Data("second_")
+    data = [first, second]
 
     paper_setup()
 
-    fig = plt.figure(figsize=set_size(height_in_width=0.8))
-    gs = fig.add_gridspec(2, 1)
-    axf = fig.add_subplot(gs[0, 0])
-    axs = fig.add_subplot(gs[1, 0])
+    fig = plt.figure(figsize=set_size(height_in_width=1.6))
+    factor = 10
+    space = 3
+    gs = fig.add_gridspec(4 * factor + space, 1)
+    axs = [
+        [fig.add_subplot(gs[0:factor, 0]), fig.add_subplot(gs[factor : 2 * factor, 0])],
+        [
+            fig.add_subplot(gs[2 * factor + space : 3 * factor + space, 0]),
+            fig.add_subplot(gs[3 * factor + space : 4 * factor + space, 0]),
+        ],
+    ]
+
+    ranges = [
+        range(1, 5),
+        range(0, 4),
+    ]
 
     color_map = matplotlib.colormaps["plasma"]
     colors = [
         color_map(i)
-        for i in np.linspace(0.01, 0.80, first.size_len + second.size_len - 1)
+        for i in np.linspace(0.0, 0.95, len(ranges[0]) + len(ranges[1]) - 1)
+    ]
+    print(len(colors))
+
+    linestyles = [
+        "dashed",
+        "solid",
+        "dotted",
+    ]
+    labels = [
+        r"$p_{\mathrm{SCF}}$",
+        r"$\Delta p_{\mathrm{SCF}}$",
     ]
 
-    label = r"$p_{\mathrm{SCF}}$"
+    for i, (color_offset, orbit_range) in enumerate(
+        zip([-1, len(ranges[0]) - 1], ranges)
+    ):
+        for j in orbit_range:
+            axs[i][0].plot(
+                data[i].densities,
+                data[i].simplicial[j],
+                label=f"$m = {round(data[i].sizes[j]/2)}$",
+                linestyle=linestyles[0],
+                color=colors[color_offset + j],
+            )
+        for j in orbit_range:
+            axs[i][1].plot(
+                data[i].densities,
+                data[i].delta_simplicial[j],
+                label=f"$m = {round(data[i].sizes[j]/2)}$",
+                linestyle=linestyles[1],
+                color=colors[color_offset + j],
+            )
+            axs[i][1].plot(
+                data[i].densities,
+                data[i].collapsed[j],
+                label=f"$m = {round(data[i].sizes[j]/2)}$",
+                linestyle=linestyles[2],
+                color=colors[color_offset + j],
+            )
+        handles, labels = axs[i][0].get_legend_handles_labels()
+        axs[i][0].legend(handles, labels, loc="upper right")
 
-    for i in range(first.size_len):
-        axf.plot(
-            first.densities,
-            first.results[i],
-            label=f"$n = {first.sizes[i]}$",
-            color=colors[i],
-        )
+    axs[0][1].set_yticks([0, 50, 100])
+    axs[0][1].set_yticklabels(["0", "50", "100"])
 
-    for i in range(second.size_len):
-        axs.plot(
-            first.densities,
-            first.results[i],
-            label=f"$n = {second.sizes[i]}$",
-            color=colors[i + first.size_len - 1],
-        )
+    # ymax = ao.get_ylim()[1]
+    # ao.set_ylim(0, ymax)
+    # for ax in [ao, au]:
+    #     # ax.set_ylabel(label)
+    #     ax.set_xlim(0, 1)
+    #     ax.grid()
+    #     ax.tick_params(axis="x", which="both", bottom=True, top=True, labelbottom=True)
+    #     handles, labels = ax.get_legend_handles_labels()
+    #     ax.legend(handles, labels, loc="upper right")
 
-    ymax = axf.get_ylim()[1]
-    for ax in [axf, axs]:
-        ax.set_ylabel(label)
-        ax.grid()
-        ax.tick_params(axis="x", which="both", bottom=True, top=True, labelbottom=True)
-        ax.set_ylim(0, ymax)
-        handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels, loc="upper right")
+    # au.set_xlabel(r"$d$")
 
-    axf.set_xlim(0, 1)
-    axs.set_xlim(0, 0.2)
-
-    axs.set_xlabel(r"$d$")
-
-
-    plt.subplots_adjust(top=0.96, bottom=0.13, left=0.14, right=0.970)
+    plt.subplots_adjust(top=0.96, bottom=0.13, left=0.14, right=0.960)
 
     plt.savefig(f"output/e_structure.pdf")
 
@@ -87,7 +119,8 @@ def paper_setup():
 
 class Data:
     def __init__(self, suffix: str):
-        with open(f"{data_dir}/{file}{suffix}0.json") as f:
+        thisfile = f"{file}{suffix}"
+        with open(f"{data_dir}/{thisfile}1.json") as f:
             data = json.load(f)
 
         self.densities = data["densities"]
@@ -95,25 +128,33 @@ class Data:
         self.density_len = len(self.densities)
         self.size_len = len(self.sizes)
 
-        num_sample_files = 20
-        self.num_total_samples = 0
+        # num_sample_files = 20
+        num_sample_files = 1
+        num_total_samples = 0
 
-        self.results = np.array(
+        self.simplicial = np.array(
+            np.tile(0, (self.size_len, self.density_len)), dtype=float
+        )
+        before_simplicial = np.array(
             np.tile(0, (self.size_len, self.density_len)), dtype=float
         )
 
-        for i in range(num_sample_files):
+        for i in range(1, num_sample_files + 1):
             try:
-                with open(f"{data_dir}/{file}{i}.json") as f:
+                with open(f"{data_dir}/{thisfile}{i}.json") as f:
                     data = json.load(f)
             except FileNotFoundError:
-                print(f"File {i} not found")
+                print(f"File {file}{i} not found")
                 continue
             num_samples = data["num_samples"]
-            self.num_total_samples += num_samples
-            self.results += num_samples * np.array(data["simplicial"])
+            num_total_samples += num_samples
+            self.simplicial += num_samples * np.array(data["after_simplicial"])
+            before_simplicial += num_samples * np.array(data["before_simplicial"])
 
-        self.results /= self.num_total_samples
+        self.simplicial /= num_total_samples
+        before_simplicial /= num_total_samples
+        self.delta_simplicial = (self.simplicial - before_simplicial) * 100
+        self.collapsed = np.array(data["collapsed"]) * 100
 
 
 # get default with \the\textwidth

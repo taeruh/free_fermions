@@ -176,8 +176,8 @@ pub fn periodic() {
                 (0..5).map(|_| Density::new(density)).collect_tuple().unwrap();
             let mut before_claw_free = 0;
             let mut before_simplicial = 0;
-            let mut claw_free = 0;
-            let mut simplicial = 0;
+            let mut after_claw_free = 0;
+            let mut after_simplicial = 0;
             let mut collapsed = 0.0;
 
             let mut i = 0;
@@ -225,10 +225,10 @@ pub fn periodic() {
 
                 let check = check::do_gen_check(&graph, &tree);
                 if check.claw_free {
-                    claw_free += 1;
+                    after_claw_free += 1;
                 }
                 if check.simplicial {
-                    simplicial += 1;
+                    after_simplicial += 1;
                 }
 
                 i += 1;
@@ -236,8 +236,8 @@ pub fn periodic() {
 
             ret.before_claw_free[density_idx] = before_claw_free;
             ret.before_simplicial[density_idx] = before_simplicial;
-            ret.claw_free[density_idx] = claw_free;
-            ret.simplicial[density_idx] = simplicial;
+            ret.claw_free[density_idx] = after_claw_free;
+            ret.simplicial[density_idx] = after_simplicial;
             ret.collapsed[density_idx] = collapsed;
 
             notification.lock().unwrap().update(density_idx);

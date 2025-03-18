@@ -13,19 +13,19 @@ use crate::{
 
 // adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
 // much)
-const NUM_THREADS: usize = 50;
-// const NUM_THREADS: usize = 10;
-const NUM_SAMPLES: usize = 1000; // per thread
-// const NUM_SAMPLES: usize = 20; // per thread
+// const NUM_THREADS: usize = 50;
+const NUM_THREADS: usize = 10;
+const NUM_SAMPLES: usize = 100; // per thread
 
 const DENSITY_START: f64 = 0.00;
-// const DENSITY_END: f64 = 0.40;
-const DENSITY_END: f64 = 1.00;
-// const DENSITY_END: f64 = 0.20;
-const NUM_DENSITY_STEPS: usize = 2000;
-// const NUM_DENSITY_STEPS: usize = 40;
+// const DENSITY_END: f64 = 0.06;
+const DENSITY_END: f64 = 1.0;
+// const NUM_DENSITY_STEPS: usize = 200;
+const NUM_DENSITY_STEPS: usize = 100;
 
 // these two have to be even
+// const SIZE_START: usize = 10;
+// const SIZE_END: usize = 18;
 const SIZE_START: usize = 2;
 const SIZE_END: usize = 10;
 const NUM_SIZES: usize = (SIZE_END - SIZE_START) / 2 + 1;
@@ -46,17 +46,29 @@ struct Results {
     seed: u64,
     num_samples: usize,
     // first index is the size, second is the density; averaged over the samples
-    simplicial: Vec<Vec<f64>>,
+    before_claw_free: Vec<Vec<f64>>,
+    after_claw_free: Vec<Vec<f64>>,
+    before_simplicial: Vec<Vec<f64>>,
+    after_simplicial: Vec<Vec<f64>>,
+    collapsed: Vec<Vec<f64>>,
 }
 
 struct CountResults {
-    simplicial: Vec<Vec<usize>>,
+    before_claw_free: Vec<Vec<usize>>,
+    after_claw_free: Vec<Vec<usize>>,
+    before_simplicial: Vec<Vec<usize>>,
+    after_simplicial: Vec<Vec<usize>>,
+    collapsed: Vec<Vec<f64>>,
 }
 
 impl CountResults {
     fn init() -> Self {
         Self {
-            simplicial: vec![vec![0; NUM_DENSITY_STEPS]; NUM_SIZES],
+            before_claw_free: vec![vec![0; NUM_DENSITY_STEPS]; NUM_SIZES],
+            after_claw_free: vec![vec![0; NUM_DENSITY_STEPS]; NUM_SIZES],
+            before_simplicial: vec![vec![0; NUM_DENSITY_STEPS]; NUM_SIZES],
+            after_simplicial: vec![vec![0; NUM_DENSITY_STEPS]; NUM_SIZES],
+            collapsed: vec![vec![0.; NUM_DENSITY_STEPS]; NUM_SIZES],
         }
     }
 
@@ -64,10 +76,22 @@ impl CountResults {
         let mut ret = Self::init();
         for result in results {
             for i in 0..NUM_SIZES {
-                let ret_simp = ret.simplicial.get_mut(i).unwrap();
-                let result_simp = result.simplicial.get(i).unwrap();
+                let ret_before_claw_free = ret.before_claw_free.get_mut(i).unwrap();
+                let before_claw_free = result.before_claw_free.get(i).unwrap();
+                let ret_after_claw_free = ret.after_claw_free.get_mut(i).unwrap();
+                let after_claw_free = result.after_claw_free.get(i).unwrap();
+                let ret_before_simp = ret.before_simplicial.get_mut(i).unwrap();
+                let before_simp = result.before_simplicial.get(i).unwrap();
+                let ret_after_simp = ret.after_simplicial.get_mut(i).unwrap();
+                let after_simp = result.after_simplicial.get(i).unwrap();
+                let ret_collapsed = ret.collapsed.get_mut(i).unwrap();
+                let collapsed = result.collapsed.get(i).unwrap();
                 for j in 0..NUM_DENSITY_STEPS {
-                    ret_simp[j] += result_simp[j];
+                    ret_before_claw_free[j] += before_claw_free[j];
+                    ret_after_claw_free[j] += after_claw_free[j];
+                    ret_before_simp[j] += before_simp[j];
+                    ret_after_simp[j] += after_simp[j];
+                    ret_collapsed[j] += collapsed[j];
                 }
             }
         }
@@ -82,7 +106,11 @@ impl Results {
             sizes: Vec::new(),
             seed: 0,
             num_samples: NUM_TOTAL_SAMPLES,
-            simplicial: vec![vec![0.0; NUM_DENSITY_STEPS]; NUM_SIZES],
+            before_claw_free: vec![vec![0.0; NUM_DENSITY_STEPS]; NUM_SIZES],
+            after_claw_free: vec![vec![0.0; NUM_DENSITY_STEPS]; NUM_SIZES],
+            before_simplicial: vec![vec![0.0; NUM_DENSITY_STEPS]; NUM_SIZES],
+            after_simplicial: vec![vec![0.0; NUM_DENSITY_STEPS]; NUM_SIZES],
+            collapsed: vec![vec![0.0; NUM_DENSITY_STEPS]; NUM_SIZES],
         }
     }
 
@@ -98,25 +126,39 @@ impl Results {
         ret.seed = seed;
 
         for i in 0..NUM_SIZES {
-            let ret_simp = ret.simplicial.get_mut(i).unwrap();
-            let results_simp = results.simplicial.get(i).unwrap();
+            let ret_before_claw_free = ret.before_claw_free.get_mut(i).unwrap();
+            let before_claw_free = results.before_claw_free.get(i).unwrap();
+            let ret_after_claw_free = ret.after_claw_free.get_mut(i).unwrap();
+            let after_claw_free = results.after_claw_free.get(i).unwrap();
+            let ret_before_simp = ret.before_simplicial.get_mut(i).unwrap();
+            let before_simp = results.before_simplicial.get(i).unwrap();
+            let ret_after_simp = ret.after_simplicial.get_mut(i).unwrap();
+            let after_simp = results.after_simplicial.get(i).unwrap();
+            let ret_collapsed = ret.collapsed.get_mut(i).unwrap();
+            let collapsed = results.collapsed.get(i).unwrap();
             for j in 0..NUM_DENSITY_STEPS {
-                ret_simp[j] = results_simp[j] as f64 / NUM_TOTAL_SAMPLES as f64;
+                ret_before_claw_free[j] =
+                    before_claw_free[j] as f64 / NUM_TOTAL_SAMPLES as f64;
+                ret_after_claw_free[j] =
+                    after_claw_free[j] as f64 / NUM_TOTAL_SAMPLES as f64;
+                ret_before_simp[j] = before_simp[j] as f64 / NUM_TOTAL_SAMPLES as f64;
+                ret_after_simp[j] = after_simp[j] as f64 / NUM_TOTAL_SAMPLES as f64;
+                ret_collapsed[j] = collapsed[j] / NUM_TOTAL_SAMPLES as f64;
             }
         }
         ret
     }
 }
 
-pub fn periodic() {
+pub fn run() {
     let id = env::args()
         .nth(1)
         .expect("id not provided")
         .parse::<usize>()
         .expect("id not a number");
 
-    // let seed = 0;
-    let seed = Pcg64::from_entropy().gen();
+    let seed = 0;
+    // let seed = Pcg64::from_entropy().gen();
 
     let seeds = rand_helper::generate_seeds::<NUM_THREADS>(Some(seed));
     let densities = get_densities();
@@ -127,10 +169,19 @@ pub fn periodic() {
 
         for (size_idx, size) in (SIZE_START..=SIZE_END).step_by(2).enumerate() {
             println!("{:?}", size);
-            let ret_simp = ret.simplicial.get_mut(size_idx).unwrap();
+            let ret_before_claw_free = ret.before_claw_free.get_mut(size_idx).unwrap();
+            let ret_after_claw_free = ret.after_claw_free.get_mut(size_idx).unwrap();
+            let ret_before_simp = ret.before_simplicial.get_mut(size_idx).unwrap();
+            let ret_after_simp = ret.after_simplicial.get_mut(size_idx).unwrap();
+            let ret_collapsed = ret.collapsed.get_mut(size_idx).unwrap();
+
             for (density_idx, density) in densities.iter().copied().enumerate() {
                 let d = Density::new(density);
-                let mut simplicial = 0;
+                let mut before_claw_free = 0;
+                let mut after_claw_free = 0;
+                let mut before_simplicial = 0;
+                let mut after_simplicial = 0;
+                let mut collapsed = 0.;
 
                 let mut i = 0;
                 while i < NUM_SAMPLES {
@@ -142,22 +193,43 @@ pub fn periodic() {
 
                     if graph.is_empty() {
                         i += 1;
-                        simplicial += 1;
+                        before_claw_free += 1;
+                        after_claw_free += 1;
+                        before_simplicial += 1;
+                        after_simplicial += 1;
                         continue;
                     }
 
+                    let orig_len = graph.len();
                     let mut tree = graph.modular_decomposition();
-                    graph.twin_collapse(&mut tree);
-                    let check = check::do_gen_check(&graph, &tree);
 
+                    let check = check::do_gen_check(&graph, &tree);
+                    if check.claw_free {
+                        before_claw_free += 1;
+                    }
                     if check.simplicial {
-                        simplicial += 1;
+                        before_simplicial += 1;
+                    }
+
+                    graph.twin_collapse(&mut tree);
+                    collapsed += (orig_len - graph.len()) as f64 / orig_len as f64;
+
+                    let check = check::do_gen_check(&graph, &tree);
+                    if check.claw_free {
+                        after_claw_free += 1;
+                    }
+                    if check.simplicial {
+                        after_simplicial += 1;
                     }
 
                     i += 1;
                 }
 
-                ret_simp[density_idx] = simplicial;
+                ret_before_claw_free[density_idx] = before_claw_free;
+                ret_after_claw_free[density_idx] = after_claw_free;
+                ret_before_simp[density_idx] = before_simplicial;
+                ret_after_simp[density_idx] = after_simplicial;
+                ret_collapsed[density_idx] = collapsed;
             }
         }
         println!("thread {id} finished");
@@ -178,13 +250,9 @@ pub fn periodic() {
     );
 
     fs::write(
-        // format!("output/e_structure_{id}.json"),
         format!("output/e_structure_first_{id}.json"),
+        // format!("output/e_structure_second_{id}.json"),
         serde_json::to_string_pretty(&results).unwrap(),
     )
     .unwrap();
-}
-
-pub fn run() {
-    periodic()
 }

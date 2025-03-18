@@ -7,7 +7,7 @@
 #PBS -M jannis.ruh@student.uts.edu.au
 #PBS -N free_fermions
 
-#PBS -J 1-20
+#PBS -J 41-80
 
 # 200h is the maximum, otherwise the job doesn't even get queued
 #PBS -l walltime=06:00:00 

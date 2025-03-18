@@ -17,7 +17,7 @@ impl Commutator for MajoranaString {
             .fold((false, false, false), |(s, o, i), (&x, &y)| {
                 (s ^ x, o ^ y, i ^ (x && y))
             });
-        (abs_self && abs_other) ^ inner
+        !((abs_self && abs_other) ^ inner)
     }
 }
 
@@ -32,6 +32,7 @@ impl ElectronicStructure {
         let dist = Bernoulli::new(density).unwrap();
 
         let n_choose_2 = n * (n - 1) / 2;
+        // for n = 2, this results in 0 as it should
         let n_choose_4 = n * (n - 1) * (n - 2) * (n - 3) / 24;
 
         let mut operators: Vec<MajoranaString> = Vec::with_capacity(
@@ -52,6 +53,8 @@ impl ElectronicStructure {
                     }
                 }),
         );
+        // for n = 2, the third (and fourth) loop are empty as it should since we don't
+        // have any 4-body operators
         operators.extend(
             (0..n)
                 .flat_map(|i| {
