@@ -28,6 +28,7 @@ def main():
             fig.add_subplot(gs[3 * factor + space : 4 * factor + space, 0]),
         ],
     ]
+    gs.update(hspace=0.005)
 
     ranges = [
         range(1, 5),
@@ -39,7 +40,6 @@ def main():
         color_map(i)
         for i in np.linspace(0.0, 0.95, len(ranges[0]) + len(ranges[1]) - 1)
     ]
-    print(len(colors))
 
     linestyles = [
         "dashed",
@@ -49,6 +49,7 @@ def main():
     labels = [
         r"$p_{\mathrm{SCF}}$",
         r"$\Delta p_{\mathrm{SCF}}$",
+        r"$\Delta \Xi$",
     ]
 
     for i, (color_offset, orbit_range) in enumerate(
@@ -77,25 +78,50 @@ def main():
                 linestyle=linestyles[2],
                 color=colors[color_offset + j],
             )
-        handles, labels = axs[i][0].get_legend_handles_labels()
-        axs[i][0].legend(handles, labels, loc="upper right")
-
-    axs[0][1].set_yticks([0, 50, 100])
-    axs[0][1].set_yticklabels(["0", "50", "100"])
+        handles, this_labels = axs[i][0].get_legend_handles_labels()
+        axs[i][0].legend(handles, this_labels, loc="upper right")
 
     # ymax = ao.get_ylim()[1]
     # ao.set_ylim(0, ymax)
-    # for ax in [ao, au]:
-    #     # ax.set_ylabel(label)
-    #     ax.set_xlim(0, 1)
-    #     ax.grid()
-    #     ax.tick_params(axis="x", which="both", bottom=True, top=True, labelbottom=True)
-    #     handles, labels = ax.get_legend_handles_labels()
-    #     ax.legend(handles, labels, loc="upper right")
+    for ax in sum(axs, []):
+        ax.set_ylim(0, ax.get_ylim()[1])
+        ax.grid()
+        ax.tick_params(axis="x", which="both", bottom=True, top=True)
+        # handles, labels = ax.get_legend_handles_labels()
+        # ax.legend(handles, labels, loc="upper right")
 
-    # au.set_xlabel(r"$d$")
+    for ax in [axs[0][1], axs[1][1]]:
+        ax.set_xlabel(r"$d$")
+        ax.xaxis.set_label_coords(0.5, -0.14)
+        ax.set_ylabel(r"[\%]")
 
-    plt.subplots_adjust(top=0.96, bottom=0.13, left=0.14, right=0.960)
+    for ax in [axs[0][0], axs[1][0]]:
+        # ax.set_yticks([0.5, 1.0])
+        # ax.set_yticklabels(["0.5", "1.0"])
+        ax.set_ylabel(labels[0])
+        ax.tick_params(axis="x", labelbottom=False)
+
+    for ax in axs[0]:
+        ax.set_xlim(0, 1)
+    for ax in axs[1]:
+        ax.set_xlim(0, 0.06)
+
+    axs[0][1].set_ylim(0, 109.5)
+    axs[0][1].set_yticks([0, 50, 100])
+    axs[0][1].set_yticklabels(["0", "50", "100"])
+    axs[1][1].set_xticks([0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06])
+    axs[1][1].set_xticklabels(["0.00", "0.01", "0.02", "0.03", "0.04", "0.05", "0.06"])
+
+    ax = axs[1][1]
+    ax.plot([], [], color="black", linestyle = linestyles[0], label=labels[0])
+    ax.plot([], [], color="black", linestyle = linestyles[1], label=labels[1])
+    ax.plot([], [], color="black", linestyle = linestyles[2], label=labels[2])
+    handles, labels = ax.get_legend_handles_labels()
+    handles = handles[-3:]
+    labels = labels[-3:]
+    ax.legend(handles, labels, loc="upper right")
+
+    plt.subplots_adjust(top=0.98, bottom=0.07, left=0.14, right=0.950)
 
     plt.savefig(f"output/e_structure.pdf")
 
@@ -128,8 +154,8 @@ class Data:
         self.density_len = len(self.densities)
         self.size_len = len(self.sizes)
 
-        # num_sample_files = 20
-        num_sample_files = 1
+        num_sample_files = 60
+        # num_sample_files = 1
         num_total_samples = 0
 
         self.simplicial = np.array(
@@ -150,7 +176,7 @@ class Data:
             num_total_samples += num_samples
             self.simplicial += num_samples * np.array(data["after_simplicial"])
             before_simplicial += num_samples * np.array(data["before_simplicial"])
-
+        print(num_total_samples)
         self.simplicial /= num_total_samples
         before_simplicial /= num_total_samples
         self.delta_simplicial = (self.simplicial - before_simplicial) * 100

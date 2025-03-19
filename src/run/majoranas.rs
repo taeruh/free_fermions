@@ -13,21 +13,21 @@ use crate::{
 
 // adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
 // much)
-// const NUM_THREADS: usize = 50;
-const NUM_THREADS: usize = 10;
+const NUM_THREADS: usize = 50;
+// const NUM_THREADS: usize = 10;
 const NUM_SAMPLES: usize = 100; // per thread
 
 const DENSITY_START: f64 = 0.00;
-// const DENSITY_END: f64 = 0.06;
-const DENSITY_END: f64 = 1.0;
-// const NUM_DENSITY_STEPS: usize = 200;
-const NUM_DENSITY_STEPS: usize = 100;
+const DENSITY_END: f64 = 0.06;
+// const DENSITY_END: f64 = 1.0;
+const NUM_DENSITY_STEPS: usize = 200;
+// const NUM_DENSITY_STEPS: usize = 100;
 
 // these two have to be even
-// const SIZE_START: usize = 10;
-// const SIZE_END: usize = 18;
-const SIZE_START: usize = 2;
-const SIZE_END: usize = 10;
+const SIZE_START: usize = 10;
+const SIZE_END: usize = 18;
+// const SIZE_START: usize = 2;
+// const SIZE_END: usize = 10;
 const NUM_SIZES: usize = (SIZE_END - SIZE_START) / 2 + 1;
 
 const NUM_TOTAL_SAMPLES: usize = NUM_THREADS * NUM_SAMPLES;
@@ -157,8 +157,8 @@ pub fn run() {
         .parse::<usize>()
         .expect("id not a number");
 
-    let seed = 0;
-    // let seed = Pcg64::from_entropy().gen();
+    // let seed = 0;
+    let seed = Pcg64::from_entropy().gen();
 
     let seeds = rand_helper::generate_seeds::<NUM_THREADS>(Some(seed));
     let densities = get_densities();
@@ -250,8 +250,8 @@ pub fn run() {
     );
 
     fs::write(
-        format!("output/e_structure_first_{id}.json"),
-        // format!("output/e_structure_second_{id}.json"),
+        // format!("output/e_structure_first_{id}.json"),
+        format!("output/e_structure_second_{id}.json"),
         serde_json::to_string_pretty(&results).unwrap(),
     )
     .unwrap();
