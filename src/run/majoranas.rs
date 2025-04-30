@@ -15,7 +15,7 @@ use crate::{
 // much)
 const NUM_THREADS: usize = 50;
 // const NUM_THREADS: usize = 10;
-const NUM_SAMPLES: usize = 100; // per thread
+const NUM_SAMPLES: usize = 600; // per thread
 
 const DENSITY_START: f64 = 0.00;
 const DENSITY_END: f64 = 0.06;

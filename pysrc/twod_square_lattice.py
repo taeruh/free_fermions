@@ -6,8 +6,8 @@ import numpy as np
 
 data_dir = "output"
 # data_dir = "results"
-file = "periodic_bricks_"
-# file = "periodic_bricks_full_"
+# file = "periodic_square_lattice_"
+file = "periodic_square_lattice_full_"
 
 
 def main():
@@ -91,13 +91,13 @@ def main():
         color=colors[1],
         linestyle=linestyles[1],
     )
-    axl.plot(
-        densities,
-        results["collapsed"] * 100,
-        label=labels[2],
-        color=colors[2],
-        linestyle=linestyles[2],
-    )
+    # axl.plot(
+    #     densities,
+    #     results["collapsed"] * 100,
+    #     label=labels[2],
+    #     color=colors[2],
+    #     linestyle=linestyles[2],
+    # )
 
     print(
         f"before sum(|scf - cf|) = {np.abs(results["before_claw_free"] -
@@ -124,7 +124,7 @@ def main():
     axl.set_yticks([0.0, 2.5, 5.0])
     plt.subplots_adjust(top=0.96, bottom=0.13, left=0.14, right=0.970)
 
-    plt.savefig(f"output/periodic_bricks.pdf")
+    plt.savefig(f"output/periodic_square_lattice.pdf")
 
 
 def paper_setup():

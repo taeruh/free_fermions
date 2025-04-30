@@ -52,17 +52,17 @@ impl Commutator for Pauli {
 
 impl<const N: usize, Op: Commutator> Commutator for LocalOperator<N, Op> {
     fn commute(&self, other: &Self) -> bool {
-        let mut negated_res = false;
+        let mut anticommute = false;
         for s in 0..N {
             for o in 0..N {
                 if self.index[s] == other.index[o]
                     && !self.pauli[s].commute(&other.pauli[o])
                 {
-                    negated_res ^= true;
+                    anticommute ^= true;
                 }
             }
         }
-        !negated_res
+        !anticommute
     }
 }
 

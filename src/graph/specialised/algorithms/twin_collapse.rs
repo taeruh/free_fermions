@@ -36,7 +36,8 @@ impl<G: GraphData> Graph<G> {
                 *node = unsafe { graph_map.mapped_unchecked(*node) };
             }
         }
-        tree.root = (unsafe { tree_map.mapped_unchecked(tree.root.index()) } as int).into();
+        tree.root =
+            (unsafe { tree_map.mapped_unchecked(tree.root.index()) } as int).into();
     }
 
     fn recurse_collapse(
@@ -60,16 +61,60 @@ impl<G: GraphData> Graph<G> {
                 let children: Vec<_> = tree
                     .neighbors_directed(updated_module, Direction::Outgoing)
                     .collect();
-                if *tree.node_weight(updated_module).unwrap() == ModuleKind::Prime {
-                    for child in children {
-                        if matches!(tree.node_weight(child).unwrap(), ModuleKind::Node(_))
-                        {
-                            continue;
-                        }
-                        self.recurse_collapse(tree, child, graph_map, tree_map);
+                for child in children.iter() {
+                    if matches!(tree.node_weight(*child).unwrap(), ModuleKind::Node(_)) {
+                        continue;
                     }
-                    return;
+                    self.recurse_collapse(tree, *child, graph_map, tree_map);
                 }
+
+                // TODO: this is just copied from the generic version to make the tests
+                // pass; should implement that more efficiently here ... {{
+                if children.len() <= 4 // (should be) equivalent to "== 4"
+                && children.iter().all(|child| {
+                    matches!(
+                        tree.node_weight((tree_map.mapped(child.index()) as u32).into())
+                            .unwrap(),
+                        ModuleKind::Node(_)
+                    )
+                }) {
+                    for child in children[1..].iter() {
+                        let node = if let ModuleKind::Node(node) = tree
+                            .node_weight((tree_map.mapped(child.index()) as u32).into())
+                            .unwrap()
+                        {
+                            node
+                        } else {
+                            unreachable!(
+                                "already checked above that all children are nodes"
+                            )
+                        };
+                        self.remove_node(graph_map.swap_remove(*node));
+                        tree.remove_node(
+                            (tree_map.swap_remove(child.index()) as u32).into(),
+                        );
+                    }
+                    let updated_module = (tree_map.mapped(module.index()) as u32).into();
+                    *tree.node_weight_mut(updated_module).unwrap() = ModuleKind::Node(
+                        if let ModuleKind::Node(node) = tree
+                            .node_weight(
+                                (tree_map.mapped(children[0].index()) as u32).into(),
+                            )
+                            .unwrap()
+                        {
+                            *node
+                        } else {
+                            unreachable!(
+                                "already checked above that all children are nodes"
+                            )
+                        },
+                    );
+                    tree.remove_node(
+                        (tree_map.swap_remove(children[0].index()) as u32).into(),
+                    );
+                    // }}
+                }
+                return;
             },
             _ => {},
         }
@@ -80,7 +125,8 @@ impl<G: GraphData> Graph<G> {
             node: NodeIndex,
             tree_map: &SwapRemoveMap,
         ) -> &'t ModuleKind<Node> {
-            tree.node_weight((tree_map.mapped(node.index()) as int).into()).unwrap()
+            tree.node_weight((tree_map.mapped(node.index()) as int).into())
+                .unwrap()
         }
 
         #[inline(always)]

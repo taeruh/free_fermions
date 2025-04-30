@@ -63,7 +63,12 @@ pub mod tests {
             (2, [1, 3]),
             (3, [2]),
         );
-        let collapsed = vec![input.clone()];
+        let collapsed = [0, 1, 2, 3].into_iter().map(|representative| {
+            collect!(
+                hh, map;
+                (representative, []),
+            )
+        });
         check::<G>(input, collapsed, false);
     }
 
@@ -158,13 +163,10 @@ pub mod tests {
             (4, [2, 3]),
             (5, [2]),
         );
-        let collapsed = [3, 4, 5].into_iter().map(|representative| {
+        let collapsed = [0, 1, 2, 3, 4, 5].into_iter().map(|representative| {
             collect!(
                 hh, map;
-                (0, [1]),
-                (1, [0, 2]),
-                (2, [1, representative]),
-                (representative, [2]),
+                (representative, []),
             )
         });
         check::<G>(input, collapsed, false);
@@ -180,13 +182,10 @@ pub mod tests {
             (4, [1, 5]),
             (5, [2, 3, 4]),
         );
-        let collapsed = [2, 3, 4].into_iter().map(|representative| {
+        let collapsed = [0, 1, 2, 3, 4, 5].into_iter().map(|representative| {
             collect!(
                 hh, map;
-                (0, [1]),
-                (1, [0, representative]),
-                (representative, [1, 5]),
-                (5, [representative]),
+                (representative, []),
             )
         });
         check::<G>(input, collapsed, false);

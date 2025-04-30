@@ -35,8 +35,44 @@ impl<G: ImplGraph> Graph<G> {
             tree.neighbors_directed(new_root, Direction::Outgoing).collect();
 
         if *tree.node_weight(new_root).unwrap() == ModuleKind::Prime {
-            for child in children {
-                self.recurse_collapse(tree, child, graph_map, tree_map);
+            for child in children.iter() {
+                self.recurse_collapse(tree, *child, graph_map, tree_map);
+            }
+            if children.len() <= 4 // (should be) equivalent to "== 4"
+                && children.iter().all(|child| {
+                    matches!(
+                        tree.node_weight((tree_map.mapped(child.index()) as u32).into())
+                            .unwrap(),
+                        ModuleKind::Node(_)
+                    )
+                })
+            {
+                for child in children[1..].iter() {
+                    let node = if let ModuleKind::Node(node) = tree
+                        .node_weight((tree_map.mapped(child.index()) as u32).into())
+                        .unwrap()
+                    {
+                        node
+                    } else {
+                        unreachable!("already checked above that all children are nodes")
+                    };
+                    self.remove_node(graph_map.swap_remove(*node));
+                    tree.remove_node((tree_map.swap_remove(child.index()) as u32).into());
+                }
+                let new_root = (tree_map.mapped(root.index()) as u32).into();
+                *tree.node_weight_mut(new_root).unwrap() = ModuleKind::Node(
+                    if let ModuleKind::Node(node) = tree
+                        .node_weight((tree_map.mapped(children[0].index()) as u32).into())
+                        .unwrap()
+                    {
+                        *node
+                    } else {
+                        unreachable!("already checked above that all children are nodes")
+                    },
+                );
+                tree.remove_node(
+                    (tree_map.swap_remove(children[0].index()) as u32).into(),
+                );
             }
             return;
         }
@@ -47,8 +83,9 @@ impl<G: ImplGraph> Graph<G> {
         let mut children = children.into_iter();
         for child in children.by_ref() {
             self.recurse_collapse(tree, child, graph_map, tree_map);
-            if let ModuleKind::Node(node) =
-                tree.node_weight((tree_map.mapped(child.index()) as u32).into()).unwrap()
+            if let ModuleKind::Node(node) = tree
+                .node_weight((tree_map.mapped(child.index()) as u32).into())
+                .unwrap()
             {
                 remaining_leaf = Some((*node, child.index()));
                 num_children -= 1;
@@ -58,8 +95,9 @@ impl<G: ImplGraph> Graph<G> {
         // continue with the rest of the children
         for child in children {
             self.recurse_collapse(tree, child, graph_map, tree_map);
-            if let ModuleKind::Node(node) =
-                tree.node_weight((tree_map.mapped(child.index()) as u32).into()).unwrap()
+            if let ModuleKind::Node(node) = tree
+                .node_weight((tree_map.mapped(child.index()) as u32).into())
+                .unwrap()
             {
                 self.remove_node(graph_map.swap_remove(*node));
                 tree.remove_node((tree_map.swap_remove(child.index()) as u32).into());

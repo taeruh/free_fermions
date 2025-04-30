@@ -154,7 +154,7 @@ class Data:
         self.density_len = len(self.densities)
         self.size_len = len(self.sizes)
 
-        num_sample_files = 60
+        num_sample_files = 70
         # num_sample_files = 1
         num_total_samples = 0
 
@@ -170,7 +170,7 @@ class Data:
                 with open(f"{data_dir}/{thisfile}{i}.json") as f:
                     data = json.load(f)
             except FileNotFoundError:
-                print(f"File {file}{i} not found")
+                print(f"File {thisfile}{i} not found")
                 continue
             num_samples = data["num_samples"]
             num_total_samples += num_samples

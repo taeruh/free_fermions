@@ -14,20 +14,23 @@ use serde::Serialize;
 
 use crate::{
     graph::generic::ImplGraph,
-    hamiltonian::{Density, bricks::Bricks},
+    hamiltonian::{Density, square_lattice::PeriodicLattice},
     rand_helper,
     run::{GenGraph, check},
 };
 
 // adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
 // much)
-const NUM_THREADS: usize = 50;
-const NUM_SAMPLES: usize = 10000; // per thread
+// const NUM_THREADS: usize = 50;
+const NUM_THREADS: usize = 10;
+// const NUM_SAMPLES: usize = 10000; // per thread
+const NUM_SAMPLES: usize = 100; // per thread
 
-const DENSITY_START: f64 = 1. / 9.;
-// const DENSITY_END: f64 = 0.40;
-const DENSITY_END: f64 = 1.00;
-const NUM_DENSITY_STEPS: usize = 2000;
+const DENSITY_START: f64 = 0.01;
+const DENSITY_END: f64 = 0.40;
+// const DENSITY_END: f64 = 1.00;
+// const NUM_DENSITY_STEPS: usize = 2000;
+const NUM_DENSITY_STEPS: usize = 100;
 
 const NUM_TOTAL_SAMPLES: usize = NUM_THREADS * NUM_SAMPLES;
 
@@ -172,8 +175,8 @@ pub fn periodic() {
         let mut ret = CountResults::init();
 
         for (density_idx, density) in densities.iter().copied().enumerate() {
-            let (e1d, e2d, e3d, e4d, e5d) =
-                (0..5).map(|_| Density::new(density)).collect_tuple().unwrap();
+            let (ed, nd, eed, end) =
+                (0..4).map(|_| Density::new(density)).collect_tuple().unwrap();
             let mut before_claw_free = 0;
             let mut before_simplicial = 0;
             let mut after_claw_free = 0;
@@ -182,11 +185,15 @@ pub fn periodic() {
 
             let mut i = 0;
             while i < NUM_SAMPLES {
-                // println!("{:?}", i);
-                let lattice = Bricks::draw(e1d, e2d, e3d, e4d, e5d, rng);
+                println!("{:?}", i);
+                let lattice = PeriodicLattice::draw(ed, nd, eed, end, rng);
                 // let lattice = crate::hamiltonian::square_lattice::PeriodicLattice::draw(
                 //     Density::new(0.), Density::new(0.), e3d, e4d, rng,
                 // );
+
+                if !lattice.is_2d {
+                    continue;
+                }
 
                 let mut graph = GenGraph::from_edge_labels(lattice.get_graph()).unwrap();
 
@@ -259,7 +266,7 @@ pub fn periodic() {
     );
 
     fs::write(
-        format!("output/periodic_bricks_full_{id}.json"),
+        format!("output/periodic_square_lattice_full_{id}.json"),
         serde_json::to_string_pretty(&results).unwrap(),
     )
     .unwrap();

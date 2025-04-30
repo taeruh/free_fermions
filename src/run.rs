@@ -6,12 +6,13 @@ use crate::graph::{
 };
 
 mod all_of_them;
+mod bricks;
 mod chain;
 mod check;
 mod erdos_renyi;
-mod lattice;
 mod majoranas;
 mod removal_examples;
+mod twod_square_lattice;
 
 // TODO: roughly test which implementations is the fastest
 type GenGraph = generic::Graph<Pet>;
@@ -20,8 +21,9 @@ type Graph = specialised::Graph<Custom>;
 pub fn run() {
     fs::create_dir_all("output").unwrap();
     // chain::run();
-    // lattice::run();
-    majoranas::run();
+    bricks::run();
+    // twod_square_lattice::run();
+    // majoranas::run();
     // erdos_renyi::run();
     // all_of_them::run();
     // removal_examples::run();

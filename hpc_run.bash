@@ -9,7 +9,7 @@
 
 # when I do more than roughly 20 jobs, I get apparently really far down in the queue
 # -> it is often faster to run less jobs but do it multiple times
-#PBS -J 1-20
+#PBS -J 60-70
 
 # 200h is the maximum, otherwise the job doesn't even get queued
 #PBS -l walltime=06:00:00 
