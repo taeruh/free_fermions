@@ -31,9 +31,10 @@ def main():
     gs.update(hspace=0.005)
 
     ranges = [
-        range(1, 5),
+        range(0, 4),
         range(0, 4),
     ]
+    color_offsets = [0, len(ranges[0]) - 1]
 
     color_map = matplotlib.colormaps["plasma"]
     colors = [
@@ -53,7 +54,7 @@ def main():
     ]
 
     for i, (color_offset, orbit_range) in enumerate(
-        zip([-1, len(ranges[0]) - 1], ranges)
+        zip(color_offsets, ranges)
     ):
         for j in orbit_range:
             axs[i][0].plot(
@@ -145,8 +146,13 @@ def paper_setup():
 
 class Data:
     def __init__(self, suffix: str):
+        offset = 901
+        num_sample_files = 1
+        # offset = 1
+        # num_sample_files = 20
+
         thisfile = f"{file}{suffix}"
-        with open(f"{data_dir}/{thisfile}1.json") as f:
+        with open(f"{data_dir}/{thisfile}{offset}.json") as f:
             data = json.load(f)
 
         self.densities = data["densities"]
@@ -154,8 +160,6 @@ class Data:
         self.density_len = len(self.densities)
         self.size_len = len(self.sizes)
 
-        num_sample_files = 70
-        # num_sample_files = 1
         num_total_samples = 0
 
         self.simplicial = np.array(
@@ -164,8 +168,11 @@ class Data:
         before_simplicial = np.array(
             np.tile(0, (self.size_len, self.density_len)), dtype=float
         )
+        self.collapsed = np.array(
+            np.tile(0, (self.size_len, self.density_len)), dtype=float
+        )
 
-        for i in range(1, num_sample_files + 1):
+        for i in range(offset, num_sample_files + offset):
             try:
                 with open(f"{data_dir}/{thisfile}{i}.json") as f:
                     data = json.load(f)
@@ -176,11 +183,12 @@ class Data:
             num_total_samples += num_samples
             self.simplicial += num_samples * np.array(data["after_simplicial"])
             before_simplicial += num_samples * np.array(data["before_simplicial"])
+            self.collapsed += num_samples * np.array(data["collapsed"])
         print(num_total_samples)
         self.simplicial /= num_total_samples
         before_simplicial /= num_total_samples
         self.delta_simplicial = (self.simplicial - before_simplicial) * 100
-        self.collapsed = np.array(data["collapsed"]) * 100
+        self.collapsed *= 100. / num_total_samples
 
 
 # get default with \the\textwidth

@@ -9,10 +9,10 @@
 
 # when I do more than roughly 20 jobs, I get apparently really far down in the queue
 # -> it is often faster to run less jobs but do it multiple times
-#PBS -J 60-70
+#PBS -J 10-11
 
 # 200h is the maximum, otherwise the job doesn't even get queued
-#PBS -l walltime=06:00:00 
+#PBS -l walltime=30:00:00 
 # see for max possible resource on a single node: https://hpc.research.uts.edu.au/status/
 # (select=1 is probably the default (putting stuff onto one chunk(/host?)))
 #PBS -l select=1:ncpus=50:mem=10GB

@@ -10,9 +10,11 @@ mod bricks;
 mod chain;
 mod check;
 mod erdos_renyi;
+mod klocal;
 mod majoranas;
 mod removal_examples;
 mod twod_square_lattice;
+mod density_size_sweep;
 
 // TODO: roughly test which implementations is the fastest
 type GenGraph = generic::Graph<Pet>;
@@ -21,12 +23,24 @@ type Graph = specialised::Graph<Custom>;
 pub fn run() {
     fs::create_dir_all("output").unwrap();
     // chain::run();
-    bricks::run();
+    // bricks::run();
     // twod_square_lattice::run();
     // majoranas::run();
     // erdos_renyi::run();
     // all_of_them::run();
     // removal_examples::run();
+    klocal::run();
+}
+
+fn uniform_densities(
+    density_start: f64,
+    density_end: f64,
+    num_density_steps: usize,
+) -> Vec<f64> {
+    let delta = (density_end - density_start) / (num_density_steps - 1) as f64;
+    (0..num_density_steps)
+        .map(|i| density_start + delta * (i as f64))
+        .collect()
 }
 
 // // use std::collections::HashSet;

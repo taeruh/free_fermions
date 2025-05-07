@@ -119,5 +119,6 @@ fn draw_doubles(density: f64, rng: &mut impl Rng) -> Vec<(Pauli, Pauli)> {
 
 pub mod bricks;
 pub mod electronic_structure;
+pub mod two_local;
 pub mod oned_chain;
 pub mod square_lattice;

@@ -21,7 +21,7 @@ mod tests {
     use crate::graph::generic::Pet;
 
     #[test]
-    fn this_test() {
+    fn test() {
         let list = [
             (1, 2),
             (1, 5),

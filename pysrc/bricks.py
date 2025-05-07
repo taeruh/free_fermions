@@ -27,7 +27,7 @@ def main():
         "collapsed": np.array(np.zeros(density_len)),
     }
 
-    num_sample_files = 3
+    num_sample_files = 20
     num_total_samples = 0
 
     for i in range(num_sample_files):
