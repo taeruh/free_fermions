@@ -10,6 +10,10 @@ impl Density {
         assert!((0.0..=1.0).contains(&f));
         Self(f)
     }
+
+    pub fn get(&self) -> f64 {
+        self.0
+    }
 }
 
 pub trait Commutator {

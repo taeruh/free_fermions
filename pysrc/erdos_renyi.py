@@ -1,78 +1,214 @@
 #!/usr/bin/env python
 
-import json
 import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
+import scipy
 
-CONSIDER_PARALLEL_GRAPHS = "true"
-# CONSIDER_PARALLEL_GRAPHS = "false"
+from data_density_sizes import Data
+from plot_helper import paper_setup, set_size
+
+data_dir = "output"
+# data_dir = "results"
+file = "erdos_renyi_"
+
+
+def choose_two(n):
+    return n * (n - 1) / 2
+
+
+def choose_four(n):
+    return n * (n - 1) * (n - 2) * (n - 3) / 24
+
+
+def binomial(n, k):
+    return scipy.special.comb(n, k)
+
+
+def four_set_has_claw(density):
+    return 4 * density**3 * (1 - density) ** 3
+
+
+def is_simplicial_exponent(density, set_size, size):
+    return set_size * ((set_size - 1) / 2 + (size - set_size) * density)
+
+
+def set_is_simplicial_clique(density, set_size, size):
+    return density ** is_simplicial_exponent(density, set_size, size)
+
+
+def _upper_claw_bound(density):
+    return 1 - four_set_has_claw(density)
+
+
+def _lower_claw_bound(density, size):
+    return 1 - choose_four(size) * four_set_has_claw(density)
+
+
+def _upper_simplicial_bound(density, size):
+    ret = 0
+    for set_size in range(1, int(np.min([size, 5]))):
+        ret += binomial(size, set_size) * set_is_simplicial_clique(
+            density, set_size, size
+        )
+    return ret
+
+
+def _lower_simplicial_bound(density, size):
+    return set_is_simplicial_clique(density, size, size)
+
+
+lower_claw_bound = np.vectorize(_lower_claw_bound)
+upper_claw_bound = np.vectorize(_upper_claw_bound)
+upper_simplicial_bound = np.vectorize(_upper_simplicial_bound)
+lower_simplicial_bound = np.vectorize(_lower_simplicial_bound)
 
 
 def main():
-    with open(f"output/erdos_renyi_{CONSIDER_PARALLEL_GRAPHS}.json") as f:
-        data = json.load(f)
+    data = Data(data_dir, file)
 
-    fig = plt.figure()
-    gs = fig.add_gridspec(4, 2)
-    acs = []
-    for i in range(4):
-        acs.append([])
-        for j in range(2):
-            acs[i].append(fig.add_subplot(gs[i, j]))
+    paper_setup()
 
-    size_start = 4
-    size_end = 4
-    size_len = size_end + 1 - size_start
-    size_step = 2
-    size_ticks = [s for s in range(size_start, size_end + 1, size_step)]
+    fig = plt.figure(figsize=set_size(height_in_width=0.7))
+    gs = fig.add_gridspec(2, 1)
+    axs = [
+        fig.add_subplot(gs[0, 0]),
+        fig.add_subplot(gs[1, 0]),
+    ]
+    gs.update(hspace=0.005)
 
-    density_len = len(data["densities"])
-    density_step = 20
-    density_ticks = [data["densities"][d] for d in range(0, density_len, density_step)]
+    orbit_range = range(0, 2)
+    color_offset = 0
 
-    for i in range(4):
-        for j in range(2):
-            acs[i][j].set_xticks(range(0, density_len, density_step))
-            acs[i][j].set_xticklabels(density_ticks)
-            acs[i][j].set_yticks(range(0, size_len, size_step))
-            acs[i][j].set_yticklabels(size_ticks)
+    color_map = matplotlib.colormaps["plasma"]
+    colors = [
+        color_map(i)
+        for i in np.linspace(0.0, 0.95, len(orbit_range) + len(orbit_range) - 1)
+    ]
 
-    dat = {}
-    for i, j, d in [
-        (0, 0, "before_collapse_claw_free"),
-        (0, 1, "claw_free"),
-        (1, 0, "before_collapse_simplicial"),
-        (1, 1, "simplicial"),
-    ]:
-        da = []
-        for size in range(size_start, size_end + 1):
-            da.append(data["sweep"][size][d])
-        acs[i][j].imshow(da)
-        dat[d] = np.array(da)
-    acs[2][0].imshow(
-        dat["before_collapse_claw_free"] - dat["before_collapse_simplicial"]
-    )
-    acs[2][1].imshow(dat["claw_free"] - dat["simplicial"])
+    linestyles = [
+        "dashed",
+        "solid",
+        "dotted",
+    ]
+    labels = [
+        r"$p_{\mathrm{SCF}}$",
+        r"$\Delta p_{\mathrm{SCF}}$",
+        r"$\Delta \Xi$",
+    ]
 
-    da = []
-    for size in range(size_start, size_end + 1):
-        da.append(data["sweep"][size]["avg_collapsed_nodes"])
-    acs[3][0].imshow(da)
+    for j in orbit_range[1:]:
+    # for j in orbit_range[:-1]:
+        # axs[0].plot(
+        #     data.densities,
+        #     data.simplicial[j],
+        #     label=f"{j} simplicial",
+        # )
+        axs[0].plot(
+            data.densities,
+            data.before_simplicial[j],
+            label=f"{j} before simplicial",
+        )
+        axs[0].plot(
+            data.densities,
+            upper_simplicial_bound(data.densities, data.sizes[j]),
+            label=f"{j} upper bound",
+        )
+        axs[0].plot(
+            data.densities,
+            lower_simplicial_bound(data.densities, data.sizes[j]),
+            label=f"{j} lower bound",
+        )
+        # axs[0].plot(
+        #     data.densities,
+        #     data.claw_free[j],
+        #     label=f"{j} claw free",
+        # )
+        # axs[0].plot(
+        #     data.densities,
+        #     data.before_claw_free[j],
+        #     label=f"{j} before claw free",
+        # )
+        # axs[0].plot(
+        #     data.densities,
+        #     lower_claw_bound(data.densities, data.sizes[j]),
+        #     label=f"{j} lower bound",
+        # )
+        # axs[0].plot(
+        #     data.densities,
+        #     upper_claw_bound(data.densities),
+        #     label=f"{j} upper bound",
+        # )
 
-    da = []
-    length = int(dat["before_collapse_claw_free"].shape[1] // 2)
-    for size in range(len(dat["before_collapse_claw_free"])):
-        d = []
-        for i in range(length):
-            print(size, i)
-            d.append(
-                dat["before_collapse_claw_free"][size][-i]
-                - dat["before_collapse_claw_free"][size][i]
-            )
-        da.append(d)
-    acs[3][1].imshow(da)
+    # for j in orbit_range:
+    #     axs[0].plot(
+    #         data.densities,
+    #         data.simplicial[j],
+    #         data.before_simplicial[j],
+    #         label=f"$m = {round(data.sizes[j]/2)}$",
+    #         linestyle=linestyles[0],
+    #         color=colors[color_offset + j],
+    #     )
+    # for j in orbit_range:
+    #     axs[1].plot(
+    #         data.densities,
+    #         data.delta_simplicial[j],
+    #         label=f"$m = {round(data.sizes[j]/2)}$",
+    #         linestyle=linestyles[1],
+    #         color=colors[color_offset + j],
+    #     )
+    #     axs[1].plot(
+    #         data.densities,
+    #         data.collapsed[j],
+    #         label=f"$m = {round(data.sizes[j]/2)}$",
+    #         linestyle=linestyles[2],
+    #         color=colors[color_offset + j],
+    #     )
 
-    plt.savefig(f"output/erdos_renyi_{CONSIDER_PARALLEL_GRAPHS}.pdf")
+    # n = 20
+    # p = 0.9
+    # x = [k for k in range(1, n + 1)]
+    # y = [is_simplicial_exponent(p, k, n) for k in x]
+    # axs[1].plot(x, y)
+
+    handles, this_labels = axs[0].get_legend_handles_labels()
+    axs[0].legend(handles, this_labels, loc="upper right")
+
+    # ymax = ao.get_ylim()[1]
+    # ao.set_ylim(0, ymax)
+    for ax in axs:
+        # ax.set_ylim(0, ax.get_ylim()[1])
+        ax.set_ylim(0, 1)
+        # ax.set_ylim(1 - 0.04, 1 + 0.01)
+        ax.grid()
+        ax.tick_params(axis="x", which="both", bottom=True, top=True)
+        ax.set_xlim(0, data.densities[-1])
+        # ax.set_xlim(0, 0.1)
+        # handles, labels = ax.get_legend_handles_labels()
+        # ax.legend(handles, labels, loc="upper right")
+
+    axs[1].set_xlabel(r"$d$")
+    axs[1].xaxis.set_label_coords(0.5, -0.14)
+    axs[1].set_ylabel(r"[\%]")
+
+    # ax.set_yticks([0.5, 1.0])
+    # ax.set_yticklabels(["0.5", "1.0"])
+    axs[0].set_ylabel(labels[0])
+    axs[0].tick_params(axis="x", labelbottom=False)
+
+    # axs[1].set_ylim(0, 66)
+
+    axs[1].plot([], [], color="black", linestyle=linestyles[0], label=labels[0])
+    axs[1].plot([], [], color="black", linestyle=linestyles[1], label=labels[1])
+    axs[1].plot([], [], color="black", linestyle=linestyles[2], label=labels[2])
+    handles, labels = axs[1].get_legend_handles_labels()
+    handles = handles[-3:]
+    labels = labels[-3:]
+    axs[1].legend(handles, labels, loc="upper right")
+
+    plt.subplots_adjust(top=0.98, bottom=0.12, left=0.12, right=0.950)
+
+    plt.savefig(f"output/erdos_renyi.pdf")
 
 
 if __name__ == "__main__":

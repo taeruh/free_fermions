@@ -16,19 +16,19 @@ use crate::{
 const NUM_THREADS: usize = 50;
 // const NUM_THREADS: usize = 10;
 // const NUM_THREAD_SAMPLES: usize = 5000; // per thread
-const NUM_THREAD_SAMPLES: usize = 5; // per thread
+const NUM_THREAD_SAMPLES: usize = 2; // per thread
 
 const DENSITY_START: f64 = 0.00;
-// const DENSITY_END: f64 = 1.0;
-const DENSITY_END: f64 = 0.06;
+const DENSITY_END: f64 = 1.0;
+// const DENSITY_END: f64 = 0.06;
 // const NUM_DENSITY_STEPS: usize = 2000;
 const NUM_DENSITY_STEPS: usize = 50;
 
 // these two have to be even
-// const SIZE_START: usize = 4;
-// const SIZE_END: usize = 10;
-const SIZE_START: usize = 10;
-const SIZE_END: usize = 16;
+const SIZE_START: usize = 4;
+const SIZE_END: usize = 10;
+// const SIZE_START: usize = 10;
+// const SIZE_END: usize = 16;
 
 fn get_densities() -> Vec<f64> {
     super::uniform_densities(DENSITY_START, DENSITY_END, NUM_DENSITY_STEPS)
@@ -64,8 +64,8 @@ pub fn run() {
     );
 
     fs::write(
-        // format!("output/e_structure_first_{id}.json"),
-        format!("output/e_structure_second_{id}.json"),
+        format!("output/e_structure_first_{id}.json"),
+        // format!("output/e_structure_second_{id}.json"),
         serde_json::to_string_pretty(&results).unwrap(),
     )
     .unwrap();

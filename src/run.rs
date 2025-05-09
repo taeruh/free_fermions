@@ -9,12 +9,14 @@ mod all_of_them;
 mod bricks;
 mod chain;
 mod check;
+mod old_erdos_renyi;
 mod erdos_renyi;
 mod klocal;
 mod majoranas;
 mod removal_examples;
 mod twod_square_lattice;
 mod density_size_sweep;
+mod small_claw_free;
 
 // TODO: roughly test which implementations is the fastest
 type GenGraph = generic::Graph<Pet>;
@@ -26,10 +28,11 @@ pub fn run() {
     // bricks::run();
     // twod_square_lattice::run();
     // majoranas::run();
-    // erdos_renyi::run();
+    erdos_renyi::run();
     // all_of_them::run();
     // removal_examples::run();
-    klocal::run();
+    // klocal::run();
+    // small_claw_free::run();
 }
 
 fn uniform_densities(

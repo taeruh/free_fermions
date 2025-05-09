@@ -5,6 +5,7 @@ import matplotlib
 import numpy as np
 
 from data_density_sizes import Data
+from plot_helper import paper_setup, set_size
 
 data_dir = "output"
 # data_dir = "results"
@@ -89,7 +90,6 @@ def main():
     axs[0].set_ylabel(labels[0])
     axs[0].tick_params(axis="x", labelbottom=False)
 
-
     axs[1].set_ylim(0, 66)
 
     axs[1].plot([], [], color="black", linestyle=linestyles[0], label=labels[0])
@@ -102,34 +102,7 @@ def main():
 
     plt.subplots_adjust(top=0.98, bottom=0.12, left=0.12, right=0.950)
 
-    plt.savefig(f"output/e_structure.pdf")
-
-
-def paper_setup():
-    plt.style.use(
-        [
-            "./pysrc/styles/ownstandard.mplstyle",
-            "./pysrc/styles/ownlatex.mplstyle",
-            # "./pysrc/styles/owndark.mplstyle",
-        ]
-    )
-    plt.rcParams.update(
-        {
-            "figure.figsize": [*set_size()],
-            "font.size": 9,
-            "lines.linewidth": 1.5,
-        }
-    )
-
-
-# get default with \the\textwidth
-# def set_size(
-#     width_in_pt=483.0, height_in_width=1.0, scale=1.0
-# ):  # quantum 10 pt two-col
-# def set_size(width_in_pt=510.0, height_in_width=1.0, scale=1.0):  # revtex 10pt two-col
-def set_size(width_in_pt=246.0, height_in_width=1.0, scale=1.0):  # revtex 10pt two-col
-    width_in_in = width_in_pt * scale / 72.27
-    return (width_in_in, width_in_in * height_in_width)
+    plt.savefig(f"output/klocal_structure.pdf")
 
 
 if __name__ == "__main__":

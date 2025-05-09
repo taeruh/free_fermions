@@ -146,10 +146,10 @@ def paper_setup():
 
 class Data:
     def __init__(self, suffix: str):
-        offset = 901
-        num_sample_files = 1
-        # offset = 1
-        # num_sample_files = 20
+        # offset = 901
+        # num_sample_files = 1
+        offset = 1
+        num_sample_files = 20
 
         thisfile = f"{file}{suffix}"
         with open(f"{data_dir}/{thisfile}{offset}.json") as f:
