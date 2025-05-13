@@ -31,7 +31,7 @@ const SIZE_END: usize = 10;
 // const SIZE_END: usize = 16;
 
 fn get_densities() -> Vec<f64> {
-    super::uniform_densities(DENSITY_START, DENSITY_END, NUM_DENSITY_STEPS)
+    super::uniform_values(DENSITY_START, DENSITY_END, NUM_DENSITY_STEPS).collect()
 }
 
 fn get_graph(density: Density, size: usize, rng: &mut Pcg64) -> GenGraph {

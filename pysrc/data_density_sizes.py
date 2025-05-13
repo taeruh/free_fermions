@@ -4,10 +4,10 @@ import numpy as np
 
 class Data:
     def __init__(self, data_dir: str, file: str):
-        # offset = 901
-        # num_sample_files = 1
-        offset = 1
-        num_sample_files = 20
+        offset = 901
+        num_sample_files = 1
+        # offset = 1
+        # num_sample_files = 20
 
         with open(f"{data_dir}/{file}{offset}.json") as f:
             data = json.load(f)

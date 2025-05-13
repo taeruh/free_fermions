@@ -9,14 +9,17 @@ mod all_of_them;
 mod bricks;
 mod chain;
 mod check;
-mod old_erdos_renyi;
-mod erdos_renyi;
-mod klocal;
-mod majoranas;
-mod removal_examples;
-mod twod_square_lattice;
 mod density_size_sweep;
+mod erdos_renyi;
+mod majoranas;
+mod num_two_local_claws;
+mod old_erdos_renyi;
+mod removal_examples;
 mod small_claw_free;
+mod sparse;
+mod lin_sparse;
+mod two_local;
+mod twod_square_lattice;
 
 // TODO: roughly test which implementations is the fastest
 type GenGraph = generic::Graph<Pet>;
@@ -28,22 +31,23 @@ pub fn run() {
     // bricks::run();
     // twod_square_lattice::run();
     // majoranas::run();
-    erdos_renyi::run();
+    // erdos_renyi::run();
     // all_of_them::run();
     // removal_examples::run();
-    // klocal::run();
+    // two_local::run();
     // small_claw_free::run();
+    // num_two_local_claws::run();
+    // sparse::run();
+    lin_sparse::run();
 }
 
-fn uniform_densities(
-    density_start: f64,
-    density_end: f64,
-    num_density_steps: usize,
-) -> Vec<f64> {
-    let delta = (density_end - density_start) / (num_density_steps - 1) as f64;
-    (0..num_density_steps)
-        .map(|i| density_start + delta * (i as f64))
-        .collect()
+fn uniform_values(
+    value_start: f64,
+    value_end: f64,
+    num_steps: usize,
+) -> impl Iterator<Item = f64> + Clone {
+    let delta = (value_end - value_start) / (num_steps - 1) as f64;
+    (0..num_steps).map(move |i| value_start + delta * (i as f64))
 }
 
 // // use std::collections::HashSet;

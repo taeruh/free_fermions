@@ -7,12 +7,13 @@ use rand_pcg::Pcg64;
 use super::{GenGraph, density_size_sweep};
 use crate::{fix_int::int, graph::generic::ImplGraph, hamiltonian::Density, rand_helper};
 
-const NUM_THREADS: usize = 12;
-const NUM_THREAD_SAMPLES: usize = 500;
+const NUM_THREADS: usize = 10;
+const NUM_THREAD_SAMPLES: usize = 100;
 
+const SIZES: [usize; 2] = [20, 40];
 const DENSITY_START: f64 = 0.00;
 const DENSITY_END: f64 = 1.;
-const NUM_DENSITY_STEPS: usize = 300;
+const NUM_DENSITY_STEPS: usize = 100;
 
 pub fn run() {
     let id = env::args()
@@ -26,8 +27,8 @@ pub fn run() {
     let seeds = rand_helper::generate_seeds::<NUM_THREADS>(Some(seed));
 
     let densities =
-        super::uniform_densities(DENSITY_START, DENSITY_END, NUM_DENSITY_STEPS);
-    let sizes: Vec<usize> = [10, 20].to_vec();
+        super::uniform_values(DENSITY_START, DENSITY_END, NUM_DENSITY_STEPS);
+    let sizes: Vec<usize> = SIZES.to_vec();
 
     let edge_pools = sizes
         .iter()
@@ -52,7 +53,7 @@ pub fn run() {
     let results = density_size_sweep::sweep(
         seed,
         seeds.to_vec(),
-        densities,
+        densities.collect(),
         sizes,
         NUM_THREAD_SAMPLES,
         get_graph,

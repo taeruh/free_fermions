@@ -8,6 +8,8 @@ use crate::{
 
 type LocalOperator = super::LocalOperator<2, Pauli>;
 
+const INCLUDE_SINGLES: bool = false;
+
 #[derive(Debug)]
 pub struct TwoLocal {
     operators: Vec<LocalOperator>,
@@ -17,25 +19,25 @@ pub struct TwoLocal {
 // to collect and if they are really big it has to be done completely differently, e.g.,
 // encode it somehow into numbers that we can directly draw with rand::seq::index::sample
 pub fn init_pool(n: usize) -> Vec<LocalOperator> {
-    (1..n)
-        .flat_map(|i| {
-            ((i + 1)..(n + 1))
-                .flat_map(move |j| {
-                    DOUBLES.into_iter().map(move |p| LocalOperator {
-                        index: [i, j],
-                        pauli: [p.0, p.1],
-                    })
-                })
-                .chain(SINGLES.into_iter().map(move |p| LocalOperator {
-                    index: [i, 0],
-                    pauli: [p, Pauli::X],
-                }))
+    let ret = (1..n).flat_map(|i| {
+        ((i + 1)..(n + 1)).flat_map(move |j| {
+            DOUBLES.into_iter().map(move |p| LocalOperator {
+                index: [i, j],
+                pauli: [p.0, p.1],
+            })
         })
-        .chain(SINGLES.into_iter().map(move |p| LocalOperator {
-            index: [n, 0],
-            pauli: [p, Pauli::X],
+    });
+    if INCLUDE_SINGLES {
+        ret.chain((1..n + 1).flat_map(|i| {
+            SINGLES.into_iter().map(move |p| LocalOperator {
+                index: [i, 0],
+                pauli: [p, Pauli::X],
+            })
         }))
         .collect::<Vec<_>>()
+    } else {
+        ret.collect::<Vec<_>>()
+    }
 }
 
 impl TwoLocal {
@@ -51,15 +53,5 @@ impl TwoLocal {
 
     pub fn get_graph(&self) -> Vec<(int, int)> {
         super::get_edges(&self.operators)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    // use super::*;
-
-    #[test]
-    fn this_test() {
-        todo!()
     }
 }

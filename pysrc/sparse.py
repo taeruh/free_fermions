@@ -9,7 +9,7 @@ from plot_helper import paper_setup, set_size
 
 data_dir = "output"
 # data_dir = "results"
-file = "two_local_"
+file = "sparse_"
 
 
 def main():
@@ -25,7 +25,7 @@ def main():
     ]
     gs.update(hspace=0.005)
 
-    orbit_range = range(0, 3)
+    orbit_range = range(0, 2)
     color_offset = 0
 
     color_map = matplotlib.colormaps["plasma"]
@@ -49,7 +49,7 @@ def main():
         axs[0].plot(
             data.densities,
             data.simplicial[j],
-            label=f"$m = {round(data.sizes[j]/2)}$",
+            label=f"$m = {round(data.sizes[j])}$",
             linestyle=linestyles[0],
             color=colors[color_offset + j],
         )
@@ -57,14 +57,14 @@ def main():
         axs[1].plot(
             data.densities,
             data.delta_simplicial[j],
-            label=f"$m = {round(data.sizes[j]/2)}$",
+            label=f"$m = {round(data.sizes[j])}$",
             linestyle=linestyles[1],
             color=colors[color_offset + j],
         )
         axs[1].plot(
             data.densities,
             data.collapsed[j],
-            label=f"$m = {round(data.sizes[j]/2)}$",
+            label=f"$m = {round(data.sizes[j])}$",
             linestyle=linestyles[2],
             color=colors[color_offset + j],
         )
@@ -102,7 +102,7 @@ def main():
 
     plt.subplots_adjust(top=0.98, bottom=0.12, left=0.12, right=0.950)
 
-    plt.savefig(f"output/klocal_structure.pdf")
+    plt.savefig(f"output/sparse.pdf")
 
 
 if __name__ == "__main__":

@@ -1,3 +1,6 @@
+use std::ops::BitAnd;
+
+use bitvec::vec::BitVec;
 use rand::Rng;
 
 use crate::fix_int::int;
@@ -34,10 +37,18 @@ pub enum Pauli {
     Z,
 }
 
+#[derive(Debug)]
+enum FullPauli {
+    I,
+    X,
+    Y,
+    Z,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LocalOperator<const N: usize, Op> {
-    index: [usize; N],
-    pauli: [Op; N],
+    pub index: [usize; N],
+    pub pauli: [Op; N],
 }
 // }}}
 
@@ -68,6 +79,75 @@ impl<const N: usize, Op: Commutator> Commutator for LocalOperator<N, Op> {
         }
         !anticommute
     }
+}
+
+#[derive(Debug, Clone)]
+struct PauliString {
+    n: usize,
+    z: BitVec,
+    x: BitVec,
+}
+
+impl Commutator for PauliString {
+    fn commute(&self, other: &Self) -> bool {
+        let zx = self.z.clone().bitand(&other.x);
+        let xz = self.x.clone().bitand(&other.z);
+        (zx.count_ones() + xz.count_ones()) % 2 == 0
+    }
+}
+
+impl PauliString {
+    pub fn from_paulis(n: usize, paulis: Vec<LocalOperator<1, Pauli>>) -> Self {
+        let mut z = BitVec::repeat(false, n);
+        let mut x = BitVec::repeat(false, n);
+        for op in paulis {
+            match op.pauli[0] {
+                Pauli::X => x.set(op.index[0], true),
+                Pauli::Y => {
+                    x.set(op.index[0], true);
+                    z.set(op.index[0], true);
+                }
+                Pauli::Z => z.set(op.index[0], true),
+            }
+        }
+        Self { n, z, x }
+    }
+
+    pub fn from_bit_strings(max_bit: usize, z: usize, x: usize) -> Self {
+        Self {
+            n: max_bit,
+            z: bitvec_from_usize(max_bit, z),
+            x: bitvec_from_usize(max_bit, x),
+        }
+    }
+
+    pub fn draw_as_paulis(&self) {
+        let mut paulis = Vec::with_capacity(self.n);
+        for i in 0..self.n {
+            let z = *self.z.get(i).unwrap();
+            let x = *self.x.get(i).unwrap();
+            if z && x {
+                paulis.push(FullPauli::Y);
+            } else if z {
+                paulis.push(FullPauli::Z);
+            } else if x {
+                paulis.push(FullPauli::X);
+            } else {
+                paulis.push(FullPauli::I);
+            }
+        }
+        println!("{paulis:?}");
+    }
+}
+
+fn bitvec_from_usize(max_bit: usize, bits: usize) -> BitVec {
+    let mut ret = BitVec::repeat(false, max_bit);
+    for i in 0..max_bit {
+        if (bits >> i) & 1 == 1 {
+            ret.set(i, true);
+        }
+    }
+    ret
 }
 
 fn get_edges<Op: Commutator>(ops: &[Op]) -> Vec<(int, int)> {
@@ -123,6 +203,7 @@ fn draw_doubles(density: f64, rng: &mut impl Rng) -> Vec<(Pauli, Pauli)> {
 
 pub mod bricks;
 pub mod electronic_structure;
-pub mod two_local;
 pub mod oned_chain;
 pub mod square_lattice;
+pub mod two_local;
+pub mod sparse;

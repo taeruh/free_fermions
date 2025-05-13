@@ -9,24 +9,24 @@ use crate::{graph::generic::ImplGraph, hamiltonian::Density, run::check};
 
 #[derive(Debug, Serialize)]
 pub struct Results {
-    densities: Vec<f64>,
-    sizes: Vec<usize>,
-    seed: u64,
-    num_samples: usize,
+    pub densities: Vec<f64>,
+    pub sizes: Vec<usize>,
+    pub seed: u64,
+    pub num_samples: usize,
     // first index is the size, second is the density; averaged over the samples
-    before_claw_free: Vec<Vec<f64>>,
-    after_claw_free: Vec<Vec<f64>>,
-    before_simplicial: Vec<Vec<f64>>,
-    after_simplicial: Vec<Vec<f64>>,
-    collapsed: Vec<Vec<f64>>,
+    pub before_claw_free: Vec<Vec<f64>>,
+    pub after_claw_free: Vec<Vec<f64>>,
+    pub before_simplicial: Vec<Vec<f64>>,
+    pub after_simplicial: Vec<Vec<f64>>,
+    pub collapsed: Vec<Vec<f64>>,
 }
 
 pub struct CountResults {
-    before_claw_free: Vec<Vec<usize>>,
-    after_claw_free: Vec<Vec<usize>>,
-    before_simplicial: Vec<Vec<usize>>,
-    after_simplicial: Vec<Vec<usize>>,
-    collapsed: Vec<Vec<f64>>,
+    pub before_claw_free: Vec<Vec<usize>>,
+    pub after_claw_free: Vec<Vec<usize>>,
+    pub before_simplicial: Vec<Vec<usize>>,
+    pub after_simplicial: Vec<Vec<usize>>,
+    pub collapsed: Vec<Vec<f64>>,
 }
 
 impl CountResults {

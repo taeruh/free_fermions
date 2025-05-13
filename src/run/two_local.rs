@@ -17,6 +17,7 @@ use crate::{
 const NUM_THREADS: usize = 12;
 const NUM_THREAD_SAMPLES: usize = 100;
 
+const SIZES: [usize; 3] = [10, 20, 30];
 const DENSITY_START: f64 = 0.00;
 const DENSITY_END: f64 = 0.1;
 const NUM_DENSITY_STEPS: usize = 100;
@@ -33,8 +34,8 @@ pub fn run() {
     let seeds = rand_helper::generate_seeds::<NUM_THREADS>(Some(seed));
 
     let densities =
-        super::uniform_densities(DENSITY_START, DENSITY_END, NUM_DENSITY_STEPS);
-    let sizes = [10, 20, 30].to_vec();
+        super::uniform_values(DENSITY_START, DENSITY_END, NUM_DENSITY_STEPS);
+    let sizes = SIZES.to_vec();
 
     let pools = sizes
         .iter()
@@ -52,7 +53,7 @@ pub fn run() {
     let results = density_size_sweep::sweep(
         seed,
         seeds.to_vec(),
-        densities,
+        densities.collect(),
         sizes,
         NUM_THREAD_SAMPLES,
         get_graph,
