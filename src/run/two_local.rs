@@ -19,7 +19,7 @@ const NUM_THREAD_SAMPLES: usize = 100;
 
 const SIZES: [usize; 3] = [10, 20, 30];
 const DENSITY_START: f64 = 0.00;
-const DENSITY_END: f64 = 0.1;
+const DENSITY_END: f64 = 0.06;
 const NUM_DENSITY_STEPS: usize = 100;
 
 pub fn run() {

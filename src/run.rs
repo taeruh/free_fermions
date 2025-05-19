@@ -34,11 +34,11 @@ pub fn run() {
     // erdos_renyi::run();
     // all_of_them::run();
     // removal_examples::run();
-    // two_local::run();
+    two_local::run();
     // small_claw_free::run();
     // num_two_local_claws::run();
     // sparse::run();
-    lin_sparse::run();
+    // lin_sparse::run();
 }
 
 fn uniform_values(

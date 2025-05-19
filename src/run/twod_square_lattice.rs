@@ -24,10 +24,11 @@ use crate::{
 // const NUM_THREADS: usize = 50;
 const NUM_THREADS: usize = 10;
 // const NUM_SAMPLES: usize = 10000; // per thread
-const NUM_SAMPLES: usize = 100; // per thread
+const NUM_SAMPLES: usize = 400; // per thread
 
+const FORCE_2D: bool = true;
 const DENSITY_START: f64 = 0.01;
-const DENSITY_END: f64 = 0.40;
+const DENSITY_END: f64 = 0.60;
 // const DENSITY_END: f64 = 1.00;
 // const NUM_DENSITY_STEPS: usize = 2000;
 const NUM_DENSITY_STEPS: usize = 100;
@@ -191,7 +192,7 @@ pub fn periodic() {
                 //     Density::new(0.), Density::new(0.), e3d, e4d, rng,
                 // );
 
-                if !lattice.is_2d {
+                if FORCE_2D && !lattice.is_2d {
                     continue;
                 }
 
@@ -265,8 +266,9 @@ pub fn periodic() {
         seed,
     );
 
+    let force_2d = if FORCE_2D { "force_2d" } else { "" };
     fs::write(
-        format!("output/periodic_square_lattice_full_{id}.json"),
+        format!("output/periodic_square_lattice_{force_2d}_{id}.json"),
         serde_json::to_string_pretty(&results).unwrap(),
     )
     .unwrap();

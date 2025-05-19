@@ -49,7 +49,7 @@ def main():
         axs[0].plot(
             data.densities,
             data.simplicial[j],
-            label=f"$m = {round(data.sizes[j])}$",
+            label=f"$n = {round(data.sizes[j])}$",
             linestyle=linestyles[0],
             color=colors[color_offset + j],
         )

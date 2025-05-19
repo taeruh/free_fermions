@@ -49,20 +49,19 @@ def main():
         axs[0].plot(
             data.densities,
             # data.before_simplicial[j],
-            data.claw_free[j],
-            # data.simplicial[j],
+            # data.claw_free[j],
+            data.simplicial[j],
             # data.before_claw_free[j],
-            label=f"$m = {round(data.sizes[j])}$",
+            label=f"$n = {round(data.sizes[j])}$",
             linestyle=linestyles[0],
             color=colors[color_offset + j],
         )
-        axs[0].plot(
-            data.densities,
-            data.simplicial[j],
-            label=f"$m = {round(data.sizes[j])}$",
-            linestyle=linestyles[2],
-            color=colors[color_offset + j],
-        )
+        # axs[0].plot(
+        #     data.densities,
+        #     data.simplicial[j],
+        #     linestyle=linestyles[2],
+        #     color=colors[color_offset + j],
+        # )
     for j in orbit_range:
         axs[1].plot(
             data.densities,
@@ -91,7 +90,7 @@ def main():
         # handles, labels = ax.get_legend_handles_labels()
         # ax.legend(handles, labels, loc="upper right")
 
-    axs[1].set_xlabel(r"$d$")
+    axs[1].set_xlabel(r"\# paulis")
     axs[1].xaxis.set_label_coords(0.5, -0.14)
     axs[1].set_ylabel(r"[\%]")
 

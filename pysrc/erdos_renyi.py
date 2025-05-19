@@ -62,10 +62,22 @@ def _lower_simplicial_bound(density, size):
     return set_is_simplicial_clique(density, size, size)
 
 
+# from Perkins paper "The Typical Structure Of Dense Claw-free Graphs"
+def _limit_claw_free(density, size):
+    def r(density):
+        transition_point = (3 - np.sqrt(5)) / 2
+        if density < transition_point:
+            return - np.log2(1 - density)
+        else:
+            return - 0.5 * np.log2(density)
+    return np.exp2(- choose_two(size) * r(density))
+
+
 lower_claw_bound = np.vectorize(_lower_claw_bound)
 upper_claw_bound = np.vectorize(_upper_claw_bound)
 upper_simplicial_bound = np.vectorize(_upper_simplicial_bound)
 lower_simplicial_bound = np.vectorize(_lower_simplicial_bound)
+limit_claw_free = np.vectorize(_limit_claw_free)
 
 
 def main():
@@ -102,37 +114,42 @@ def main():
     for j in orbit_range:
         axs[0].plot(
             data.densities,
-            # data.simplicial[j],
-            data.before_simplicial[j],
-            label=f"$m = {data.sizes[j]}$",
+            data.simplicial[j],
+            # data.before_simplicial[j],
+            label=f"$n = {data.sizes[j]}$",
             linestyle=linestyles[0],
             color=colors[color_offset + j],
         )
-        axs[0].plot(
-            data.densities,
-            lower_claw_bound(data.densities, data.sizes[j]),
-            linestyle=linestyles[3],
-            color=colors[color_offset + j],
-            linewidth=bounds_width,
-        )
-        axs[0].plot(
-            data.densities,
-            upper_simplicial_bound(data.densities, data.sizes[j]),
-            linestyle=linestyles[3],
-            color=colors[color_offset + j],
-            linewidth=bounds_width,
-        )
+        # axs[0].plot(
+        #     data.densities,
+        #     lower_claw_bound(data.densities, data.sizes[j]),
+        #     linestyle=linestyles[3],
+        #     color=colors[color_offset + j],
+        #     linewidth=bounds_width,
+        # )
+        # axs[0].plot(
+        #     data.densities,
+        #     upper_simplicial_bound(data.densities, data.sizes[j]),
+        #     linestyle=linestyles[3],
+        #     color=colors[color_offset + j],
+        #     linewidth=bounds_width,
+        # )
+        # axs[0].plot(
+        #     data.densities,
+        #     limit_claw_free(data.densities, data.sizes[j]),
+        #     linestyle=linestyles[2],
+        #     color=colors[color_offset + j],
+        #     linewidth=bounds_width,
+        # )
         axs[1].plot(
             data.densities,
             data.delta_simplicial[j],
-            label=f"$m = {round(data.sizes[j]/2)}$",
             linestyle=linestyles[1],
             color=colors[color_offset + j],
         )
         axs[1].plot(
             data.densities,
             data.collapsed[j],
-            label=f"$m = {round(data.sizes[j]/2)}$",
             linestyle=linestyles[2],
             color=colors[color_offset + j],
         )
@@ -174,14 +191,14 @@ def main():
     axs[1].plot([], [], color="black", linestyle=linestyles[0], label=labels[0])
     axs[1].plot([], [], color="black", linestyle=linestyles[1], label=labels[1])
     axs[1].plot([], [], color="black", linestyle=linestyles[2], label=labels[2])
-    axs[1].plot(
-        [],
-        [],
-        color="black",
-        linestyle=linestyles[3],
-        label=labels[3],
-        linewidth=bounds_width,
-    )
+    # axs[1].plot(
+    #     [],
+    #     [],
+    #     color="black",
+    #     linestyle=linestyles[3],
+    #     label=labels[3],
+    #     linewidth=bounds_width,
+    # )
     handles, labels = axs[1].get_legend_handles_labels()
     handles = handles[-4:]
     labels = labels[-4:]

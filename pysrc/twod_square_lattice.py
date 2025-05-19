@@ -7,11 +7,12 @@ import numpy as np
 data_dir = "output"
 # data_dir = "results"
 # file = "periodic_square_lattice_"
-file = "periodic_square_lattice_full_"
+file = "periodic_square_lattice_force_2d_"
+# file = "periodic_square_lattice_full_"
 
 
 def main():
-    with open(f"{data_dir}/{file}0.json") as f:
+    with open(f"{data_dir}/{file}1.json") as f:
         data = json.load(f)
 
     densities = data["densities"]
@@ -30,7 +31,7 @@ def main():
     num_sample_files = 20
     num_total_samples = 0
 
-    for i in range(num_sample_files):
+    for i in range(1, num_sample_files + 1):
         try:
             with open(f"{data_dir}/{file}{i}.json") as f:
                 data = json.load(f)
@@ -91,13 +92,13 @@ def main():
         color=colors[1],
         linestyle=linestyles[1],
     )
-    # axl.plot(
-    #     densities,
-    #     results["collapsed"] * 100,
-    #     label=labels[2],
-    #     color=colors[2],
-    #     linestyle=linestyles[2],
-    # )
+    axl.plot(
+        densities,
+        results["collapsed"] * 100,
+        label=labels[2],
+        color=colors[2],
+        linestyle=linestyles[2],
+    )
 
     print(
         f"before sum(|scf - cf|) = {np.abs(results["before_claw_free"] -
@@ -112,6 +113,7 @@ def main():
         a.grid()
         ymax = a.get_ylim()[1]
         a.set_ylim(0, ymax)
+
     axl.set_xlabel(r"$d$")
     ax.tick_params(axis="x", which="both", bottom=True, top=True, labelbottom=False)
     axl.tick_params(axis="x", which="both", top=True)
@@ -121,8 +123,10 @@ def main():
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels, loc="upper right")
 
-    axl.set_yticks([0.0, 2.5, 5.0])
-    plt.subplots_adjust(top=0.96, bottom=0.13, left=0.14, right=0.970)
+    # axl.set_yticks([0.0, 1.0, 2.0])
+    axl.set_ylim(0, 3.4)
+
+    plt.subplots_adjust(top=0.93, bottom=0.13, left=0.14, right=0.970)
 
     plt.savefig(f"output/periodic_square_lattice.pdf")
 

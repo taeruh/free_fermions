@@ -20,7 +20,7 @@ impl Sparse {
         assert!(num_operators < max_code + 1);
 
         let mut ops = Vec::with_capacity(num_operators);
-        println!("{:?}", max_code);
+        // println!("{:?}", max_code);
 
         for code in index::sample(rng, max_code, num_operators) {
             let x = code >> num_spins;

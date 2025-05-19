@@ -12,12 +12,12 @@ use crate::{
 };
 
 const NUM_THREADS: usize = 10;
-const NUM_THREAD_SAMPLES: usize = 30;
+const NUM_THREAD_SAMPLES: usize = 10;
 
 const SIZES: [usize; 2] = [10, 15];
 const FACTOR_START: f64 = 0.0;
 const FACTOR_END: f64 = 0.0001;
-const NUM_FACTOR_STEPS: usize = 200;
+const NUM_FACTOR_STEPS: usize = 100;
 
 pub fn run() {
     let id = env::args()

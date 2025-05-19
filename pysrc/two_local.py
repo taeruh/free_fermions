@@ -49,7 +49,7 @@ def main():
         axs[0].plot(
             data.densities,
             data.simplicial[j],
-            label=f"$m = {round(data.sizes[j]/2)}$",
+            label=f"$m = {round(data.sizes[j])}$",
             linestyle=linestyles[0],
             color=colors[color_offset + j],
         )
@@ -57,14 +57,14 @@ def main():
         axs[1].plot(
             data.densities,
             data.delta_simplicial[j],
-            label=f"$m = {round(data.sizes[j]/2)}$",
+            label=f"$m = {round(data.sizes[j])}$",
             linestyle=linestyles[1],
             color=colors[color_offset + j],
         )
         axs[1].plot(
             data.densities,
             data.collapsed[j],
-            label=f"$m = {round(data.sizes[j]/2)}$",
+            label=f"$m = {round(data.sizes[j])}$",
             linestyle=linestyles[2],
             color=colors[color_offset + j],
         )
@@ -85,6 +85,10 @@ def main():
     axs[1].xaxis.set_label_coords(0.5, -0.14)
     axs[1].set_ylabel(r"[\%]")
 
+    xticks = [i * 0.01 for i in range(0, 7)]
+    axs[1].set_xticks(xticks)
+    axs[1].set_xticklabels([f"{i:.2f}" for i in xticks])
+
     # ax.set_yticks([0.5, 1.0])
     # ax.set_yticklabels(["0.5", "1.0"])
     axs[0].set_ylabel(labels[0])
@@ -102,7 +106,7 @@ def main():
 
     plt.subplots_adjust(top=0.98, bottom=0.12, left=0.12, right=0.950)
 
-    plt.savefig(f"output/klocal.pdf")
+    plt.savefig(f"output/two_local.pdf")
 
 
 if __name__ == "__main__":
