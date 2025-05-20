@@ -26,8 +26,8 @@ pub fn run() {
         .parse::<usize>()
         .expect("id not a number");
 
-    // let seed = Pcg64::from_entropy().gen();
-    let seed = Pcg64::seed_from_u64(0).gen();
+    let seed = Pcg64::from_entropy().gen();
+    // let seed = Pcg64::seed_from_u64(0).gen();
     let seeds = rand_helper::generate_seeds::<NUM_THREADS>(Some(seed));
 
     let factor_iter = super::uniform_values(FACTOR_START, FACTOR_END, NUM_FACTOR_STEPS);

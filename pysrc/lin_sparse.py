@@ -82,10 +82,14 @@ def main():
 
     # ymax = ao.get_ylim()[1]
     # ao.set_ylim(0, ymax)
+    xticks = [i * 2 for i in range(9)]
     for ax in axs:
         ax.set_ylim(0, ax.get_ylim()[1])
         ax.grid()
-        ax.tick_params(axis="x", which="both", bottom=True, top=True)
+        ax.set_xticks(xticks)
+        # turn off the minor xticks:
+        ax.tick_params(axis="x", which="minor", bottom=False, top=False)
+        ax.tick_params(axis="x", which="major", bottom=True, top=True)
         ax.set_xlim(0, data.densities[-1])
         # handles, labels = ax.get_legend_handles_labels()
         # ax.legend(handles, labels, loc="upper right")
@@ -94,7 +98,6 @@ def main():
     axs[1].xaxis.set_label_coords(0.5, -0.14)
     axs[1].set_ylabel(r"[\%]")
 
-    # ax.set_yticks([0.5, 1.0])
     # ax.set_yticklabels(["0.5", "1.0"])
     axs[0].set_ylabel(labels[0])
     axs[0].tick_params(axis="x", labelbottom=False)

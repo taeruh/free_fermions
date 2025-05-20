@@ -29,12 +29,12 @@ pub fn run() {
     fs::create_dir_all("output").unwrap();
     // chain::run();
     // bricks::run();
-    // twod_square_lattice::run();
+    twod_square_lattice::run();
     // majoranas::run();
     // erdos_renyi::run();
     // all_of_them::run();
     // removal_examples::run();
-    two_local::run();
+    // two_local::run();
     // small_claw_free::run();
     // num_two_local_claws::run();
     // sparse::run();

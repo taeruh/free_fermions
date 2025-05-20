@@ -75,10 +75,11 @@ def main():
         r"$\Delta \Xi$",
     ]
 
-    ax.set_ylabel(labels[0])
+    # ax.set_ylabel(labels[0])
+    ax.set_ylabel(r"$p_{\mathrm{SCF}} [10^{-4}]$")
     ax.plot(
         densities,
-        results["after_simplicial"],
+        results["after_simplicial"] * 10**4,
         label=labels[0],
         color=colors[0],
         linestyle=linestyles[0],
@@ -113,6 +114,7 @@ def main():
         a.grid()
         ymax = a.get_ylim()[1]
         a.set_ylim(0, ymax)
+        print(ymax)
 
     axl.set_xlabel(r"$d$")
     ax.tick_params(axis="x", which="both", bottom=True, top=True, labelbottom=False)
@@ -123,7 +125,10 @@ def main():
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels, loc="upper right")
 
-    # axl.set_yticks([0.0, 1.0, 2.0])
+    # yticks = [2 * i * 0.0001 for i in range(0, 4)]
+    # ax.set_yticks(yticks)
+    # ax.set_yticklabels([f"{i:.4f}" for i in yticks])
+
     axl.set_ylim(0, 3.4)
 
     plt.subplots_adjust(top=0.93, bottom=0.13, left=0.14, right=0.970)

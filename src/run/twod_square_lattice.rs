@@ -22,9 +22,9 @@ use crate::{
 // adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
 // much)
 // const NUM_THREADS: usize = 50;
-const NUM_THREADS: usize = 10;
+const NUM_THREADS: usize = 20;
 // const NUM_SAMPLES: usize = 10000; // per thread
-const NUM_SAMPLES: usize = 400; // per thread
+const NUM_SAMPLES: usize = 20000; // per thread
 
 const FORCE_2D: bool = true;
 const DENSITY_START: f64 = 0.01;
@@ -163,7 +163,6 @@ pub fn periodic() {
         .parse::<usize>()
         .expect("id not a number");
 
-    // let seed = 0;
     let seed = Pcg64::from_entropy().gen();
 
     let seeds = rand_helper::generate_seeds::<NUM_THREADS>(Some(seed));

@@ -14,8 +14,8 @@ use crate::{
     rand_helper,
 };
 
-const NUM_THREADS: usize = 12;
-const NUM_THREAD_SAMPLES: usize = 100;
+const NUM_THREADS: usize = 10;
+const NUM_THREAD_SAMPLES: usize = 5000;
 
 const SIZES: [usize; 3] = [10, 20, 30];
 const DENSITY_START: f64 = 0.00;
@@ -29,8 +29,8 @@ pub fn run() {
         .parse::<usize>()
         .expect("id not a number");
 
-    // let seed = Pcg64::from_entropy().gen();
-    let seed = Pcg64::seed_from_u64(0).gen();
+    let seed = Pcg64::from_entropy().gen();
+    // let seed = Pcg64::seed_from_u64(0).gen();
     let seeds = rand_helper::generate_seeds::<NUM_THREADS>(Some(seed));
 
     let densities =

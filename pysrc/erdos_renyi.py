@@ -73,11 +73,22 @@ def _limit_claw_free(density, size):
     return np.exp2(- choose_two(size) * r(density))
 
 
+def _exact(n, p, max_k):
+    sum = 0
+    for k in range(1, max_k + 1):
+        inner_sum = 0
+        for l in range(0, n - k + 1):
+            inner_sum += p**l * (1 - p) ** (n - k - l) * p ** binomial(l, 2)
+        sum += binomial(n, k) * p ** binomial(k, 2) * inner_sum
+    return sum
+
+
 lower_claw_bound = np.vectorize(_lower_claw_bound)
 upper_claw_bound = np.vectorize(_upper_claw_bound)
 upper_simplicial_bound = np.vectorize(_upper_simplicial_bound)
 lower_simplicial_bound = np.vectorize(_lower_simplicial_bound)
 limit_claw_free = np.vectorize(_limit_claw_free)
+exact = np.vectorize(_exact)
 
 
 def main():
@@ -134,6 +145,13 @@ def main():
         #     color=colors[color_offset + j],
         #     linewidth=bounds_width,
         # )
+        axs[0].plot(
+            data.densities,
+            exact(data.sizes[j], data.densities, data.sizes[j]),
+            linestyle=linestyles[2],
+            color=colors[color_offset + j],
+            linewidth=bounds_width,
+        )
         # axs[0].plot(
         #     data.densities,
         #     limit_claw_free(data.densities, data.sizes[j]),
