@@ -7,91 +7,104 @@ import scipy
 
 from data_density_sizes import Data
 from plot_helper import paper_setup, set_size
+from bounds import *
 
 data_dir = "output"
 # data_dir = "results"
 file = "erdos_renyi_"
 
 
-def choose_two(n):
-    return n * (n - 1) / 2
-
-
-def choose_four(n):
-    return n * (n - 1) * (n - 2) * (n - 3) / 24
-
-
-def binomial(n, k):
+def binom(n, k):
     return scipy.special.comb(n, k)
 
 
-def four_set_has_claw(density):
-    return 4 * density**3 * (1 - density) ** 3
+# {{{ everything here is in the limit with some wild approximations
 
 
-def is_simplicial_exponent(density, set_size, size):
-    return choose_two(set_size) + choose_two((size - set_size) * density)
-    # return choose_two(set_size) + set_size * choose_two((size - set_size) * density)
-    # return choose_two(set_size) + set_size * (size - set_size) * density
-    # return set_size * ((set_size - 1) / 2 + (size - set_size) * density)
+# this is actually not an approximation and not just in the limit valid
+def _exp_claws(n, p):
+    # return binom(n, 4) * 4 * (p**3) * (1 - p) ** 3
+    return n * binom(n - 1, 3) * (p**3) * (1 - p) ** 3
 
 
-def set_is_simplicial_clique(density, set_size, size):
-    return density ** is_simplicial_exponent(density, set_size, size)
+def _inverted_second_moment_claws(n, p):
+    p_ = 1 - p
+    return (
+        binom(n - 4, 4)
+        + 4 * binom(n - 4, 3)
+        + 3 * binom(n - 4, 2) / (2 * p * p_)
+        + (n - 4) / 4 * (1 / (p_**3) + 3 / (p**2 * p_))
+        + 1 / (4 * p**3 * p_**3)
+    ) / binom(n, 4)
 
 
-def _upper_claw_bound(density):
-    return 1 - four_set_has_claw(density)
+# also exact and always valid
+def _variance_claws(n, p):
+    return exp_claws(n, p) ** 2 * inverted_second_moment_claws(n, p)
 
 
-def _lower_claw_bound(density, size):
-    return 1 - choose_four(size) * four_set_has_claw(density)
+exp_claws = np.vectorize(_exp_claws)
+inverted_second_moment_claws = np.vectorize(_inverted_second_moment_claws)
+variance_claws = np.vectorize(_variance_claws)
 
 
-def _upper_simplicial_bound(density, size):
+# this is not too bad for small p, but pretty bad for big p, since then the neighbourhoods
+# are completely overcounting -> bound is way too low for large p (except when they are
+# p is getting close to 1)
+def _exp_simp_clique(n, p, k_max):
     ret = 0
-    # for set_size in range(1, int(np.min([size, 5]))):
-    for set_size in range(1, size + 1):
-        ret += binomial(size, set_size) * set_is_simplicial_clique(
-            density, set_size, size
-        )
+    for k in range(1, k_max + 1):
+        # ret += binom(n, k) * p ** (binom(k, 2) + k * binom((n - k) * p, 2))
+        # in the above, we just put in an expectation value for the neighbourhood size;
+        # the below is better, but we are still assuming independence of the
+        # neighbourhoods
+        neigh = 0
+        for l in range(0, n - k + 1):
+            neigh += (
+                binom(n - k, l) * p**l * ((1 - p) ** (n - k - l)) * p ** binom(l, 2)
+            )
+        ret += binom(n, k) * p ** binom(k, 2) * neigh**k
     return ret
 
 
-def _lower_simplicial_bound(density, size):
-    return set_is_simplicial_clique(density, size, size)
-
-
-# from Perkins paper "The Typical Structure Of Dense Claw-free Graphs"
-def _limit_claw_free(density, size):
-    def r(density):
-        transition_point = (3 - np.sqrt(5)) / 2
-        if density < transition_point:
-            return - np.log2(1 - density)
-        else:
-            return - 0.5 * np.log2(density)
-    return np.exp2(- choose_two(size) * r(density))
-
-
-def _exact(n, p, max_k):
-    sum = 0
-    for k in range(1, max_k + 1):
-        inner_sum = 0
+def _better_second_moment_cliques(n, p, k_max):
+    correction = 0
+    for k in range(1, k_max + 1):
+        neigh = 0
         for l in range(0, n - k + 1):
-            inner_sum += p**l * (1 - p) ** (n - k - l) * p ** binomial(l, 2)
-        sum += binomial(n, k) * p ** binomial(k, 2) * inner_sum
-    return sum
+            neigh += (
+                binom(n - k, l) * p**l * ((1 - p) ** (n - k - l)) * p ** binom(l, 2)
+            )
+        correction += binom(n, k) * (p ** binom(k, 2) * neigh**k) ** 2
+    exp = exp_simp_clique(n, p, k_max)
+    return 1 / (1 + 1 / exp - correction / exp**2)
 
 
-lower_claw_bound = np.vectorize(_lower_claw_bound)
-upper_claw_bound = np.vectorize(_upper_claw_bound)
-upper_simplicial_bound = np.vectorize(_upper_simplicial_bound)
-lower_simplicial_bound = np.vectorize(_lower_simplicial_bound)
-limit_claw_free = np.vectorize(_limit_claw_free)
-exact = np.vectorize(_exact)
+exp_simp_clique = np.vectorize(_exp_simp_clique)
+better_second_moment_cliques = np.vectorize(_better_second_moment_cliques)
+
+
+def first_moment(exp):
+    return exp
+
+
+def inverted_first_moment(exp):
+    return 1 - exp
+
+
+def second_moment(exp):
+    return 1 / (1 + 1 / exp)
+
+
+def inverted_second_moment(exp):
+    return 1 / (exp + 1)
+
+
+# }}}
 
 
 def main():
+
     data = Data(data_dir, file)
 
     paper_setup()
@@ -122,7 +135,35 @@ def main():
     ]
     bounds_width = 0.5
 
+    # remove first and last element of densities (to avoid zero divisions)
+    cut_densities = data.densities[1:-1]
+
     for j in orbit_range:
+        size = data.sizes[j]
+
+        claws = exp_claws(size, cut_densities)
+        cliques = exp_simp_clique(data.sizes[j], cut_densities, size)
+
+        zeros = np.zeros_like(cut_densities)
+        ones = np.ones_like(cut_densities)
+
+        # claw_lower = np.maximum(zeros, inverted_first_moment(claws))
+        # simp_lower = second_moment(cliques)
+        # lower = claw_lower * simp_lower
+        # # lower = simp_lower
+        # # lower = claw_lower
+
+        lower = [gnp_almost_surely_scf_get_threshold(size, p_) for p_ in cut_densities]
+
+        # claw_upper_approximated = inverted_second_moment(claws)  # way too low ...
+        claw_upper = 1 - 1 / inverted_second_moment_claws(size, cut_densities)
+        simp_upper = np.minimum(ones, first_moment(cliques))
+        upper = claw_upper * simp_upper
+        # upper = claw_upper
+        # upper = simp_upper
+
+        # upper = [get_upper_bound(size, p_) for p_ in cut_densities]
+
         axs[0].plot(
             data.densities,
             data.simplicial[j],
@@ -131,34 +172,21 @@ def main():
             linestyle=linestyles[0],
             color=colors[color_offset + j],
         )
-        # axs[0].plot(
-        #     data.densities,
-        #     lower_claw_bound(data.densities, data.sizes[j]),
-        #     linestyle=linestyles[3],
-        #     color=colors[color_offset + j],
-        #     linewidth=bounds_width,
-        # )
-        # axs[0].plot(
-        #     data.densities,
-        #     upper_simplicial_bound(data.densities, data.sizes[j]),
-        #     linestyle=linestyles[3],
-        #     color=colors[color_offset + j],
-        #     linewidth=bounds_width,
-        # )
         axs[0].plot(
-            data.densities,
-            exact(data.sizes[j], data.densities, data.sizes[j]),
-            linestyle=linestyles[2],
+            cut_densities,
+            upper,
+            linestyle=linestyles[3],
             color=colors[color_offset + j],
             linewidth=bounds_width,
         )
-        # axs[0].plot(
-        #     data.densities,
-        #     limit_claw_free(data.densities, data.sizes[j]),
-        #     linestyle=linestyles[2],
-        #     color=colors[color_offset + j],
-        #     linewidth=bounds_width,
-        # )
+        axs[0].plot(
+            cut_densities,
+            lower,
+            linestyle="dotted",
+            color=colors[color_offset + j],
+            linewidth=bounds_width,
+        )
+
         axs[1].plot(
             data.densities,
             data.delta_simplicial[j],
@@ -171,6 +199,14 @@ def main():
             linestyle=linestyles[2],
             color=colors[color_offset + j],
         )
+
+        # cut_simplicial = data.simplicial[j][1:-1]
+        # axs[1].plot(
+        #     cut_densities,
+        #     (cut_simplicial - upper) * 100,
+        #     linestyle="dashed",
+        #     color=colors[color_offset + j],
+        # )
 
     # n = 20
     # p = 0.9
@@ -189,6 +225,7 @@ def main():
         ax.grid()
         ax.tick_params(axis="x", which="both", bottom=True, top=True)
         ax.set_xlim(0, data.densities[-1])
+        # ax.set_xlim(0, 0.2)
         # ax.set_xlim(0, 0.1)
         # handles, labels = ax.get_legend_handles_labels()
         # ax.legend(handles, labels, loc="upper right")
@@ -229,3 +266,72 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# def choose_two(n):
+#     return n * (n - 1) / 2
+
+
+# def choose_four(n):
+#     return n * (n - 1) * (n - 2) * (n - 3) / 24
+
+
+# def binomial(n, k):
+#     return scipy.special.comb(n, k)
+
+
+# def four_set_has_claw(density):
+#     return 4 * density**3 * (1 - density) ** 3
+
+
+# def is_simplicial_exponent(density, set_size, size):
+#     return choose_two(set_size) + choose_two((size - set_size) * density)
+#     # return choose_two(set_size) + set_size * choose_two((size - set_size) * density)
+#     # return choose_two(set_size) + set_size * (size - set_size) * density
+#     # return set_size * ((set_size - 1) / 2 + (size - set_size) * density)
+
+
+# def set_is_simplicial_clique(density, set_size, size):
+#     return density ** is_simplicial_exponent(density, set_size, size)
+
+
+# def _upper_claw_bound(density):
+#     return 1 - four_set_has_claw(density)
+
+
+# def _lower_claw_bound(density, size):
+#     return 1 - choose_four(size) * four_set_has_claw(density)
+
+
+# def _upper_simplicial_bound(density, size):
+#     ret = 0
+#     # for set_size in range(1, int(np.min([size, 5]))):
+#     for set_size in range(1, size + 1):
+#         ret += binomial(size, set_size) * set_is_simplicial_clique(
+#             density, set_size, size
+#         )
+#     return ret
+
+
+# def _lower_simplicial_bound(density, size):
+#     return set_is_simplicial_clique(density, size, size)
+
+
+# # from Perkins paper "The Typical Structure Of Dense Claw-free Graphs"
+# def _limit_claw_free(density, size):
+#     def r(density):
+#         transition_point = (3 - np.sqrt(5)) / 2
+#         if density < transition_point:
+#             return -np.log2(1 - density)
+#         else:
+#             return -0.5 * np.log2(density)
+
+#     return np.exp2(-choose_two(size) * r(density))
+
+
+# lower_claw_bound = np.vectorize(_lower_claw_bound)
+# upper_claw_bound = np.vectorize(_upper_claw_bound)
+# upper_simplicial_bound = np.vectorize(_upper_simplicial_bound)
+# lower_simplicial_bound = np.vectorize(_lower_simplicial_bound)
+# limit_claw_free = np.vectorize(_limit_claw_free)
+# exact = np.vectorize(_exact)
