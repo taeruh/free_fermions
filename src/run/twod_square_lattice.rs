@@ -13,7 +13,7 @@ use rand_pcg::Pcg64;
 use serde::Serialize;
 
 use crate::{
-    graph::generic::ImplGraph,
+    graph::generic::{ImplGraph, algorithms::is_line_graph::SageProcess},
     hamiltonian::{Density, square_lattice::PeriodicLattice},
     rand_helper,
     run::{GenGraph, check},
@@ -174,6 +174,8 @@ pub fn periodic() {
         let notification = notification.clone();
         let mut ret = CountResults::init();
 
+        let mut sage_process = SageProcess::default();
+
         for (density_idx, density) in densities.iter().copied().enumerate() {
             let (ed, nd, eed, end) =
                 (0..4).map(|_| Density::new(density)).collect_tuple().unwrap();
@@ -227,7 +229,7 @@ pub fn periodic() {
                 // check (in do_gen_check) which is not yet implement for the specialised
                 // representation
 
-                graph.twin_collapse(&mut tree);
+                graph.twin_collapse(&mut tree, &mut sage_process);
                 collapsed += (orig_len - graph.len()) as f64 / orig_len as f64;
 
                 let check = check::do_gen_check(&graph, &tree);

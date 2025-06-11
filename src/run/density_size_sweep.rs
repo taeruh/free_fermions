@@ -5,7 +5,7 @@ use rand_pcg::Pcg64;
 use serde::Serialize;
 
 use super::GenGraph;
-use crate::{graph::generic::ImplGraph, hamiltonian::Density, run::check};
+use crate::{graph::generic::{algorithms::is_line_graph::SageProcess, ImplGraph}, hamiltonian::Density, run::check};
 
 #[derive(Debug, Serialize)]
 pub struct Results {
@@ -142,6 +142,8 @@ pub fn sweep(
         let rng = &mut Pcg64::seed_from_u64(seeds[id]);
         let mut ret = CountResults::init(densities.len(), sizes.len());
 
+        let mut sage_process = SageProcess::default();
+
         for (size_idx, size) in sizes.iter().enumerate() {
             println!("{:?}", size);
             let ret_before_claw_free = ret.before_claw_free.get_mut(size_idx).unwrap();
@@ -183,7 +185,7 @@ pub fn sweep(
                         before_simplicial += 1;
                     }
 
-                    graph.twin_collapse(&mut tree);
+                    graph.twin_collapse(&mut tree, &mut sage_process);
                     collapsed += (orig_len - graph.len()) as f64 / orig_len as f64;
 
                     let check = check::do_gen_check(&graph, &tree);

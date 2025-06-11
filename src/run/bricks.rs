@@ -13,24 +13,24 @@ use rand_pcg::Pcg64;
 use serde::Serialize;
 
 use crate::{
-    graph::generic::ImplGraph,
-    hamiltonian::{Density, bricks::Bricks},
+    graph::generic::{algorithms::is_line_graph::SageProcess, ImplGraph},
+    hamiltonian::{bricks::Bricks, Density},
     rand_helper,
-    run::{GenGraph, check},
+    run::{check, GenGraph},
 };
 
 // adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
 // much)
 const NUM_THREADS: usize = 50;
 // const NUM_THREADS: usize = 1;
-const NUM_SAMPLES: usize = 10000; // per thread
-// const NUM_SAMPLES: usize = 1000; // per thread
+// const NUM_SAMPLES: usize = 10000; // per thread
+const NUM_SAMPLES: usize = 500; // per thread
 
 const DENSITY_START: f64 = 1. / 9.;
 const DENSITY_END: f64 = 0.40;
 // const DENSITY_END: f64 = 1.00;
-const NUM_DENSITY_STEPS: usize = 2000;
-// const NUM_DENSITY_STEPS: usize = 50;
+// const NUM_DENSITY_STEPS: usize = 2000;
+const NUM_DENSITY_STEPS: usize = 50;
 
 const NUM_TOTAL_SAMPLES: usize = NUM_THREADS * NUM_SAMPLES;
 
@@ -174,6 +174,8 @@ pub fn periodic() {
         let notification = notification.clone();
         let mut ret = CountResults::init();
 
+        let mut sage_process = SageProcess::default();
+
         for (density_idx, density) in densities.iter().copied().enumerate() {
             let (e1d, e2d, e3d, e4d, e5d) =
                 (0..5).map(|_| Density::new(density)).collect_tuple().unwrap();
@@ -223,7 +225,7 @@ pub fn periodic() {
                 // check (in do_gen_check) which is not yet implement for the specialised
                 // representation
 
-                graph.twin_collapse(&mut tree);
+                graph.twin_collapse(&mut tree, &mut sage_process);
                 collapsed += (orig_len - graph.len()) as f64 / orig_len as f64;
 
                 let check = check::do_gen_check(&graph, &tree);
@@ -263,7 +265,8 @@ pub fn periodic() {
 
     fs::write(
         // format!("output/periodic_bricks_full_{id}.json"),
-        format!("output/periodic_bricks_{id}.json"),
+        // format!("output/periodic_bricks_{id}.json"),
+        format!("output/periodic_bricks_new_{id}.json"),
         serde_json::to_string_pretty(&results).unwrap(),
     )
     .unwrap();

@@ -1,7 +1,7 @@
 use std::fs;
 
 use crate::graph::{
-    generic::{self, Pet},
+    generic::{self, Adj, Pet},
     specialised::{self, Custom, IndexMap},
 };
 
@@ -23,13 +23,14 @@ mod twod_square_lattice;
 
 // TODO: roughly test which implementations is the fastest
 type GenGraph = generic::Graph<Pet>;
+type GenGraphAdj = generic::Graph<Adj>;
 type Graph = specialised::Graph<Custom>;
 
 pub fn run() {
     fs::create_dir_all("output").unwrap();
     // chain::run();
-    // bricks::run();
-    twod_square_lattice::run();
+    bricks::run();
+    // twod_square_lattice::run();
     // majoranas::run();
     // erdos_renyi::run();
     // all_of_them::run();

@@ -6,7 +6,7 @@ import numpy as np
 
 data_dir = "output"
 # data_dir = "results"
-file = "periodic_bricks_"
+file = "periodic_bricks_new_"
 # file = "periodic_bricks_full_"
 
 

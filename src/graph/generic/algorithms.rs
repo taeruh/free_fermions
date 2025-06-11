@@ -3,12 +3,13 @@ pub mod modular_decomposition;
 pub mod obstinate;
 pub mod simplicial;
 pub mod twin_collapse;
+pub mod is_line_graph;
 
 #[cfg(test)]
 mod test_impl {
     use hashbrown::HashMap;
 
-    use super::claw_free::ClawFree;
+    use super::{claw_free::ClawFree, is_line_graph::SageProcess};
     use crate::graph::{
         HLabels, Label, Node, VLabels,
         algorithms::{
@@ -33,8 +34,8 @@ mod test_impl {
         fn modular_decomposition(&self) -> Tree {
             self.modular_decomposition()
         }
-        fn twin_collapse(&mut self, tree: &mut Tree) {
-            self.twin_collapse(tree)
+        fn twin_collapse(&mut self, tree: &mut Tree, sage_process: &mut SageProcess) {
+            self.twin_collapse(tree, sage_process)
         }
         fn is_claw_free(&self, tree: &Tree) -> Self::ClawFree {
             self.is_claw_free(tree)

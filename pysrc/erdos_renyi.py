@@ -103,6 +103,21 @@ def inverted_second_moment(exp):
 # }}}
 
 
+# from Perkins paper "The Typical Structure Of Dense Claw-free Graphs"
+def _limit_claw_free(density, n):
+    def r(density):
+        transition_point = (3 - np.sqrt(5)) / 2
+        if density < transition_point:
+            return -np.log2(1 - density)
+        else:
+            return -0.5 * np.log2(density)
+
+    return np.exp2(-binom(n, 2) * r(density))
+
+
+limit_claw_free = np.vectorize(_limit_claw_free)
+
+
 def main():
 
     data = Data(data_dir, file)
@@ -138,7 +153,8 @@ def main():
     # remove first and last element of densities (to avoid zero divisions)
     cut_densities = data.densities[1:-1]
 
-    for j in orbit_range:
+    # for j in orbit_range:
+    for j in range(0, 1):
         size = data.sizes[j]
 
         claws = exp_claws(size, cut_densities)
@@ -147,58 +163,98 @@ def main():
         zeros = np.zeros_like(cut_densities)
         ones = np.ones_like(cut_densities)
 
-        # claw_lower = np.maximum(zeros, inverted_first_moment(claws))
+        claw_lower = np.maximum(zeros, inverted_first_moment(claws))
         # simp_lower = second_moment(cliques)
         # lower = claw_lower * simp_lower
-        # # lower = simp_lower
-        # # lower = claw_lower
+        lower = claw_lower
+        # lower = simp_lower
 
-        lower = [gnp_almost_surely_scf_get_threshold(size, p_) for p_ in cut_densities]
+        # lower = [gnp_almost_surely_scf_get_threshold(size, p_) for p_ in cut_densities]
 
         # claw_upper_approximated = inverted_second_moment(claws)  # way too low ...
         claw_upper = 1 - 1 / inverted_second_moment_claws(size, cut_densities)
-        simp_upper = np.minimum(ones, first_moment(cliques))
-        upper = claw_upper * simp_upper
-        # upper = claw_upper
+        # simp_upper = np.minimum(ones, first_moment(cliques))
+        # upper = claw_upper * simp_upper
+        upper = claw_upper
         # upper = simp_upper
 
         # upper = [get_upper_bound(size, p_) for p_ in cut_densities]
 
+        # axs[0].plot(
+        #     data.densities,
+        #     # data.simplicial[j],
+        #     data.before_simplicial[j],
+        #     label=f"$n = {data.sizes[j]}$",
+        #     linestyle=linestyles[0],
+        #     color=colors[color_offset + j],
+        # )
+
+        # axs[0].plot(
+        #     cut_densities,
+        #     upper,
+        #     linestyle=linestyles[3],
+        #     color=colors[color_offset + j],
+        #     linewidth=bounds_width,
+        # )
+
+        # axs[0].plot(
+        #     cut_densities,
+        #     lower,
+        #     linestyle="dotted",
+        #     color=colors[color_offset + j],
+        #     linewidth=bounds_width,
+        # )
+
+        densitiees = np.linspace(0, 0.05, 50)
+        # print(densitiees)
+
         axs[0].plot(
-            data.densities,
-            data.simplicial[j],
-            # data.before_simplicial[j],
-            label=f"$n = {data.sizes[j]}$",
-            linestyle=linestyles[0],
-            color=colors[color_offset + j],
-        )
-        axs[0].plot(
-            cut_densities,
-            upper,
-            linestyle=linestyles[3],
+            densitiees,
+            limit_claw_free(densitiees, size),
+            linestyle="solid",
             color=colors[color_offset + j],
             linewidth=bounds_width,
         )
+
+        size_component = size
+        size_component = 5
+        num_components = round(size / size_component)
+
+        # np_second_moment_simp_clique_size1(size, densitiees),
+        # np_second_moment_simp_clique_size1_limit(size, densitiees),
+        simp_bound = (
+            np_second_moment_simp_clique_size1_limit(size_component, densitiees)
+            ** num_components
+        )
+
         axs[0].plot(
-            cut_densities,
-            lower,
+            densitiees,
+            simp_bound,
+            linestyle="dashed",
+            color=colors[color_offset + j],
+            linewidth=bounds_width,
+        )
+
+        axs[0].plot(
+            densitiees,
+            simp_bound * limit_claw_free(densitiees, size),
             linestyle="dotted",
             color=colors[color_offset + j],
             linewidth=bounds_width,
         )
 
-        axs[1].plot(
-            data.densities,
-            data.delta_simplicial[j],
-            linestyle=linestyles[1],
-            color=colors[color_offset + j],
-        )
-        axs[1].plot(
-            data.densities,
-            data.collapsed[j],
-            linestyle=linestyles[2],
-            color=colors[color_offset + j],
-        )
+        # axs[1].plot(
+        #     data.densities,
+        #     data.delta_simplicial[j],
+        #     linestyle=linestyles[1],
+        #     color=colors[color_offset + j],
+        # )
+        # axs[1].plot(
+        #     data.densities,
+        #     data.collapsed[j],
+        #     linestyle=linestyles[2],
+        #     color=colors[color_offset + j],
+        # )
 
         # cut_simplicial = data.simplicial[j][1:-1]
         # axs[1].plot(
@@ -220,17 +276,17 @@ def main():
     # ymax = ao.get_ylim()[1]
     # ao.set_ylim(0, ymax)
     for ax in axs:
-        ax.set_ylim(0, ax.get_ylim()[1])
-        # ax.set_ylim(0, 1)
+        # ax.set_ylim(0, ax.get_ylim()[1])
+        # ax.set_ylim(0, 5)
         ax.grid()
         ax.tick_params(axis="x", which="both", bottom=True, top=True)
-        ax.set_xlim(0, data.densities[-1])
-        # ax.set_xlim(0, 0.2)
+        # ax.set_xlim(0, data.densities[-1])
+        # ax.set_xlim(0, 0.05)
         # ax.set_xlim(0, 0.1)
         # handles, labels = ax.get_legend_handles_labels()
         # ax.legend(handles, labels, loc="upper right")
 
-    axs[0].set_ylim(0, 1 + 0.05)
+    # axs[0].set_ylim(0, 1 + 0.05)
 
     axs[1].set_xlabel(r"$d$")
     axs[1].xaxis.set_label_coords(0.5, -0.14)
@@ -259,7 +315,7 @@ def main():
     labels = labels[-4:]
     axs[1].legend(handles, labels, loc="upper right")
 
-    plt.subplots_adjust(top=0.98, bottom=0.12, left=0.12, right=0.950)
+    # plt.subplots_adjust(top=0.98, bottom=0.12, left=0.12, right=0.950)
 
     plt.savefig(f"output/erdos_renyi.pdf")
 
@@ -317,21 +373,8 @@ if __name__ == "__main__":
 #     return set_is_simplicial_clique(density, size, size)
 
 
-# # from Perkins paper "The Typical Structure Of Dense Claw-free Graphs"
-# def _limit_claw_free(density, size):
-#     def r(density):
-#         transition_point = (3 - np.sqrt(5)) / 2
-#         if density < transition_point:
-#             return -np.log2(1 - density)
-#         else:
-#             return -0.5 * np.log2(density)
-
-#     return np.exp2(-choose_two(size) * r(density))
-
-
 # lower_claw_bound = np.vectorize(_lower_claw_bound)
 # upper_claw_bound = np.vectorize(_upper_claw_bound)
 # upper_simplicial_bound = np.vectorize(_upper_simplicial_bound)
 # lower_simplicial_bound = np.vectorize(_lower_simplicial_bound)
-# limit_claw_free = np.vectorize(_limit_claw_free)
 # exact = np.vectorize(_exact)

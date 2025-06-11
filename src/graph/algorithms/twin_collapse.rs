@@ -4,9 +4,7 @@ pub mod tests {
     use hashbrown::HashMap;
 
     use crate::graph::{
-        HLabels, Label,
-        algorithms::{modular_decomposition::Tree, test_impls::RequiredMethods},
-        test_utils::{RandomMap, collect},
+        algorithms::{modular_decomposition::Tree, test_impls::RequiredMethods}, generic::algorithms::is_line_graph::SageProcess, test_utils::{collect, RandomMap}, HLabels, Label
     };
 
     fn check<G: RequiredMethods>(
@@ -18,13 +16,15 @@ pub mod tests {
         let expected: Vec<G> =
             collapsed.into_iter().map(|adj| G::from_adj_list(adj)).collect();
 
+        let mut sage_process = SageProcess::default();
+
         let mut tree = graph.modular_decomposition();
         if show_info {
             println!("BEFORE graph: {graph:?}");
             println!("BEFORE tree: {tree:?}");
             println!("BEFORE labels: {:?}\n", graph.map_to_labels());
         }
-        graph.twin_collapse(&mut tree);
+        graph.twin_collapse(&mut tree, &mut sage_process);
         if show_info {
             println!("AFTER graph: {graph:?}");
             println!("AFTER tree: {tree:?}");

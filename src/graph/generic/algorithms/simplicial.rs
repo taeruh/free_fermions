@@ -336,7 +336,7 @@ mod tests {
     use super::*;
     use crate::graph::{
         algorithms::simplicial,
-        generic::{Adj, Graph, Pet},
+        generic::{algorithms::is_line_graph::SageProcess, Adj, Graph, Pet},
         test_utils::collect,
     };
 
@@ -347,6 +347,7 @@ mod tests {
     // this is the example in the paper that shows that removing siblings can indeed
     // create a simplicial clique; so let's keep it here
     fn create_simplicial_clique_via_sibling_collapse() {
+        let mut sage_process = SageProcess::default();
         // see graph in paper
         let data = collect!(vv;
             (1, [0, 6, 5, 2]),
@@ -360,7 +361,7 @@ mod tests {
         let mut graph: Graph<Adj> = Graph::from_adjacency_labels(data.clone()).unwrap();
         let mut tree = graph.modular_decomposition();
         assert_eq!(graph.simplicial(&tree, None), Some(vec![vec![]]));
-        graph.twin_collapse(&mut tree);
+        graph.twin_collapse(&mut tree, &mut sage_process);
         let cliques = graph.simplicial(&tree, None).unwrap().pop().unwrap();
         let cliques: HashSet<Vec<u32>> =
             HashSet::from_iter(cliques.into_iter().map(|mut clique| {

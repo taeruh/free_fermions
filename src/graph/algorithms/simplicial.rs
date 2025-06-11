@@ -8,7 +8,7 @@ pub mod tests {
     use crate::graph::{
         HLabels, Label, VLabels, VNodes,
         algorithms::test_impls::RequiredMethods,
-        generic::{self, Adj, ImplGraph, Pet},
+        generic::{self, Adj, ImplGraph, Pet, algorithms::is_line_graph::SageProcess},
         specialised::{self, Custom, IndexMap},
         test_utils::{self, RandomMap, collect},
     };
@@ -43,9 +43,11 @@ pub mod tests {
         let mut graph = G::from_adj_list(data.clone());
         let mut tree = graph.modular_decomposition();
 
+        let mut sage_process = SageProcess::default();
+
         // the specialised version requires that if something can be collapsed, it has
         // been collapsed
-        graph.twin_collapse(&mut tree);
+        graph.twin_collapse(&mut tree, &mut sage_process);
         // and it requires it to be claw-free, which we also assume for the generic
         // version in the RequiredMethods implementation (unwrapping there)
         if !graph.is_claw_free(&tree).into() {
@@ -374,6 +376,7 @@ pub mod tests {
     #[test]
     fn consistency() {
         let rng = &mut Pcg64::from_entropy();
+        let mut sage_process = SageProcess::default();
         'outer: for _ in 0..20 {
             let mut counter = 0;
             let (graph, tree) = loop {
@@ -390,7 +393,7 @@ pub mod tests {
 
                 let mut graph = generic::Graph::<Pet>::from_adj_list(data);
                 let mut tree = graph.modular_decomposition();
-                graph.twin_collapse(&mut tree);
+                graph.twin_collapse(&mut tree, &mut sage_process);
 
                 if !bool::from(graph.is_claw_free(&tree)) {
                     continue;

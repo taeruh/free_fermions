@@ -1,11 +1,17 @@
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
 
-use crate::{graph::generic::ImplGraph, hamiltonian::{oned_chain::OpenChain, Density}, run::{check, GenGraph}};
+use crate::{
+    graph::generic::{ImplGraph, algorithms::is_line_graph::SageProcess},
+    hamiltonian::{Density, oned_chain::OpenChain},
+    run::{GenGraph, check},
+};
 
 pub fn run() {
     let rng = &mut Pcg64::from_entropy();
     // let rng = &mut Pcg64::seed_from_u64(25);
+
+    let mut sage_process = SageProcess::default();
 
     let density = Density::new(0.2);
     let chain = OpenChain::draw(density, rng);
@@ -22,12 +28,10 @@ pub fn run() {
     // println!("{:?}", chain.get_graph());
     // println!("{:?}", graph);
 
-    graph.twin_collapse(&mut tree);
+    graph.twin_collapse(&mut tree, &mut sage_process);
 
     let num_nodes = graph.iter_labels().count();
     println!("{:?}", num_nodes);
     let check = check::do_gen_check(&graph, &tree);
     println!("{:?}", check);
-
-
 }

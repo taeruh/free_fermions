@@ -15,6 +15,7 @@ mod test_impl {
             obstinate::ObstinateMapped,
             test_impls::{DoItOnce, RequiredMethods},
         },
+        generic::algorithms::is_line_graph::SageProcess,
         specialised::{Custom, Graph, GraphData, IndexMap},
     };
 
@@ -32,7 +33,7 @@ mod test_impl {
         fn modular_decomposition(&self) -> Tree {
             self.modular_decomposition()
         }
-        fn twin_collapse(&mut self, tree: &mut Tree) {
+        fn twin_collapse(&mut self, tree: &mut Tree, _: &mut SageProcess) {
             unsafe { self.twin_collapse(tree) }
         }
         fn is_claw_free(&self, tree: &Tree) -> Self::ClawFree {

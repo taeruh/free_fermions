@@ -2,6 +2,7 @@
 pub mod tests {
     use crate::graph::{
         algorithms::{modular_decomposition::Tree, test_impls::RequiredMethods},
+        generic::algorithms::is_line_graph::SageProcess,
         test_utils::collect,
     };
 
@@ -40,7 +41,7 @@ pub mod tests {
         let mut tree = graph.modular_decomposition();
         // No(Structure(SeriesParallelCount(_, 3,)))
         check(&graph, &tree, false, false);
-        graph.twin_collapse(&mut tree);
+        graph.twin_collapse(&mut tree, &mut SageProcess::default());
         check(&graph, &tree, true, false);
     }
 
@@ -61,7 +62,7 @@ pub mod tests {
         );
         let mut graph = G::from_adj_list(data);
         let mut tree = graph.modular_decomposition();
-        graph.twin_collapse(&mut tree); // nothing should happen
+        graph.twin_collapse(&mut tree, &mut SageProcess::default()); // nothing should happen
         check(
             &graph, &tree,
             // No(PrimeCase(Claw {
@@ -98,7 +99,7 @@ pub mod tests {
         );
         let mut graph = G::from_adj_list(data);
         let mut tree = graph.modular_decomposition();
-        graph.twin_collapse(&mut tree); // nothing should happen
+        graph.twin_collapse(&mut tree, &mut SageProcess::default()); // nothing should happen
         check(
             &graph, &tree,
             // No(PrimeCase(Claw {
@@ -130,7 +131,7 @@ pub mod tests {
         let mut tree = graph.modular_decomposition();
         // No(Structure(PrimeNonClique(1 and 2 module)))
         check(&graph, &tree, false, false);
-        graph.twin_collapse(&mut tree); // nothing should happen
+        graph.twin_collapse(&mut tree, &mut SageProcess::default()); // nothing should happen
         check(&graph, &tree, true, false);
     }
 

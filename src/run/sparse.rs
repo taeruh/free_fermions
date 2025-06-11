@@ -5,7 +5,7 @@ use rand_pcg::Pcg64;
 
 use super::{GenGraph, density_size_sweep::Results};
 use crate::{
-    graph::generic::ImplGraph,
+    graph::generic::{algorithms::is_line_graph::SageProcess, ImplGraph},
     hamiltonian::sparse::Sparse,
     rand_helper,
     run::{check, density_size_sweep::CountResults},
@@ -35,6 +35,8 @@ pub fn run() {
     let job = |id: usize| {
         let rng = &mut Pcg64::seed_from_u64(seeds[id]);
         let mut ret = CountResults::init(NUM_FACTOR_STEPS, SIZES.len());
+
+        let mut sage_process = SageProcess::default();
 
         for (size_idx, &size) in SIZES.iter().enumerate() {
             println!("{:?}", size);
@@ -98,7 +100,7 @@ pub fn run() {
                         before_simplicial += 1;
                     }
 
-                    graph.twin_collapse(&mut tree);
+                    graph.twin_collapse(&mut tree, &mut sage_process);
                     collapsed += (orig_len - graph.len()) as f64 / orig_len as f64;
 
                     let check = check::do_gen_check(&graph, &tree);

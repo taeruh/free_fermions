@@ -8,6 +8,10 @@ def binom(n, k):
     return scipy.special.comb(n, k)
 
 
+def fact(n):
+    return scipy.special.factorial(n)
+
+
 def _exp_claws(n, p):
     # return binom(n, 4) * 4 * (p**3) * (1 - p) ** 3
     return n * binom(n - 1, 3) * (p**3) * (1 - p) ** 3
@@ -31,6 +35,79 @@ def _variance_claws(n, p):
 exp_claws = np.vectorize(_exp_claws)
 inverted_second_moment_claws = np.vectorize(_inverted_second_moment_claws)
 variance_claws = np.vectorize(_variance_claws)
+
+
+def vertex_is_simp_clique(n, p):
+    ret = 0
+    for l in range(0, n):
+        ret += binom(n - 1, l) * p**l * ((1 - p) ** (n - 1 - l)) * p ** binom(l, 2)
+    return ret
+
+
+def exp_simp_clique_size1(n, p):
+    return n * vertex_is_simp_clique(n, p)
+
+
+def exp_simp_clique_size1_squared(n, p):
+    ret = n * vertex_is_simp_clique(n, p) ** 2
+    mixed = 0
+    fact_n_2 = fact(n - 2)
+    for f in range(0, n - 2 + 1):
+        fact_f = fact_n_2 / fact(n - 2 - f)
+        for s in range(0, f + 1):
+            fact_s = fact_f / fact(s)
+            for l in range(0, f - s + 1):
+                m = f - s - l
+                factor = fact_s / (fact(l) * fact(m))
+                mixed += (
+                    factor
+                    * p
+                    ** (
+                        2 * s
+                        + l
+                        + m
+                        + binom(s, 2)
+                        + binom(l, 2)
+                        + binom(m, 2)
+                        + s * (l + m)
+                    )
+                    * (1 - p) ** (2 * (n - 2) - (l + m + 2 * s))
+                )
+    return ret + n * (n - 1) * mixed
+
+
+def second_moment_simp_clique_size1(n, p):
+    return exp_simp_clique_size1(n, p) ** 2 / exp_simp_clique_size1_squared(n, p)
+
+
+def second_moment_simp_clique_size1_limit(n, p):
+    # n = 40
+    numerator = 0
+    for l in range(0, n - 1 + 1):
+        numerator += ((n - 1) * p) ** l / fact(l) * p ** binom(l, 2)
+    denominator = 0
+    for f in range(0, n - 2 + 1):
+        fact_f = ((n - 2) * p) ** f
+        for s in range(0, f + 1):
+            fact_s = fact_f / fact(s)
+            for l in range(0, f - s + 1):
+                m = f - s - l
+                factor = fact_s / (fact(l) * fact(m))
+                denominator += (
+                    factor
+                    * p ** (binom(l, 2) + binom(m, 2) + s * f - binom(s, 2))
+                    * (1 - p) ** (n - 2 - s)
+                )
+    # return np.exp(-n * p) * numerator**2 / denominator
+    # return np.exp(-n * p) * 1
+    return np.exp(-2 * n * p) * 1
+    # return numerator**2 / denominator
+
+
+np_second_moment_simp_clique_size1 = np.vectorize(second_moment_simp_clique_size1)
+np_second_moment_simp_clique_size1_limit = np.vectorize(
+    second_moment_simp_clique_size1_limit
+)
 
 
 # {{{ everything here is in the limit with some wild approximations

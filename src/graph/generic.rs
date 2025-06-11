@@ -251,6 +251,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
         Self: Sized,
     {
         if (nodes.len() as f64) < (0.6 * self.len() as f64) {
+            // if (nodes.len() as f64) < (0.0 * self.len() as f64) {
             self.subgraph_by_adding(nodes)
         } else {
             self.clone().subgraph_by_removing(nodes)

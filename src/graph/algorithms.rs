@@ -11,7 +11,7 @@ pub mod test_impls {
     use hashbrown::HashMap;
 
     use super::{modular_decomposition::Tree, obstinate::ObstinateMapped};
-    use crate::graph::{HLabels, Label, Node, VLabels};
+    use crate::graph::{generic::algorithms::is_line_graph::SageProcess, HLabels, Label, Node, VLabels};
 
     /// Helper to call parts of generic tests only once (cf. the `check` in
     /// simplicial.rs).
@@ -25,7 +25,7 @@ pub mod test_impls {
         type ClawFree: Into<bool> + Debug;
         fn from_adj_list(adj_list: HashMap<Label, HLabels>) -> Self;
         fn modular_decomposition(&self) -> Tree;
-        fn twin_collapse(&mut self, tree: &mut Tree);
+        fn twin_collapse(&mut self, tree: &mut Tree, sage_process: &mut SageProcess);
         fn obstinate(&self) -> ObstinateMapped;
         fn is_claw_free(&self, tree: &Tree) -> Self::ClawFree;
         fn simplicial(&self, tree: &Tree) -> Vec<Vec<VLabels>>;
