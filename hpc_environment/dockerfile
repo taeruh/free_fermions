@@ -1,0 +1,17 @@
+from archlinux:latest
+
+# FIX: I don't know why, but while it is installing the latest rust version here (do
+# something like `run rustc --version && sleep 3`), when I check it on the cluster it is
+# the clustor version. Really, really weird. I ended up just updating it again on the
+# cluster and then it was the right version.
+
+run pacman -Syu --noconfirm
+run pacman -S --noconfirm clang sagemath
+
+run sh --version
+run curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
+run source $HOME/.cargo/env
+env PATH="/root/.cargo/bin:${PATH}"
+run rustup toolchain install stable
+run rustup default stable
+run rustup update stable

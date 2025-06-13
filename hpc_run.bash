@@ -15,7 +15,7 @@
 #PBS -l walltime=3:00:00 
 # see for max possible resource on a single node: https://hpc.research.uts.edu.au/status/
 # (select=1 is probably the default (putting stuff onto one chunk(/host?)))
-#PBS -l select=1:ncpus=20:mem=5GB
+#PBS -l select=1:ncpus=50:mem=100GB
 
 # this is relative to the final workdir which is ./=${PBS_O_WORKDIR}, so we don't have
 # to move it from the scratch
@@ -35,10 +35,12 @@ mkdir -p output
 scratch="/scratch/${USER}_${PBS_JOBID%.*}"
 mkdir -p ${scratch}/output
 cp target/release/${bin} ${scratch}
+cp arch_rust_with_sagemath.sif ${scratch}
+cp -r pysrc ${scratch}
 
 cd ${scratch}
 
-./${bin} ${id}
+apptainer exec arch_rust_with_sagemath.sif ./${bin} ${id}
 # NOTE: `cd ${PBS_O_WORKDIR}; mv ${scratch}/output/* output` doesn't work; it's the wild
 # card that makes problems in this case, but I don't know why (maybe the ${scratch} name
 # is too weird)?

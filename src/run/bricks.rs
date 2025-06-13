@@ -22,9 +22,10 @@ use crate::{
 // adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
 // much)
 const NUM_THREADS: usize = 50;
-// const NUM_THREADS: usize = 1;
+// const NUM_THREADS: usize = 10;
 // const NUM_SAMPLES: usize = 10000; // per thread
 const NUM_SAMPLES: usize = 500; // per thread
+// const NUM_SAMPLES: usize = 20; // per thread
 
 const DENSITY_START: f64 = 1. / 9.;
 const DENSITY_END: f64 = 0.40;

@@ -1,0 +1,2 @@
+Bootstrap: docker-daemon
+From: arch_rust_with_sagemath:latest

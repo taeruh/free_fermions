@@ -6,5 +6,6 @@ output
 perf.data
 perf.data.old
 flamegraph.svg
+arch_rust_with_sagemath.sif
 
 .task.mk
