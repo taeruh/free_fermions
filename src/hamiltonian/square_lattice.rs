@@ -34,6 +34,7 @@ impl PeriodicLattice {
             electrons.len() * 9
                 + nuclei.len() * 9
                 + ee_horizontal.len() * 12
+                + ee_vertical.len() * 12
                 + en_interactions.len() * 9,
         );
         for i in 0..3 {

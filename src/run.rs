@@ -29,8 +29,8 @@ type Graph = specialised::Graph<Custom>;
 pub fn run() {
     fs::create_dir_all("output").unwrap();
     // chain::run();
-    bricks::run();
-    // twod_square_lattice::run();
+    // bricks::run();
+    twod_square_lattice::run();
     // majoranas::run();
     // erdos_renyi::run();
     // all_of_them::run();

@@ -22,16 +22,16 @@ use crate::{
 // adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
 // much)
 // const NUM_THREADS: usize = 50;
-const NUM_THREADS: usize = 20;
-// const NUM_SAMPLES: usize = 10000; // per thread
-const NUM_SAMPLES: usize = 20000; // per thread
+const NUM_THREADS: usize = 8;
+// const NUM_SAMPLES: usize = 20000; // per thread
+const NUM_SAMPLES: usize = 10000; // per thread
 
 const FORCE_2D: bool = true;
-const DENSITY_START: f64 = 0.01;
+const DENSITY_START: f64 = 1. / 9.;
 const DENSITY_END: f64 = 0.60;
 // const DENSITY_END: f64 = 1.00;
 // const NUM_DENSITY_STEPS: usize = 2000;
-const NUM_DENSITY_STEPS: usize = 100;
+const NUM_DENSITY_STEPS: usize = 50;
 
 const NUM_TOTAL_SAMPLES: usize = NUM_THREADS * NUM_SAMPLES;
 
@@ -177,8 +177,15 @@ pub fn periodic() {
         let mut sage_process = SageProcess::default();
 
         for (density_idx, density) in densities.iter().copied().enumerate() {
-            let (ed, nd, eed, end) =
-                (0..4).map(|_| Density::new(density)).collect_tuple().unwrap();
+            // println!("{:?}", density);
+            // let (ed, nd, eed, end) =
+            //     (0..4).map(|_| Density::new(density)).collect_tuple().unwrap();
+            let (ed, nd, eed, end) = (
+                Density::new(0.),
+                Density::new(0.),
+                Density::new(density),
+                Density::new(density),
+            );
             let mut before_claw_free = 0;
             let mut before_simplicial = 0;
             let mut after_claw_free = 0;
@@ -187,11 +194,8 @@ pub fn periodic() {
 
             let mut i = 0;
             while i < NUM_SAMPLES {
-                println!("{:?}", i);
+                // println!("{:?}", i);
                 let lattice = PeriodicLattice::draw(ed, nd, eed, end, rng);
-                // let lattice = crate::hamiltonian::square_lattice::PeriodicLattice::draw(
-                //     Density::new(0.), Density::new(0.), e3d, e4d, rng,
-                // );
 
                 if FORCE_2D && !lattice.is_2d {
                     continue;

@@ -67,3 +67,5 @@ pub mod matrix;
 // pub mod playing_around;
 pub mod run;
 pub mod rand_helper;
+
+pub mod binary_search;

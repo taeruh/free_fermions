@@ -239,6 +239,15 @@ def main():
             densitiees,
             simp_bound * limit_claw_free(densitiees, size),
             linestyle="dotted",
+            color="red",
+            linewidth=bounds_width,
+        )
+
+        axs[0].plot(
+            densitiees,
+            # simp_bound * limit_claw_free(densitiees, size),
+            simp_bound + limit_claw_free(densitiees, size) - 1,
+            linestyle="dotted",
             color=colors[color_offset + j],
             linewidth=bounds_width,
         )
