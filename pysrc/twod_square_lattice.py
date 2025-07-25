@@ -12,6 +12,31 @@ file = "periodic_square_lattice_force_2d_"
 
 
 def main():
+    with open(f"{data_dir}/exact_square_lattice_coefficients.json") as f:
+        coefficients = json.load(f)
+
+    max_ops = len(coefficients["scf"]) - 1
+
+    def exact_scf(density):
+        ret = 0.0
+        for i, coeff in enumerate(coefficients["scf"]):
+            ret += coeff * density**i * (1 - density) ** (max_ops - i)
+        return ret
+    def exact_dscf(density):
+        ret = 0.0
+        for i, coeff in enumerate(coefficients["dscf"]):
+            ret += coeff * density**i * (1 - density) ** (max_ops - i)
+        return ret
+    # aah, that's actually not the same as the numerical thing as numerical things takes
+    # all samples into account for the collapse, but the analytical only the ones that are
+    # scf after the collapse
+    # def exact_collapsed(density):
+    #     ret = 0.0
+    #     for i, coeff in enumerate(coefficients["collapsed"]):
+    #         ret += coeff * density**i * (1 - density) ** (max_ops - i)
+    #     return ret
+
+
     with open(f"{data_dir}/{file}1.json") as f:
         data = json.load(f)
 
@@ -85,6 +110,15 @@ def main():
         linestyle=linestyles[0],
     )
 
+    # exact = np.array([exact_scf(d) for d in densities])
+    # ax.plot(
+    #     densities,
+    #     exact * 10**4,
+    #     label="e scf",
+    #     color="black",
+    #     linestyle=linestyles[0],
+    # )
+
     axl.set_ylabel(r"[\%]")
     axl.plot(
         densities,
@@ -99,6 +133,15 @@ def main():
         label=labels[2],
         color=colors[2],
         linestyle=linestyles[2],
+    )
+
+    exact = np.array([exact_dscf(d) for d in densities])
+    axl.plot(
+        densities,
+        exact * 100,
+        label="e dscf",
+        color="black",
+        linestyle=linestyles[1],
     )
 
     print(
@@ -129,7 +172,7 @@ def main():
     # ax.set_yticks(yticks)
     # ax.set_yticklabels([f"{i:.4f}" for i in yticks])
 
-    axl.set_ylim(0, 3.4)
+    # axl.set_ylim(0, 3.4)
 
     plt.subplots_adjust(top=0.93, bottom=0.13, left=0.14, right=0.970)
 

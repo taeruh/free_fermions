@@ -69,3 +69,4 @@ pub mod run;
 pub mod rand_helper;
 
 pub mod binary_search;
+pub mod exact;

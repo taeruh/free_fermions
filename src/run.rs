@@ -1,23 +1,26 @@
 use std::fs;
 
-use crate::graph::{
-    generic::{self, Adj, Pet},
-    specialised::{self, Custom, IndexMap},
+use crate::{
+    exact,
+    graph::{
+        generic::{self, Adj, Pet},
+        specialised::{self, Custom, IndexMap},
+    },
 };
 
 mod all_of_them;
 mod bricks;
 mod chain;
-mod check;
+pub mod check;
 mod density_size_sweep;
 mod erdos_renyi;
+mod lin_sparse;
 mod majoranas;
 mod num_two_local_claws;
 mod old_erdos_renyi;
 mod removal_examples;
 mod small_claw_free;
 mod sparse;
-mod lin_sparse;
 mod two_local;
 mod twod_square_lattice;
 
@@ -40,6 +43,8 @@ pub fn run() {
     // num_two_local_claws::run();
     // sparse::run();
     // lin_sparse::run();
+    // exact::square_lattice::run();
+    // exact::square_lattice::run_analyse();
 }
 
 fn uniform_values(

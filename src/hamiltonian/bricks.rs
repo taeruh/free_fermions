@@ -73,9 +73,6 @@ impl Bricks {
                     let d = density.0;
                     assert!(d >= 1. / 9., "density {i} too low");
                     let mut e = super::draw_doubles(d, rng);
-                    // if e.is_empty() {
-                    //     e.push(*DOUBLES.choose(rng).unwrap());
-                    // }
                     while e.is_empty() {
                         e = super::draw_doubles(d, rng);
                     }

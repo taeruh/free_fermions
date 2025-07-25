@@ -150,7 +150,7 @@ fn bitvec_from_usize(max_bit: usize, bits: usize) -> BitVec {
     ret
 }
 
-fn get_edges<Op: Commutator>(ops: &[Op]) -> Vec<(int, int)> {
+pub fn get_edges<Op: Commutator>(ops: &[Op]) -> Vec<(int, int)> {
     let mut ret = Vec::new();
     if ops.is_empty() {
         return ret;
@@ -166,7 +166,7 @@ fn get_edges<Op: Commutator>(ops: &[Op]) -> Vec<(int, int)> {
 }
 
 const SINGLES: [Pauli; 3] = [Pauli::X, Pauli::Y, Pauli::Z];
-const DOUBLES: [(Pauli, Pauli); 9] = [
+pub const DOUBLES: [(Pauli, Pauli); 9] = [
     (Pauli::X, Pauli::X),
     (Pauli::X, Pauli::Y),
     (Pauli::X, Pauli::Z),

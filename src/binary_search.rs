@@ -28,7 +28,7 @@ impl<S> TreePath<S> {
 
     // changes the state to the new state, according to the true branch, and returns
     // whether it is a valid state
-    fn try_true<F: FnOnce(&mut S, usize) -> bool>(&mut self, f: F) -> bool {
+    fn try_true<F: FnMut(&mut S, usize) -> bool>(&mut self, f: &mut F) -> bool {
         if f(&mut self.state, self.index) {
             self.index += 1;
             true
@@ -39,7 +39,7 @@ impl<S> TreePath<S> {
 
     // changes the state to the new state, according to the false branch, and returns
     // whether it is a valid state
-    fn try_false<F: FnOnce(&mut S, usize) -> bool>(&mut self, f: F) -> bool {
+    fn try_false<F: FnMut(&mut S, usize) -> bool>(&mut self, f: &mut F) -> bool {
         if f(&mut self.state, self.index) {
             self.index += 1;
             true
@@ -79,7 +79,7 @@ pub struct TreeStack<S, R, const N: usize> {
     results: Vec<R>,
 }
 
-impl<S: Clone, R, const N: usize> TreeStack<S, R, N> {
+impl<S: Clone + Debug, R, const N: usize> TreeStack<S, R, N> {
     pub fn new(init_state: S) -> Self {
         let mut stack = Vec::with_capacity(N);
         stack.push(TreePathWithTry::new(init_state));
@@ -91,18 +91,19 @@ impl<S: Clone, R, const N: usize> TreeStack<S, R, N> {
     }
 
     fn step<
-        Ft: FnOnce(&mut S, usize) -> bool,
-        Ff: FnOnce(&mut S, usize) -> bool,
+        Ft: FnMut(&mut S, usize) -> bool,
+        Ff: FnMut(&mut S, usize) -> bool,
         Fr: Fn(S) -> R,
     >(
         &mut self,
-        f_true: Ft,
-        f_false: Ff,
+        f_true: &mut Ft,
+        f_false: &mut Ff,
         f_result: Fr,
     ) -> bool {
         let current = &mut self.stack[self.top];
         if self.top + 1 == N {
             // leaf case
+            // println!("{:?}", current.tree.state);
             let mut leaf = current.clone_reset();
             if leaf.tree.try_true(f_true) {
                 self.results.push(f_result(leaf.tree.state));
@@ -156,14 +157,14 @@ impl<S: Clone, R, const N: usize> TreeStack<S, R, N> {
     }
 
     pub fn search<
-        Ft: Copy + Fn(&mut S, usize) -> bool,
-        Ff: Copy + Fn(&mut S, usize) -> bool,
-        Fr: Copy + Fn(S) -> R,
+        Ft: FnMut(&mut S, usize) -> bool,
+        Ff: FnMut(&mut S, usize) -> bool,
+        Fr: Fn(S) -> R,
     >(
         &mut self,
-        f_true: Ft,
-        f_false: Ff,
-        f_result: Fr,
+        f_true: &mut Ft,
+        f_false: &mut Ff,
+        f_result: &Fr,
     ) {
         let mut has_fininshed = Finished::False;
         while let Finished::False = has_fininshed {
@@ -221,7 +222,7 @@ mod tests {
 
         let init_state = [0; N];
         let mut tree = TreeStack::<_, [u8; N], N>::new(init_state);
-        tree.search(f_true, f_false, |s| s);
+        tree.search(&mut f_true, &mut f_false, &|s| s);
 
         assert_eq!(tree.into_results().as_slice(), &expect);
     }
