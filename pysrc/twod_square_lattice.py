@@ -7,7 +7,8 @@ import numpy as np
 data_dir = "output"
 # data_dir = "results"
 # file = "periodic_square_lattice_"
-file = "periodic_square_lattice_force_2d_"
+# file = "periodic_square_lattice_force_2d_"
+file = "periodic_square_lattice__"
 # file = "periodic_square_lattice_full_"
 
 
@@ -15,7 +16,8 @@ def main():
     with open(f"{data_dir}/exact_square_lattice_coefficients.json") as f:
         coefficients = json.load(f)
 
-    max_ops = len(coefficients["scf"]) - 1
+    max_ops = len(coefficients["scf"])
+    # print(max_ops)
 
     def exact_scf(density):
         ret = 0.0
@@ -53,7 +55,7 @@ def main():
         "collapsed": np.array(np.zeros(density_len)),
     }
 
-    num_sample_files = 20
+    num_sample_files = 30
     num_total_samples = 0
 
     for i in range(1, num_sample_files + 1):
@@ -100,6 +102,7 @@ def main():
         r"$\Delta \Xi$",
     ]
 
+
     # ax.set_ylabel(labels[0])
     ax.set_ylabel(r"$p_{\mathrm{SCF}} [10^{-4}]$")
     ax.plot(
@@ -107,17 +110,19 @@ def main():
         results["after_simplicial"] * 10**4,
         label=labels[0],
         color=colors[0],
-        linestyle=linestyles[0],
+        # linestyle=linestyles[0],
+        linestyle="solid",
     )
 
-    # exact = np.array([exact_scf(d) for d in densities])
-    # ax.plot(
-    #     densities,
-    #     exact * 10**4,
-    #     label="e scf",
-    #     color="black",
-    #     linestyle=linestyles[0],
-    # )
+
+    exact = np.array([exact_scf(d) for d in densities])
+    ax.plot(
+        densities,
+        exact * 10**4,
+        label="e scf",
+        color="black",
+        linestyle=(0, (3, 1, 1, 1, 1, 1)),
+    )
 
     axl.set_ylabel(r"[\%]")
     axl.plot(
@@ -127,13 +132,13 @@ def main():
         color=colors[1],
         linestyle=linestyles[1],
     )
-    axl.plot(
-        densities,
-        results["collapsed"] * 100,
-        label=labels[2],
-        color=colors[2],
-        linestyle=linestyles[2],
-    )
+    # axl.plot(
+    #     densities,
+    #     results["collapsed"] * 100,
+    #     label=labels[2],
+    #     color=colors[2],
+    #     linestyle=linestyles[2],
+    # )
 
     exact = np.array([exact_dscf(d) for d in densities])
     axl.plot(
@@ -176,6 +181,7 @@ def main():
 
     plt.subplots_adjust(top=0.93, bottom=0.13, left=0.14, right=0.970)
 
+    print("hello")
     plt.savefig(f"output/periodic_square_lattice.pdf")
 
 

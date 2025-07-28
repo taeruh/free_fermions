@@ -165,7 +165,8 @@ pub fn run_analyse() {
     // like that (too big);
     // firstly, compare results when we don't enforce the 2d-ness, and hope that they
     // coincide with each other
-    let normalisation_factor = total_num as f64 / sample_num as f64;
+    // let normalisation_factor = total_num as f64 / sample_num as f64;
+    let normalisation_factor = 1.;
 
     #[derive(Debug, Serialize, Deserialize)]
     struct Coefficients {
@@ -180,12 +181,14 @@ pub fn run_analyse() {
     };
 
     for instance in results.into_iter() {
-        if instance.is_empty || !instance.is_2d {
+        // if instance.is_empty || !instance.is_2d {
+        if instance.is_empty {
+            coefficients.scf[0] += 1.0;
             continue;
         }
         let index = instance.num_ops;
-        assert!(index > 1, "graph cannot be two-dimensional with only one operator");
-        assert!(instance.coll_valid, "all graphs should be scf after the collapse");
+        // assert!(index > 1, "graph cannot be two-dimensional with only one operator");
+        // assert!(instance.coll_valid, "all graphs should be scf after the collapse");
         coefficients.scf[index] += 1.0;
         if !instance.orig_valid {
             coefficients.dscf[index] += 1.0;
@@ -197,6 +200,8 @@ pub fn run_analyse() {
         coefficients.scf[i] *= normalisation_factor;
         coefficients.dscf[i] *= normalisation_factor;
     }
+
+    println!("{:?}", coefficients);
 
     fs::write(
         "output/exact_square_lattice_coefficients.json",

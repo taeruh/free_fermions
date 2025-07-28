@@ -33,7 +33,6 @@ pub fn run() {
     fs::create_dir_all("output").unwrap();
     // chain::run();
     // bricks::run();
-    twod_square_lattice::run();
     // majoranas::run();
     // erdos_renyi::run();
     // all_of_them::run();
@@ -45,6 +44,7 @@ pub fn run() {
     // lin_sparse::run();
     // exact::square_lattice::run();
     // exact::square_lattice::run_analyse();
+    twod_square_lattice::run();
 }
 
 fn uniform_values(
