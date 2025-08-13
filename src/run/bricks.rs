@@ -197,6 +197,12 @@ pub fn periodic() {
                 let mut graph = GenGraph::from_edge_labels(lattice.get_graph()).unwrap();
 
                 if graph.is_empty() {
+                    before_claw_free += 1;
+                    before_simplicial += 1;
+                    // collapsed += 0;
+                    after_claw_free += 1;
+                    after_simplicial += 1;
+                    i += 1;
                     continue;
                 }
 
