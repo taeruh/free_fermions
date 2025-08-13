@@ -3,12 +3,13 @@
 import json
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy
 
 data_dir = "output"
 # data_dir = "results"
 # file = "periodic_square_lattice_"
-# file = "periodic_square_lattice_force_2d_"
-file = "periodic_square_lattice__"
+file = "periodic_square_lattice_force_2d_"
+# file = "periodic_square_lattice__"
 # file = "periodic_square_lattice_full_"
 
 
@@ -17,18 +18,29 @@ def main():
         coefficients = json.load(f)
 
     max_ops = len(coefficients["scf"])
-    # print(max_ops)
+    # print(max_ops)  # should be 3*9=27
+
+    def binom(n, k):
+        return scipy.special.comb(n, k)
 
     def exact_scf(density):
         ret = 0.0
+        norm = 0.0  # normalization factor since we were throwing away non-2d cases
         for i, coeff in enumerate(coefficients["scf"]):
             ret += coeff * density**i * (1 - density) ** (max_ops - i)
-        return ret
+            norm += (
+                (binom(3 * 9, i) - (2 * binom(2 * 9, i) - binom(1 * 9, i)))
+                * density**i
+                * (1 - density) ** (max_ops - i)
+            )
+        return ret / norm
+
     def exact_dscf(density):
         ret = 0.0
         for i, coeff in enumerate(coefficients["dscf"]):
             ret += coeff * density**i * (1 - density) ** (max_ops - i)
         return ret
+
     # aah, that's actually not the same as the numerical thing as numerical things takes
     # all samples into account for the collapse, but the analytical only the ones that are
     # scf after the collapse
@@ -37,7 +49,6 @@ def main():
     #     for i, coeff in enumerate(coefficients["collapsed"]):
     #         ret += coeff * density**i * (1 - density) ** (max_ops - i)
     #     return ret
-
 
     with open(f"{data_dir}/{file}1.json") as f:
         data = json.load(f)
@@ -55,7 +66,7 @@ def main():
         "collapsed": np.array(np.zeros(density_len)),
     }
 
-    num_sample_files = 30
+    num_sample_files = 20
     num_total_samples = 0
 
     for i in range(1, num_sample_files + 1):
@@ -102,23 +113,21 @@ def main():
         r"$\Delta \Xi$",
     ]
 
-
     # ax.set_ylabel(labels[0])
-    ax.set_ylabel(r"$p_{\mathrm{SCF}} [10^{-4}]$")
+    ax.set_ylabel(r"$p_{\mathrm{SCF}} [10^{-2}]$")
     ax.plot(
         densities,
-        results["after_simplicial"] * 10**4,
+        results["after_simplicial"] * 10**2,
         label=labels[0],
         color=colors[0],
         # linestyle=linestyles[0],
         linestyle="solid",
     )
 
-
     exact = np.array([exact_scf(d) for d in densities])
     ax.plot(
         densities,
-        exact * 10**4,
+        exact * 10**2,
         label="e scf",
         color="black",
         linestyle=(0, (3, 1, 1, 1, 1, 1)),
@@ -132,15 +141,16 @@ def main():
         color=colors[1],
         linestyle=linestyles[1],
     )
-    # axl.plot(
-    #     densities,
-    #     results["collapsed"] * 100,
-    #     label=labels[2],
-    #     color=colors[2],
-    #     linestyle=linestyles[2],
-    # )
+    axl.plot(
+        densities,
+        results["collapsed"] * 100,
+        label=labels[2],
+        color=colors[2],
+        linestyle=linestyles[2],
+    )
 
     exact = np.array([exact_dscf(d) for d in densities])
+    print(exact)
     axl.plot(
         densities,
         exact * 100,

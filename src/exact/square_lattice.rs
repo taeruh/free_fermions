@@ -155,19 +155,6 @@ pub fn run_analyse() {
     )
     .unwrap();
 
-    let total_num = (2_usize).pow(3 * 9);
-    // correct for the cases where no horizontal or vertical edges, but then we counted
-    // the empty case twice in the correction, so plus one
-    let sample_num = total_num - 2 * (2_usize).pow(2 * 9) + 1;
-    // NO! this is too naive, since in the numerics we resample to enforce the 2d-ness
-    // which effectively breaks the independence ...
-    // with this normalisation here the results are off by a factor of 10 or something
-    // like that (too big);
-    // firstly, compare results when we don't enforce the 2d-ness, and hope that they
-    // coincide with each other
-    // let normalisation_factor = total_num as f64 / sample_num as f64;
-    let normalisation_factor = 1.;
-
     #[derive(Debug, Serialize, Deserialize)]
     struct Coefficients {
         scf: [f64; N],
@@ -181,14 +168,12 @@ pub fn run_analyse() {
     };
 
     for instance in results.into_iter() {
-        // if instance.is_empty || !instance.is_2d {
-        if instance.is_empty {
-            coefficients.scf[0] += 1.0;
+        if instance.is_empty || !instance.is_2d {
             continue;
         }
         let index = instance.num_ops;
-        // assert!(index > 1, "graph cannot be two-dimensional with only one operator");
-        // assert!(instance.coll_valid, "all graphs should be scf after the collapse");
+        assert!(index > 1, "graph cannot be two-dimensional with only one operator");
+        assert!(instance.coll_valid, "all graphs should be scf after the collapse");
         coefficients.scf[index] += 1.0;
         if !instance.orig_valid {
             coefficients.dscf[index] += 1.0;
@@ -196,16 +181,31 @@ pub fn run_analyse() {
         coefficients.collapsed[index] += instance.collapsed;
     }
 
-    for i in 0..N {
-        coefficients.scf[i] *= normalisation_factor;
-        coefficients.dscf[i] *= normalisation_factor;
-    }
+    // note that the coefficients are not normalised as we do not accept non-2d lattices;
+    // we do the normalisation when plotting as it actually depends on the drawing
+    // probability, i.e., we cannot just universally normalise the coefficients
 
-    println!("{:?}", coefficients);
+    println!("{coefficients:?}");
 
     fs::write(
         "output/exact_square_lattice_coefficients.json",
         serde_json::to_string_pretty(&coefficients).unwrap(),
     )
     .unwrap();
+}
+
+fn binom(n: usize, k: usize) -> usize {
+    // never do that
+    // if k > n {
+    //     return 0;
+    // }
+    if k == 0 || k == n {
+        return 1;
+    }
+    let mut res = 1;
+    for i in 0..k {
+        res *= n - i;
+        res /= i + 1;
+    }
+    res
 }

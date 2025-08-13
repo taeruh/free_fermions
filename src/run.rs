@@ -43,8 +43,8 @@ pub fn run() {
     // sparse::run();
     // lin_sparse::run();
     // exact::square_lattice::run();
-    // exact::square_lattice::run_analyse();
-    twod_square_lattice::run();
+    exact::square_lattice::run_analyse();
+    // twod_square_lattice::run();
 }
 
 fn uniform_values(
