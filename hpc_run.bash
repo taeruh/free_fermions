@@ -9,13 +9,13 @@
 
 # when I do more than roughly 20 jobs, I get apparently really far down in the queue
 # -> it is often faster to run less jobs but do it multiple times
-#PBS -J 1-20
+# #PBS -J 1-20
 
 # 200h is the maximum, otherwise the job doesn't even get queued
-#PBS -l walltime=3:00:00 
+#PBS -l walltime=80:00:00 
 # see for max possible resource on a single node: https://hpc.research.uts.edu.au/status/
 # (select=1 is probably the default (putting stuff onto one chunk(/host?)))
-#PBS -l select=1:ncpus=50:mem=100GB
+#PBS -l select=1:ncpus=1:mem=100GB
 
 # this is relative to the final workdir which is ./=${PBS_O_WORKDIR}, so we don't have
 # to move it from the scratch
@@ -24,7 +24,8 @@
 
 
 bin="free_fermions"
-id="${PBS_ARRAY_INDEX}"
+# id="${PBS_ARRAY_INDEX}"
+id="999"
 
 echo "${id}"
 

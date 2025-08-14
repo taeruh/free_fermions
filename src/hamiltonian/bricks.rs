@@ -71,7 +71,7 @@ impl Bricks {
                 .enumerate()
                 .map(|(i, density)| {
                     let d = density.0;
-                    assert!(d >= 1. / 9., "density {i} too low");
+                    // assert!(d >= 1. / 9., "density {i} too low");
                     let mut e = super::draw_doubles(d, rng);
                     while e.is_empty() {
                         e = super::draw_doubles(d, rng);

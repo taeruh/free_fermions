@@ -11,11 +11,12 @@ file = "periodic_bricks_new_"
 
 
 def main():
-    with open(f"{data_dir}/{file}0.json") as f:
+    with open(f"{data_dir}/{file}1.json") as f:
         data = json.load(f)
 
     densities = data["densities"]
     density_len = len(densities)
+    print(densities)
 
     max_sc_size = 0
 
@@ -30,7 +31,7 @@ def main():
     num_sample_files = 20
     num_total_samples = 0
 
-    for i in range(num_sample_files):
+    for i in range(1, num_sample_files + 1):
         try:
             with open(f"{data_dir}/{file}{i}.json") as f:
                 data = json.load(f)

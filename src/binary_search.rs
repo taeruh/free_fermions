@@ -104,6 +104,7 @@ impl<S: Clone + Debug, R, const N: usize> TreeStack<S, R, N> {
         if self.top + 1 == N {
             // leaf case
             // println!("{:?}", current.tree.state);
+            // println!("at top");
             let mut leaf = current.clone_reset();
             if leaf.tree.try_true(f_true) {
                 self.results.push(f_result(leaf.tree.state));

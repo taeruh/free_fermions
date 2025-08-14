@@ -32,7 +32,6 @@ type Graph = specialised::Graph<Custom>;
 pub fn run() {
     fs::create_dir_all("output").unwrap();
     // chain::run();
-    // bricks::run();
     // majoranas::run();
     // erdos_renyi::run();
     // all_of_them::run();
@@ -42,9 +41,12 @@ pub fn run() {
     // num_two_local_claws::run();
     // sparse::run();
     // lin_sparse::run();
-    // exact::square_lattice::run();
-    exact::square_lattice::run_analyse();
     // twod_square_lattice::run();
+    // bricks::run();
+    // exact::square_lattice::run();
+    // exact::square_lattice::run_analyse();
+    exact::bricks::run();
+    // exact::bricks::run_analyse();
 }
 
 fn uniform_values(
