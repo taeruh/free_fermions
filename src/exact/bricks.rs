@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fs, rc::Rc};
+use std::fs;
 
 use serde::{Deserialize, Serialize};
 
@@ -151,7 +151,6 @@ pub fn run() {
             orig_valid: state.orig_valid,
             coll_valid: state.coll_valid,
             collapsed: state.collapsed,
-            // is_2d: !state.ee_horizontal.is_empty() && !state.ee_vertical.is_empty(),
             is_2d: !state.e1.is_empty()
                 && !state.e2.is_empty()
                 && !state.e3.is_empty()
@@ -174,17 +173,13 @@ pub fn run() {
     tree.search(&mut f_true, &mut f_false, &f_result);
     let results = tree.into_results();
 
-    fs::write(
-        "output/exact_bricks.json",
-        serde_json::to_string_pretty(&results).unwrap(),
-    )
-    .unwrap();
+    fs::write("output/exact_bricks.msgpack", rmp_serde::to_vec(&results).unwrap())
+        .unwrap();
 }
 
 pub fn run_analyse() {
     let results: Vec<Result> =
-        serde_json::from_str(&fs::read_to_string("output/exact_bricks.json").unwrap())
-            .unwrap();
+        rmp_serde::from_slice(&fs::read("output/exact_bricks.msgpack").unwrap()).unwrap();
 
     #[derive(Debug, Serialize, Deserialize)]
     struct Coefficients {
@@ -203,7 +198,7 @@ pub fn run_analyse() {
             continue;
         }
         let index = instance.num_ops;
-        assert!(index > 5, "graph cannot be two-dimensional with less than 5 operator");
+        assert!(index > 4, "graph cannot be two-dimensional with less than 5 operator");
         assert!(instance.coll_valid, "all graphs should be scf after the collapse");
         coefficients.scf[index] += 1.0;
         if !instance.orig_valid {

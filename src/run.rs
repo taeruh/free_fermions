@@ -42,10 +42,10 @@ pub fn run() {
     // sparse::run();
     // lin_sparse::run();
     // twod_square_lattice::run();
-    // bricks::run();
     // exact::square_lattice::run();
     // exact::square_lattice::run_analyse();
-    exact::bricks::run();
+    bricks::run();
+    // exact::bricks::run();
     // exact::bricks::run_analyse();
 }
 

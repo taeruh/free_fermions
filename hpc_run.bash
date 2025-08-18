@@ -12,10 +12,10 @@
 # #PBS -J 1-20
 
 # 200h is the maximum, otherwise the job doesn't even get queued
-#PBS -l walltime=80:00:00 
+#PBS -l walltime=8:00:00 
 # see for max possible resource on a single node: https://hpc.research.uts.edu.au/status/
 # (select=1 is probably the default (putting stuff onto one chunk(/host?)))
-#PBS -l select=1:ncpus=1:mem=100GB
+#PBS -l select=1:ncpus=1:mem=30GB
 
 # this is relative to the final workdir which is ./=${PBS_O_WORKDIR}, so we don't have
 # to move it from the scratch
@@ -27,14 +27,13 @@ bin="free_fermions"
 # id="${PBS_ARRAY_INDEX}"
 id="999"
 
-echo "${id}"
-
 cd ${PBS_O_WORKDIR}
 mkdir -p log
 mkdir -p output
 
 scratch="/scratch/${USER}_${PBS_JOBID%.*}"
 mkdir -p ${scratch}/output
+cp output/exact_bricks.json ${scratch}/output/
 cp target/release/${bin} ${scratch}
 cp arch_rust_with_sagemath.sif ${scratch}
 cp -r pysrc ${scratch}

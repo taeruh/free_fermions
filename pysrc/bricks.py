@@ -3,6 +3,7 @@
 import json
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy
 
 data_dir = "output"
 # data_dir = "results"
@@ -11,12 +12,60 @@ file = "periodic_bricks_new_"
 
 
 def main():
+
+    with open(f"{data_dir}/exact_bricks_coefficients.json") as f:
+        coefficients = json.load(f)
+
+    max_ops = len(coefficients["scf"])
+    # print(max_ops)  # should be 5*9=27
+
+    def binom(n, k):
+        return scipy.special.comb(n, k)
+
+    def exact_scf(density):
+        ret = 0.0
+        norm = 0.0  # normalization factor since we were throwing away non-2d cases
+        for k, coeff in enumerate(coefficients["scf"]):
+            ret += coeff * density**k * (1 - density) ** (max_ops - k)
+            norm_factor = binom(5 * 9, k) - (
+                # inclusion-exclusion principle: we have 5 pots, each with 9 elements; we
+                # have to correct for the cases where not all pots are missing at least
+                # one element; for i=1,...,5 let A_i be the set of cases where we draw the
+                # k elements such that pot i is empty; then we want to calculate the union
+                # of (A_i)_i -> use inclusion-exclusion principle on those sets
+                5 * binom(4 * 9, k)
+                - 10 * binom(3 * 9, k)
+                + 10 * binom(2 * 9, k)
+                - 5 * binom(1 * 9, k)
+                + 1 * binom(0 * 9, k)
+            )
+            norm += norm_factor * density**k * (1 - density) ** (max_ops - k)
+        print("norm", norm)
+        return ret / norm
+        # return ret
+
+    def exact_dscf(density):
+        ret = 0.0
+        norm = 0.0
+        for i, coeff in enumerate(coefficients["dscf"]):
+            ret += coeff * density**i * (1 - density) ** (max_ops - i)
+            norm_factor = (
+                binom(5 * 9, i)
+                - 5 * binom(4 * 9, i)
+                + 10 * binom(3 * 9, i)
+                - 10 * binom(2 * 9, i)
+                + 5 * binom(1 * 9, i)
+                - 1 * binom(0 * 9, i)
+            )
+            norm += norm_factor * density**i * (1 - density) ** (max_ops - i)
+        return ret / norm
+
     with open(f"{data_dir}/{file}1.json") as f:
         data = json.load(f)
 
     densities = data["densities"]
     density_len = len(densities)
-    print(densities)
+    # print(densities)
 
     max_sc_size = 0
 
@@ -28,7 +77,8 @@ def main():
         "collapsed": np.array(np.zeros(density_len)),
     }
 
-    num_sample_files = 20
+    # num_sample_files = 20
+    num_sample_files = 5
     num_total_samples = 0
 
     for i in range(1, num_sample_files + 1):
@@ -47,12 +97,12 @@ def main():
         for key, value in results.items():
             value += num_samples * np.array(data[key])
 
-    print(f"num_total_samples: {num_total_samples}")
+    # print(f"num_total_samples: {num_total_samples}")
     for key, value in results.items():
         # value *= 100.0 / num_total_samples  # percentage
         value /= num_total_samples
 
-    print(f"max_sc_size: {max_sc_size}")
+    # print(f"max_sc_size: {max_sc_size}")
 
     paper_setup()
 
@@ -84,6 +134,15 @@ def main():
         linestyle=linestyles[0],
     )
 
+    exact = np.array([exact_scf(d) for d in densities])
+    ax.plot(
+        densities,
+        exact,
+        label="e scf",
+        color="black",
+        linestyle=(0, (3, 1, 1, 1, 1, 1)),
+    )
+
     axl.set_ylabel(r"[\%]")
     axl.plot(
         densities,
@@ -100,14 +159,23 @@ def main():
         linestyle=linestyles[2],
     )
 
-    print(
-        f"before sum(|scf - cf|) = {np.abs(results["before_claw_free"] -
-        results["before_simplicial"]).sum()}"
+    exact = np.array([exact_dscf(d) for d in densities])
+    axl.plot(
+        densities,
+        exact * 100,
+        label="e dscf",
+        color="black",
+        linestyle=(0, (3, 1, 1, 1, 1, 1)),
     )
-    print(
-        f"after  sum(|scf - cf|) = {np.abs(results["after_claw_free"] -
-        results["after_simplicial"]).sum()}"
-    )
+
+    # print(
+    #     f"before sum(|scf - cf|) = {np.abs(results["before_claw_free"] -
+    #     results["before_simplicial"]).sum()}"
+    # )
+    # print(
+    #     f"after  sum(|scf - cf|) = {np.abs(results["after_claw_free"] -
+    #     results["after_simplicial"]).sum()}"
+    # )
 
     for a in [ax, axl]:
         a.grid()

@@ -37,9 +37,15 @@ def main():
 
     def exact_dscf(density):
         ret = 0.0
+        norm = 0.0  # only for completeness here, ret will be zero anyways
         for i, coeff in enumerate(coefficients["dscf"]):
+            norm += (
+                (binom(3 * 9, i) - (2 * binom(2 * 9, i) - binom(1 * 9, i)))
+                * density**i
+                * (1 - density) ** (max_ops - i)
+            )
             ret += coeff * density**i * (1 - density) ** (max_ops - i)
-        return ret
+        return ret / norm
 
     # aah, that's actually not the same as the numerical thing as numerical things takes
     # all samples into account for the collapse, but the analytical only the ones that are
@@ -66,7 +72,8 @@ def main():
         "collapsed": np.array(np.zeros(density_len)),
     }
 
-    num_sample_files = 20
+    # num_sample_files = 20
+    num_sample_files = 5
     num_total_samples = 0
 
     for i in range(1, num_sample_files + 1):
@@ -150,13 +157,12 @@ def main():
     )
 
     exact = np.array([exact_dscf(d) for d in densities])
-    print(exact)
     axl.plot(
         densities,
         exact * 100,
         label="e dscf",
         color="black",
-        linestyle=linestyles[1],
+        linestyle=(0, (3, 1, 1, 1, 1, 1)),
     )
 
     print(
