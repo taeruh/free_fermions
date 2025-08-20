@@ -49,7 +49,7 @@ def main():
         axs[0].plot(
             data.densities,
             data.simplicial[j],
-            label=f"$m = {round(data.sizes[j])}$",
+            label=f"$n = {round(data.sizes[j])}$",
             linestyle=linestyles[0],
             color=colors[color_offset + j],
         )
@@ -57,14 +57,14 @@ def main():
         axs[1].plot(
             data.densities,
             data.delta_simplicial[j],
-            label=f"$m = {round(data.sizes[j])}$",
+            label=f"$n = {round(data.sizes[j])}$",
             linestyle=linestyles[1],
             color=colors[color_offset + j],
         )
         axs[1].plot(
             data.densities,
             data.collapsed[j],
-            label=f"$m = {round(data.sizes[j])}$",
+            label=f"$n = {round(data.sizes[j])}$",
             linestyle=linestyles[2],
             color=colors[color_offset + j],
         )
@@ -81,7 +81,7 @@ def main():
         # handles, labels = ax.get_legend_handles_labels()
         # ax.legend(handles, labels, loc="upper right")
 
-    axs[1].set_xlabel(r"$d$")
+    axs[1].set_xlabel(r"$p$")
     axs[1].xaxis.set_label_coords(0.5, -0.14)
     axs[1].set_ylabel(r"[\%]")
 

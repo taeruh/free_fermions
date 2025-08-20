@@ -5,14 +5,15 @@ use rand_pcg::Pcg64;
 
 use super::{GenGraph, density_size_sweep::Results};
 use crate::{
-    graph::generic::{algorithms::is_line_graph::SageProcess, ImplGraph},
+    graph::generic::{ImplGraph, algorithms::is_line_graph::SageProcess},
     hamiltonian::sparse::Sparse,
     rand_helper,
     run::{check, density_size_sweep::CountResults},
 };
 
 const NUM_THREADS: usize = 10;
-const NUM_THREAD_SAMPLES: usize = 1000;
+// const NUM_THREAD_SAMPLES: usize = 1000;
+const NUM_THREAD_SAMPLES: usize = 100;
 
 const SIZES: [usize; 2] = [5, 30];
 const NUM_OPERATORS: usize = 15 + 1;
@@ -35,7 +36,7 @@ pub fn run() {
         let mut sage_process = SageProcess::default();
 
         for (size_idx, &size) in SIZES.iter().enumerate() {
-            println!("{:?}", size);
+            println!("{size:?}");
             let ret_before_claw_free = ret.before_claw_free.get_mut(size_idx).unwrap();
             let ret_after_claw_free = ret.after_claw_free.get_mut(size_idx).unwrap();
             let ret_before_simp = ret.before_simplicial.get_mut(size_idx).unwrap();

@@ -94,7 +94,7 @@ def main():
         # handles, labels = ax.get_legend_handles_labels()
         # ax.legend(handles, labels, loc="upper right")
 
-    axs[1].set_xlabel(r"\# paulis")
+    axs[1].set_xlabel(r"\# Pauli Strings")
     axs[1].xaxis.set_label_coords(0.5, -0.14)
     axs[1].set_ylabel(r"[\%]")
 

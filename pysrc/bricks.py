@@ -5,67 +5,55 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 
-data_dir = "output"
-# data_dir = "results"
-file = "periodic_bricks_new_"
-# file = "periodic_bricks_full_"
+# data_dir = "output"
+data_dir = "results"
+file = "periodic_bricks_"
 
 
 def main():
-
     with open(f"{data_dir}/exact_bricks_coefficients.json") as f:
         coefficients = json.load(f)
 
     max_ops = len(coefficients["scf"])
     # print(max_ops)  # should be 5*9=27
 
-    def binom(n, k):
-        return scipy.special.comb(n, k)
+    def norm_factor(k):
+        return scipy.special.comb(5 * 9, k) - (
+            # inclusion-exclusion principle: we have 5 pots, each with 9 elements; we
+            # have to correct for the cases where not all pots are missing at least
+            # one element; for i=1,...,5 let A_i be the set of cases where we draw the
+            # k elements such that pot i is empty; then we want to calculate the union
+            # of (A_i)_i -> use inclusion-exclusion principle on those sets
+            5 * scipy.special.comb(4 * 9, k)
+            - 10 * scipy.special.comb(3 * 9, k)
+            + 10 * scipy.special.comb(2 * 9, k)
+            - 5 * scipy.special.comb(1 * 9, k)
+            + 1 * scipy.special.comb(0 * 9, k)
+        )
 
     def exact_scf(density):
         ret = 0.0
         norm = 0.0  # normalization factor since we were throwing away non-2d cases
         for k, coeff in enumerate(coefficients["scf"]):
             ret += coeff * density**k * (1 - density) ** (max_ops - k)
-            norm_factor = binom(5 * 9, k) - (
-                # inclusion-exclusion principle: we have 5 pots, each with 9 elements; we
-                # have to correct for the cases where not all pots are missing at least
-                # one element; for i=1,...,5 let A_i be the set of cases where we draw the
-                # k elements such that pot i is empty; then we want to calculate the union
-                # of (A_i)_i -> use inclusion-exclusion principle on those sets
-                5 * binom(4 * 9, k)
-                - 10 * binom(3 * 9, k)
-                + 10 * binom(2 * 9, k)
-                - 5 * binom(1 * 9, k)
-                + 1 * binom(0 * 9, k)
-            )
-            norm += norm_factor * density**k * (1 - density) ** (max_ops - k)
-        print("norm", norm)
+            norm += norm_factor(k) * density**k * (1 - density) ** (max_ops - k)
         return ret / norm
-        # return ret
 
     def exact_dscf(density):
         ret = 0.0
         norm = 0.0
-        for i, coeff in enumerate(coefficients["dscf"]):
-            ret += coeff * density**i * (1 - density) ** (max_ops - i)
-            norm_factor = (
-                binom(5 * 9, i)
-                - 5 * binom(4 * 9, i)
-                + 10 * binom(3 * 9, i)
-                - 10 * binom(2 * 9, i)
-                + 5 * binom(1 * 9, i)
-                - 1 * binom(0 * 9, i)
-            )
-            norm += norm_factor * density**i * (1 - density) ** (max_ops - i)
+        for k, coeff in enumerate(coefficients["dscf"]):
+            ret += coeff * density**k * (1 - density) ** (max_ops - k)
+            norm += norm_factor(k) * density**k * (1 - density) ** (max_ops - k)
         return ret / norm
+
 
     with open(f"{data_dir}/{file}1.json") as f:
         data = json.load(f)
 
     densities = data["densities"]
     density_len = len(densities)
-    # print(densities)
+    # print(densities[0])
 
     max_sc_size = 0
 
@@ -77,8 +65,7 @@ def main():
         "collapsed": np.array(np.zeros(density_len)),
     }
 
-    # num_sample_files = 20
-    num_sample_files = 5
+    num_sample_files = 20
     num_total_samples = 0
 
     for i in range(1, num_sample_files + 1):
@@ -97,7 +84,6 @@ def main():
         for key, value in results.items():
             value += num_samples * np.array(data[key])
 
-    # print(f"num_total_samples: {num_total_samples}")
     for key, value in results.items():
         # value *= 100.0 / num_total_samples  # percentage
         value /= num_total_samples
@@ -113,16 +99,20 @@ def main():
     gs.update(hspace=0.005)
 
     rc_colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
-    colors = [rc_colors[0], rc_colors[3], rc_colors[2]]
+    colors = [rc_colors[4], rc_colors[3], rc_colors[2], "black", "black"]
     linestyles = [
         "dashed",
         "solid",
         "dotted",
+        (0, (2.5, 1.5, 1, 1, 1, 1.5)),
+        (0, (2.5, 1.5, 1, 1, 1, 1.5)),
     ]
     labels = [
         r"$p_{\mathrm{SCF}}$",
         r"$\Delta p_{\mathrm{SCF}}$",
         r"$\Delta \Xi$",
+        r"$p_{\mathrm{SCF}}$ exact",
+        r"$\Delta p_{\mathrm{SCF}}$ exact",
     ]
 
     ax.set_ylabel(labels[0])
@@ -138,9 +128,9 @@ def main():
     ax.plot(
         densities,
         exact,
-        label="e scf",
-        color="black",
-        linestyle=(0, (3, 1, 1, 1, 1, 1)),
+        label=labels[3],
+        color=colors[3],
+        linestyle=linestyles[3],
     )
 
     axl.set_ylabel(r"[\%]")
@@ -163,9 +153,9 @@ def main():
     axl.plot(
         densities,
         exact * 100,
-        label="e dscf",
-        color="black",
-        linestyle=(0, (3, 1, 1, 1, 1, 1)),
+        label=labels[4],
+        color=colors[4],
+        linestyle=linestyles[4],
     )
 
     # print(
@@ -181,7 +171,8 @@ def main():
         a.grid()
         ymax = a.get_ylim()[1]
         a.set_ylim(0, ymax)
-    axl.set_xlabel(r"$d$")
+        a.set_xlim(0, densities[-1])
+    axl.set_xlabel(r"$p$")
     ax.tick_params(axis="x", which="both", bottom=True, top=True, labelbottom=False)
     axl.tick_params(axis="x", which="both", top=True)
 
@@ -190,7 +181,7 @@ def main():
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels, loc="upper right")
 
-    axl.set_yticks([0.0, 2.5, 5.0])
+    # axl.set_yticks([0.0, 2.5, 5.0])
     plt.subplots_adjust(top=0.96, bottom=0.13, left=0.14, right=0.970)
 
     plt.savefig(f"output/periodic_bricks.pdf")

@@ -60,7 +60,7 @@ def main():
             axs[i][0].plot(
                 data[i].densities,
                 data[i].simplicial[j],
-                label=f"$m = {round(data[i].sizes[j]/2)}$",
+                label=f"$n = {round(data[i].sizes[j]/2)}$",
                 linestyle=linestyles[0],
                 color=colors[color_offset + j],
             )
@@ -68,14 +68,14 @@ def main():
             axs[i][1].plot(
                 data[i].densities,
                 data[i].delta_simplicial[j],
-                label=f"$m = {round(data[i].sizes[j]/2)}$",
+                label=f"$n = {round(data[i].sizes[j]/2)}$",
                 linestyle=linestyles[1],
                 color=colors[color_offset + j],
             )
             axs[i][1].plot(
                 data[i].densities,
                 data[i].collapsed[j],
-                label=f"$m = {round(data[i].sizes[j]/2)}$",
+                label=f"$n = {round(data[i].sizes[j]/2)}$",
                 linestyle=linestyles[2],
                 color=colors[color_offset + j],
             )
@@ -92,7 +92,7 @@ def main():
         # ax.legend(handles, labels, loc="upper right")
 
     for ax in [axs[0][1], axs[1][1]]:
-        ax.set_xlabel(r"$d$")
+        ax.set_xlabel(r"$p$")
         ax.xaxis.set_label_coords(0.5, -0.14)
         ax.set_ylabel(r"[\%]")
 
@@ -149,7 +149,7 @@ class Data:
         # offset = 901
         # num_sample_files = 1
         offset = 1
-        num_sample_files = 20
+        num_sample_files = 5
 
         thisfile = f"{file}{suffix}"
         with open(f"{data_dir}/{thisfile}{offset}.json") as f:

@@ -14,15 +14,15 @@ use crate::{
 // adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
 // much)
 // const NUM_THREADS: usize = 50;
-const NUM_THREADS: usize = 20;
+const NUM_THREADS: usize = 10;
 // const NUM_THREAD_SAMPLES: usize = 5000; // per thread
-const NUM_THREAD_SAMPLES: usize = 2000; // per thread
+const NUM_THREAD_SAMPLES: usize = 50; // per thread
 
 const DENSITY_START: f64 = 0.00;
 // const DENSITY_END: f64 = 1.0;
 const DENSITY_END: f64 = 0.06;
 // const NUM_DENSITY_STEPS: usize = 2000;
-const NUM_DENSITY_STEPS: usize = 100;
+const NUM_DENSITY_STEPS: usize = 30;
 
 // these two have to be even
 // const SIZE_START: usize = 4;

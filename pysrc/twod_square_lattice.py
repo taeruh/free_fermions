@@ -7,10 +7,7 @@ import scipy
 
 data_dir = "output"
 # data_dir = "results"
-# file = "periodic_square_lattice_"
 file = "periodic_square_lattice_force_2d_"
-# file = "periodic_square_lattice__"
-# file = "periodic_square_lattice_full_"
 
 
 def main():
@@ -20,36 +17,30 @@ def main():
     max_ops = len(coefficients["scf"])
     # print(max_ops)  # should be 3*9=27
 
-    def binom(n, k):
-        return scipy.special.comb(n, k)
+    def norm_factor(k):
+        return scipy.special.binom(3 * 9, k) - (
+            2 * scipy.special.binom(2 * 9, k) - scipy.special.binom(1 * 9, k)
+        )
 
     def exact_scf(density):
         ret = 0.0
         norm = 0.0  # normalization factor since we were throwing away non-2d cases
         for i, coeff in enumerate(coefficients["scf"]):
             ret += coeff * density**i * (1 - density) ** (max_ops - i)
-            norm += (
-                (binom(3 * 9, i) - (2 * binom(2 * 9, i) - binom(1 * 9, i)))
-                * density**i
-                * (1 - density) ** (max_ops - i)
-            )
+            norm += norm_factor(i) * density**i * (1 - density) ** (max_ops - i)
         return ret / norm
 
     def exact_dscf(density):
         ret = 0.0
-        norm = 0.0  # only for completeness here, ret will be zero anyways
+        # norm = 0.0  #  ret will be zero anyways
         for i, coeff in enumerate(coefficients["dscf"]):
-            norm += (
-                (binom(3 * 9, i) - (2 * binom(2 * 9, i) - binom(1 * 9, i)))
-                * density**i
-                * (1 - density) ** (max_ops - i)
-            )
+            # norm += ...
             ret += coeff * density**i * (1 - density) ** (max_ops - i)
-        return ret / norm
+        return ret
 
-    # aah, that's actually not the same as the numerical thing as numerical things takes
-    # all samples into account for the collapse, but the analytical only the ones that are
-    # scf after the collapse
+    # aah, that's actually not the same as the numerical thing as the numerical thing
+    # takes all samples into account for the collapse, but the analytical only the ones
+    # that are scf after the collapse
     # def exact_collapsed(density):
     #     ret = 0.0
     #     for i, coeff in enumerate(coefficients["collapsed"]):
@@ -108,16 +99,20 @@ def main():
     gs.update(hspace=0.005)
 
     rc_colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
-    colors = [rc_colors[0], rc_colors[3], rc_colors[2]]
+    colors = [rc_colors[4], rc_colors[3], rc_colors[2], "black", "black"]
     linestyles = [
         "dashed",
         "solid",
         "dotted",
+        (0, (2.5, 1.5, 1, 1, 1, 1.5)),
+        (0, (2.5, 1.5, 1, 1, 1, 1.5)),
     ]
     labels = [
         r"$p_{\mathrm{SCF}}$",
         r"$\Delta p_{\mathrm{SCF}}$",
         r"$\Delta \Xi$",
+        r"$p_{\mathrm{SCF}}$ exact",
+        r"$\Delta p_{\mathrm{SCF}}$ exact",
     ]
 
     # ax.set_ylabel(labels[0])
@@ -135,9 +130,9 @@ def main():
     ax.plot(
         densities,
         exact * 10**2,
-        label="e scf",
-        color="black",
-        linestyle=(0, (3, 1, 1, 1, 1, 1)),
+        label=labels[3],
+        color=colors[3],
+        linestyle=linestyles[3],
     )
 
     axl.set_ylabel(r"[\%]")
@@ -160,9 +155,9 @@ def main():
     axl.plot(
         densities,
         exact * 100,
-        label="e dscf",
-        color="black",
-        linestyle=(0, (3, 1, 1, 1, 1, 1)),
+        label=labels[4],
+        color=colors[4],
+        linestyle=linestyles[4],
     )
 
     print(
@@ -178,9 +173,10 @@ def main():
         a.grid()
         ymax = a.get_ylim()[1]
         a.set_ylim(0, ymax)
+        a.set_xlim(0, densities[-1])
         print(ymax)
 
-    axl.set_xlabel(r"$d$")
+    axl.set_xlabel(r"$p$")
     ax.tick_params(axis="x", which="both", bottom=True, top=True, labelbottom=False)
     axl.tick_params(axis="x", which="both", top=True)
 

@@ -23,7 +23,7 @@ use crate::{
 // much)
 // const NUM_THREADS: usize = 50;
 const NUM_THREADS: usize = 10;
-// const NUM_SAMPLES: usize = 20000; // per thread
+// const NUM_SAMPLES: usize = 10000; // per thread
 const NUM_SAMPLES: usize = 100; // per thread
 
 const FORCE_2D: bool = true;
