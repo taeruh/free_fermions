@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 
-data_dir = "output"
-# data_dir = "results"
+# data_dir = "output"
+data_dir = "results"
 file = "periodic_square_lattice_force_2d_"
 
 
@@ -63,8 +63,8 @@ def main():
         "collapsed": np.array(np.zeros(density_len)),
     }
 
-    # num_sample_files = 20
-    num_sample_files = 5
+    num_sample_files = 20
+    # num_sample_files = 5
     num_total_samples = 0
 
     for i in range(1, num_sample_files + 1):

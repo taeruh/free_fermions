@@ -9,8 +9,8 @@ from data_density_sizes import Data
 from plot_helper import paper_setup, set_size
 from bounds import *
 
-data_dir = "output"
-# data_dir = "results"
+# data_dir = "output"
+data_dir = "results"
 file = "erdos_renyi_"
 
 

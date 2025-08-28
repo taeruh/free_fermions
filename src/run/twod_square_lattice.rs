@@ -21,10 +21,10 @@ use crate::{
 
 // adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
 // much)
-// const NUM_THREADS: usize = 50;
-const NUM_THREADS: usize = 10;
-// const NUM_SAMPLES: usize = 10000; // per thread
-const NUM_SAMPLES: usize = 100; // per thread
+const NUM_THREADS: usize = 50;
+// const NUM_THREADS: usize = 10;
+const NUM_SAMPLES: usize = 50000; // per thread
+// const NUM_SAMPLES: usize = 100; // per thread
 
 const FORCE_2D: bool = true;
 // const FORCE_2D: bool = false;
@@ -32,8 +32,8 @@ const FORCE_2D: bool = true;
 const DENSITY_START: f64 = 0.01;
 const DENSITY_END: f64 = 0.60;
 // const DENSITY_END: f64 = 1.00;
-// const NUM_DENSITY_STEPS: usize = 2000;
-const NUM_DENSITY_STEPS: usize = 20;
+const NUM_DENSITY_STEPS: usize = 300;
+// const NUM_DENSITY_STEPS: usize = 30;
 
 const NUM_TOTAL_SAMPLES: usize = NUM_THREADS * NUM_SAMPLES;
 

@@ -13,22 +13,26 @@ use crate::{
 
 // adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
 // much)
-// const NUM_THREADS: usize = 50;
-const NUM_THREADS: usize = 10;
-// const NUM_THREAD_SAMPLES: usize = 5000; // per thread
-const NUM_THREAD_SAMPLES: usize = 50; // per thread
+const NUM_THREADS: usize = 50;
+// const NUM_THREADS: usize = 10;
+const NUM_THREAD_SAMPLES: usize = 1000; // per thread
+// const NUM_THREAD_SAMPLES: usize = 50; // per thread
 
 const DENSITY_START: f64 = 0.00;
-// const DENSITY_END: f64 = 1.0;
-const DENSITY_END: f64 = 0.06;
-// const NUM_DENSITY_STEPS: usize = 2000;
-const NUM_DENSITY_STEPS: usize = 30;
-
-// these two have to be even
-// const SIZE_START: usize = 4;
-// const SIZE_END: usize = 10;
-const SIZE_START: usize = 10;
-const SIZE_END: usize = 16;
+// const FIRST: bool = true;
+const FIRST: bool = false;
+// size start and end have to be even
+const PARAMETERS: (f64, usize, usize, &str) = if FIRST {
+    (1.0, 4, 10, "first")
+} else {
+    (0.06, 10, 16, "second")
+};
+const DENSITY_END: f64 = PARAMETERS.0;
+const SIZE_START: usize = PARAMETERS.1;
+const SIZE_END: usize = PARAMETERS.2;
+const PART: &str = PARAMETERS.3;
+const NUM_DENSITY_STEPS: usize = 500;
+// const NUM_DENSITY_STEPS: usize = 30;
 
 fn get_densities() -> Vec<f64> {
     super::uniform_values(DENSITY_START, DENSITY_END, NUM_DENSITY_STEPS).collect()
@@ -64,8 +68,7 @@ pub fn run() {
     );
 
     fs::write(
-        // format!("output/e_structure_first_{id}.json"),
-        format!("output/e_structure_second_{id}.json"),
+        format!("output/e_structure_{PART}_{id}.json"),
         serde_json::to_string_pretty(&results).unwrap(),
     )
     .unwrap();

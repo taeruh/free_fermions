@@ -7,8 +7,8 @@ import numpy as np
 from data_density_sizes import Data
 from plot_helper import paper_setup, set_size
 
-data_dir = "output"
-# data_dir = "results"
+# data_dir = "output"
+data_dir = "results"
 file = "two_local_"
 
 
@@ -94,7 +94,7 @@ def main():
     axs[0].set_ylabel(labels[0])
     axs[0].tick_params(axis="x", labelbottom=False)
 
-    axs[1].set_ylim(0, 66)
+    # axs[1].set_ylim(0, 76)
 
     axs[1].plot([], [], color="black", linestyle=linestyles[0], label=labels[0])
     axs[1].plot([], [], color="black", linestyle=linestyles[1], label=labels[1])

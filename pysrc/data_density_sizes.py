@@ -7,8 +7,8 @@ class Data:
         # offset = 901
         # num_sample_files = 1
         offset = 1
-        # num_sample_files = 20
-        num_sample_files = 5
+        num_sample_files = 20
+        # num_sample_files = 5
 
         with open(f"{data_dir}/{file}{offset}.json") as f:
             data = json.load(f)

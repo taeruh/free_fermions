@@ -14,15 +14,16 @@ use crate::{
     rand_helper,
 };
 
-const NUM_THREADS: usize = 10;
-// const NUM_THREAD_SAMPLES: usize = 5000;
-const NUM_THREAD_SAMPLES: usize = 50;
+// const NUM_THREADS: usize = 10;
+const NUM_THREADS: usize = 50;
+const NUM_THREAD_SAMPLES: usize = 10000;
+// const NUM_THREAD_SAMPLES: usize = 50;
 
 const SIZES: [usize; 3] = [10, 20, 30];
 const DENSITY_START: f64 = 0.00;
 const DENSITY_END: f64 = 0.06;
-// const NUM_DENSITY_STEPS: usize = 100;
-const NUM_DENSITY_STEPS: usize = 40;
+const NUM_DENSITY_STEPS: usize = 500;
+// const NUM_DENSITY_STEPS: usize = 40;
 
 pub fn run() {
     let id = env::args()

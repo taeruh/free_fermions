@@ -11,9 +11,10 @@ use crate::{
     run::{check, density_size_sweep::CountResults},
 };
 
-const NUM_THREADS: usize = 10;
+// const NUM_THREADS: usize = 10;
+const NUM_THREADS: usize = 50;
 // const NUM_THREAD_SAMPLES: usize = 1000;
-const NUM_THREAD_SAMPLES: usize = 100;
+const NUM_THREAD_SAMPLES: usize = 1000;
 
 const SIZES: [usize; 2] = [5, 30];
 const NUM_OPERATORS: usize = 15 + 1;

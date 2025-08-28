@@ -7,15 +7,15 @@ use rand_pcg::Pcg64;
 use super::{GenGraph, density_size_sweep};
 use crate::{fix_int::int, graph::generic::ImplGraph, hamiltonian::Density, rand_helper};
 
-const NUM_THREADS: usize = 10;
-// const NUM_THREAD_SAMPLES: usize = 5000;
-const NUM_THREAD_SAMPLES: usize = 30;
+const NUM_THREADS: usize = 50;
+const NUM_THREAD_SAMPLES: usize = 500;
+// const NUM_THREAD_SAMPLES: usize = 30;
 
 const SIZES: [usize; 2] = [20, 40];
 const DENSITY_START: f64 = 0.00;
 const DENSITY_END: f64 = 1.;
-// const NUM_DENSITY_STEPS: usize = 100;
-const NUM_DENSITY_STEPS: usize = 50;
+const NUM_DENSITY_STEPS: usize = 300;
+// const NUM_DENSITY_STEPS: usize = 50;
 
 pub fn run() {
     let id = env::args()
