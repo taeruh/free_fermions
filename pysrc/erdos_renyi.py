@@ -59,7 +59,7 @@ def main():
         r"$p_{\mathrm{SCF}}$",
         r"$\Delta p_{\mathrm{SCF}}$",
         r"$\Delta \Xi$",
-        r"$p_{\mathrm{SCF}}\!\!<$",
+        r"$p_{\mathrm{SCF}}^<$",
     ]
 
     # remove first and last element of densities (to avoid zero divisions)
