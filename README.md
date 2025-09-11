@@ -2,6 +2,8 @@
 
 Complementary code to TODO: paper link.
 
+The data can be found in the `results` directory.
+
 *Note that this code was not written as a library and is not well documented*.
 
 ## License
