@@ -11,7 +11,9 @@ pub mod test_impls {
     use hashbrown::HashMap;
 
     use super::{modular_decomposition::Tree, obstinate::ObstinateMapped};
-    use crate::graph::{generic::algorithms::is_line_graph::SageProcess, HLabels, Label, Node, VLabels};
+    use crate::graph::{
+        generic::algorithms::is_line_graph::SageProcess, HLabels, Label, Node, VLabels,
+    };
 
     /// Helper to call parts of generic tests only once (cf. the `check` in
     /// simplicial.rs).

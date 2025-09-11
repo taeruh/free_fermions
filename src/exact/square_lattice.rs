@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     binary_search::TreeStack,
-    graph::generic::{self, ImplGraph, Pet, algorithms::is_line_graph::SageProcess},
-    hamiltonian::{self, DOUBLES, LocalOperator, Pauli},
+    graph::generic::{self, algorithms::is_line_graph::SageProcess, ImplGraph, Pet},
+    hamiltonian::{self, LocalOperator, Pauli, DOUBLES},
     run::check,
 };
 
@@ -35,9 +35,7 @@ struct Result {
 
 fn check(state: &mut State, sage_process: &mut SageProcess) -> bool {
     let mut operators = Vec::with_capacity(
-        state.ee_horizontal.len() * 12
-            + state.ee_vertical.len() * 12
-            + state.e_nuclei.len() * 9,
+        state.ee_horizontal.len() * 12 + state.ee_vertical.len() * 12 + state.e_nuclei.len() * 9,
     );
 
     for i in 0..3 {
@@ -108,13 +106,13 @@ pub fn run() {
         match index % 3 {
             0 => {
                 state.ee_horizontal.push(DOUBLES[pindex]);
-            },
+            }
             1 => {
                 state.ee_vertical.push(DOUBLES[pindex]);
-            },
+            }
             2 => {
                 state.e_nuclei.push(DOUBLES[pindex]);
-            },
+            }
             _ => unreachable!(),
         }
         check(state, &mut sage_process)
@@ -132,9 +130,7 @@ pub fn run() {
             is_empty: state.ee_horizontal.is_empty()
                 && state.ee_vertical.is_empty()
                 && state.e_nuclei.is_empty(),
-            num_ops: state.ee_horizontal.len()
-                + state.ee_vertical.len()
-                + state.e_nuclei.len(),
+            num_ops: state.ee_horizontal.len() + state.ee_vertical.len() + state.e_nuclei.len(),
         }
     }
 
@@ -150,10 +146,9 @@ pub fn run() {
 }
 
 pub fn run_analyse() {
-    let results: Vec<Result> = serde_json::from_str(
-        &fs::read_to_string("output/exact_square_lattice.json").unwrap(),
-    )
-    .unwrap();
+    let results: Vec<Result> =
+        serde_json::from_str(&fs::read_to_string("output/exact_square_lattice.json").unwrap())
+            .unwrap();
 
     #[derive(Debug, Serialize, Deserialize)]
     struct Coefficients {
@@ -172,8 +167,14 @@ pub fn run_analyse() {
             continue;
         }
         let index = instance.num_ops;
-        assert!(index > 1, "graph cannot be two-dimensional with only one operator");
-        assert!(instance.coll_valid, "all graphs should be scf after the collapse");
+        assert!(
+            index > 1,
+            "graph cannot be two-dimensional with only one operator"
+        );
+        assert!(
+            instance.coll_valid,
+            "all graphs should be scf after the collapse"
+        );
         coefficients.scf[index] += 1.0;
         if !instance.orig_valid {
             coefficients.dscf[index] += 1.0;

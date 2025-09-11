@@ -9,8 +9,14 @@ pub struct Matrix {
 
 impl Matrix {
     pub fn from_vec_with_shape(vec: Vec<Node>, shape: (usize, usize)) -> Self {
-        assert!(vec.len() == shape.0 * shape.1, "vec.len() != shape.0 * shape.1");
-        Self { data: vec, dims: shape }
+        assert!(
+            vec.len() == shape.0 * shape.1,
+            "vec.len() != shape.0 * shape.1"
+        );
+        Self {
+            data: vec,
+            dims: shape,
+        }
     }
 
     fn idx(&self, i: usize, j: usize) -> usize {
@@ -56,9 +62,7 @@ impl Matrix {
                 for k in 0..dim {
                     let self_ik = *self.get_unchecked(i, k);
                     for j in 0..dim {
-                        *d += self_ik
-                            * *self.get_unchecked(k, j)
-                            * *self.get_unchecked(j, i);
+                        *d += self_ik * *self.get_unchecked(k, j) * *self.get_unchecked(j, i);
                     }
                 }
             }

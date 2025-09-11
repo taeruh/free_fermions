@@ -1,10 +1,10 @@
 use crate::hamiltonian::Pauli;
 
-
 type LocalOperator = crate::hamiltonian::LocalOperator<2, Pauli>;
 
+#[allow(dead_code)]
 pub fn run() {
-    let center = LocalOperator {
+    let _center = LocalOperator {
         index: [1, 2],
         pauli: [Pauli::X, Pauli::X],
     };

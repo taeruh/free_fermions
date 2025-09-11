@@ -6,7 +6,7 @@ use rand_pcg::Pcg64;
 use super::density_size_sweep;
 use crate::{
     graph::generic::ImplGraph,
-    hamiltonian::{Density, electronic_structure::ElectronicStructure},
+    hamiltonian::{electronic_structure::ElectronicStructure, Density},
     rand_helper,
     run::GenGraph,
 };
@@ -16,7 +16,7 @@ use crate::{
 const NUM_THREADS: usize = 50;
 // const NUM_THREADS: usize = 10;
 const NUM_THREAD_SAMPLES: usize = 1000; // per thread
-// const NUM_THREAD_SAMPLES: usize = 50; // per thread
+                                        // const NUM_THREAD_SAMPLES: usize = 50; // per thread
 
 const DENSITY_START: f64 = 0.00;
 // const FIRST: bool = true;
@@ -43,6 +43,7 @@ fn get_graph(density: Density, size: usize, rng: &mut Pcg64) -> GenGraph {
     GenGraph::from_edge_labels(lattice.get_graph()).unwrap()
 }
 
+#[allow(dead_code)]
 pub fn run() {
     let id = env::args()
         .nth(1)

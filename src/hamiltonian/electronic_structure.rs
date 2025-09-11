@@ -1,4 +1,4 @@
-use rand::{Rng, distributions::Bernoulli, prelude::Distribution};
+use rand::{distributions::Bernoulli, prelude::Distribution, Rng};
 
 use super::{Commutator, Density};
 use crate::fix_int::int;
@@ -35,9 +35,8 @@ impl ElectronicStructure {
         // for n = 2, this results in 0 as it should
         let n_choose_4 = n * (n - 1) * (n - 2) * (n - 3) / 24;
 
-        let mut operators: Vec<MajoranaString> = Vec::with_capacity(
-            ((n_choose_2 as f64 + n_choose_4 as f64) * density) as usize,
-        );
+        let mut operators: Vec<MajoranaString> =
+            Vec::with_capacity(((n_choose_2 as f64 + n_choose_4 as f64) * density) as usize);
 
         operators.extend(
             (0..n)
@@ -59,8 +58,7 @@ impl ElectronicStructure {
             (0..n)
                 .flat_map(|i| {
                     (i + 1..n).flat_map(move |j| {
-                        (j + 1..n)
-                            .flat_map(move |k| (k + 1..n).map(move |l| (i, j, k, l)))
+                        (j + 1..n).flat_map(move |k| (k + 1..n).map(move |l| (i, j, k, l)))
                     })
                 })
                 .filter_map(|(i, j, k, l)| {

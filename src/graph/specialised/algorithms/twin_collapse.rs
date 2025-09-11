@@ -4,9 +4,9 @@ use petgraph::Direction;
 use crate::{
     fix_int::int,
     graph::{
-        Node,
         algorithms::modular_decomposition::{NodeIndex, Tree, TreeGraph},
         specialised::{Graph, GraphData, SwapRemoveMap},
+        Node,
     },
 };
 
@@ -36,8 +36,7 @@ impl<G: GraphData> Graph<G> {
                 *node = unsafe { graph_map.mapped_unchecked(*node) };
             }
         }
-        tree.root =
-            (unsafe { tree_map.mapped_unchecked(tree.root.index()) } as int).into();
+        tree.root = (unsafe { tree_map.mapped_unchecked(tree.root.index()) } as int).into();
     }
 
     fn recurse_collapse(
@@ -49,8 +48,7 @@ impl<G: GraphData> Graph<G> {
     ) {
         // we might already have removed some earlier children, so the module index might
         // be wrong
-        let updated_module =
-            (unsafe { tree_map.mapped_unchecked(module.index()) } as int).into();
+        let updated_module = (unsafe { tree_map.mapped_unchecked(module.index()) } as int).into();
 
         // in the leaf or prime case, we know that the module wont be collapsed
         match tree.node_weight(updated_module).unwrap() {
@@ -85,38 +83,28 @@ impl<G: GraphData> Graph<G> {
                         {
                             node
                         } else {
-                            unreachable!(
-                                "already checked above that all children are nodes"
-                            )
+                            unreachable!("already checked above that all children are nodes")
                         };
                         self.remove_node(graph_map.swap_remove(*node));
-                        tree.remove_node(
-                            (tree_map.swap_remove(child.index()) as u32).into(),
-                        );
+                        tree.remove_node((tree_map.swap_remove(child.index()) as u32).into());
                     }
                     let updated_module = (tree_map.mapped(module.index()) as u32).into();
                     *tree.node_weight_mut(updated_module).unwrap() = ModuleKind::Node(
                         if let ModuleKind::Node(node) = tree
-                            .node_weight(
-                                (tree_map.mapped(children[0].index()) as u32).into(),
-                            )
+                            .node_weight((tree_map.mapped(children[0].index()) as u32).into())
                             .unwrap()
                         {
                             *node
                         } else {
-                            unreachable!(
-                                "already checked above that all children are nodes"
-                            )
+                            unreachable!("already checked above that all children are nodes")
                         },
                     );
-                    tree.remove_node(
-                        (tree_map.swap_remove(children[0].index()) as u32).into(),
-                    );
+                    tree.remove_node((tree_map.swap_remove(children[0].index()) as u32).into());
                     // }}
                 }
                 return;
-            },
-            _ => {},
+            }
+            _ => {}
         }
 
         #[inline(always)]
@@ -130,11 +118,7 @@ impl<G: GraphData> Graph<G> {
         }
 
         #[inline(always)]
-        fn tree_remove(
-            tree: &mut TreeGraph,
-            tree_map: &mut SwapRemoveMap,
-            child: NodeIndex,
-        ) {
+        fn tree_remove(tree: &mut TreeGraph, tree_map: &mut SwapRemoveMap, child: NodeIndex) {
             tree.remove_node(
                 (unsafe { tree_map.swap_remove_unchecked(child.index()) } as int).into(),
             );
@@ -200,12 +184,10 @@ impl<G: GraphData> Graph<G> {
             }
         }
 
-        let new_module_root =
-            (unsafe { tree_map.mapped_unchecked(module.index()) } as int).into();
+        let new_module_root = (unsafe { tree_map.mapped_unchecked(module.index()) } as int).into();
         if let Some(new_leaf) = remaining_leaf {
             if module_may_become_remaining_leaf {
-                *tree.node_weight_mut(new_module_root).unwrap() =
-                    ModuleKind::Node(new_leaf.0);
+                *tree.node_weight_mut(new_module_root).unwrap() = ModuleKind::Node(new_leaf.0);
                 tree_remove(tree, tree_map, new_leaf.1);
             }
         }
@@ -214,6 +196,7 @@ impl<G: GraphData> Graph<G> {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use crate::graph::{
         algorithms::twin_collapse,
         specialised::{Custom, Graph, IndexMap},

@@ -3,7 +3,7 @@ use std::{env, fs, thread};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
 
-use super::{GenGraph, density_size_sweep::Results};
+use super::{density_size_sweep::Results, GenGraph};
 use crate::{
     graph::generic::{algorithms::is_line_graph::SageProcess, ImplGraph},
     hamiltonian::sparse::Sparse,
@@ -19,6 +19,7 @@ const FACTOR_START: f64 = 0.0;
 const FACTOR_END: f64 = 0.0001;
 const NUM_FACTOR_STEPS: usize = 100;
 
+#[allow(dead_code)]
 pub fn run() {
     let id = env::args()
         .nth(1)
@@ -53,8 +54,7 @@ pub fn run() {
                 let real_factor = (factor * size_power as f64).floor() as usize;
 
                 if real_factor == last_real_factor {
-                    ret_before_claw_free[factor_idx] =
-                        ret_before_claw_free[factor_idx - 1];
+                    ret_before_claw_free[factor_idx] = ret_before_claw_free[factor_idx - 1];
                     ret_after_claw_free[factor_idx] = ret_after_claw_free[factor_idx - 1];
                     ret_before_simp[factor_idx] = ret_before_simp[factor_idx - 1];
                     ret_after_simp[factor_idx] = ret_after_simp[factor_idx - 1];
@@ -126,8 +126,9 @@ pub fn run() {
     };
 
     let results: Vec<_> = thread::scope(|scope| {
-        let handles: Vec<_> =
-            (0..NUM_THREADS).map(|i| scope.spawn(move || job(i))).collect();
+        let handles: Vec<_> = (0..NUM_THREADS)
+            .map(|i| scope.spawn(move || job(i)))
+            .collect();
         handles.into_iter().map(|h| h.join().unwrap()).collect()
     });
 

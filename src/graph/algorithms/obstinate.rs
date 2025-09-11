@@ -58,8 +58,8 @@ pub mod tests {
         use crate::{
             fix_int::int,
             graph::{
-                VLabelInfo, VLabels,
                 test_utils::{self, RandomMap},
+                VLabelInfo, VLabels,
             },
         };
 
@@ -90,8 +90,7 @@ pub mod tests {
                 for i in 0..partition_size {
                     a.push((2 * i, (0..=i).map(|j| 2 * j + 1).collect()));
                     b.push((2 * i + 1, (i..partition_size).map(|j| 2 * j).collect()));
-                    let mut co_a_neighbourhood =
-                        Vec::with_capacity((size - 1 - i) as usize);
+                    let mut co_a_neighbourhood = Vec::with_capacity((size - 1 - i) as usize);
                     let mut co_b_neighbourhood =
                         Vec::with_capacity((size - 1 - (partition_size - i)) as usize);
                     for j in 0..i {
@@ -149,8 +148,7 @@ pub mod tests {
                     a: VLabels,
                     b: VLabels,
                     map: RandomMap,
-                ) -> [ObstinateMapped; 2] /* [obstinate, complement obstinate] */
-                {
+                ) -> [ObstinateMapped; 2] /* [obstinate, complement obstinate] */ {
                     // we will need to adjust the expected results to the randomized vertex
                     // labels
                     fn adjust_expected(
@@ -162,22 +160,16 @@ pub mod tests {
                                 a.iter_mut().for_each(|node| *node = map.map(*node));
                                 b.iter_mut().for_each(|node| *node = map.map(*node));
                                 ObstinateMapped::True(kind, (a, b))
-                            },
+                            }
                             ObstinateMapped::False => ObstinateMapped::False,
                         }
                     }
                     [
-                        adjust_expected(
-                            ObstinateMapped::True(kind, (a.clone(), b.clone())),
-                            &map,
-                        ),
+                        adjust_expected(ObstinateMapped::True(kind, (a.clone(), b.clone())), &map),
                         adjust_expected(
                             ObstinateMapped::True(
                                 kind,
-                                (
-                                    b.into_iter().rev().collect(),
-                                    a.into_iter().rev().collect(),
-                                ),
+                                (b.into_iter().rev().collect(), a.into_iter().rev().collect()),
                             ),
                             &map,
                         ),
@@ -272,15 +264,12 @@ pub mod tests {
     }
 
     pub fn false_completely_independent<G: RequiredMethods>() {
-        let graph =
-            G::from_adj_list(collect!(hh, 4, 57; (0, []), (1, []), (2, []), (3, []),));
+        let graph = G::from_adj_list(collect!(hh, 4, 57; (0, []), (1, []), (2, []), (3, []),));
         assert_eq!(graph.obstinate(), ObstinateMapped::False,);
     }
 
     pub fn false_disconnect_paths<G: RequiredMethods>() {
-        let graph = G::from_adj_list(
-            collect!(hh, 4, 55; (0, [1]), (1, [0]), (2, [3]), (3, [2]),),
-        );
+        let graph = G::from_adj_list(collect!(hh, 4, 55; (0, [1]), (1, [0]), (2, [3]), (3, [2]),));
         assert_eq!(graph.obstinate(), ObstinateMapped::False,);
     }
 

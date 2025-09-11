@@ -44,8 +44,9 @@ impl<G: ImplGraph> Graph<G> {
             return;
         }
 
-        let children: Vec<NodeIndex> =
-            tree.neighbors_directed(new_root, Direction::Outgoing).collect();
+        let children: Vec<NodeIndex> = tree
+            .neighbors_directed(new_root, Direction::Outgoing)
+            .collect();
 
         if *tree.node_weight(new_root).unwrap() == ModuleKind::Prime {
             for child in children.iter() {
@@ -77,7 +78,8 @@ impl<G: ImplGraph> Graph<G> {
             // (should be) equivalent to "len== 4"
             {
                 true
-            } else { // line graph check
+            } else {
+                // line graph check
                 let module_graph = self.subgraph(&nodes);
                 // alternatively, we could do the following
                 // let new_root = (tree_map.mapped(root.index()) as u32).into();
@@ -121,9 +123,7 @@ impl<G: ImplGraph> Graph<G> {
                         unreachable!("already checked above that all children are nodes")
                     },
                 );
-                tree.remove_node(
-                    (tree_map.swap_remove(children[0].index()) as u32).into(),
-                );
+                tree.remove_node((tree_map.swap_remove(children[0].index()) as u32).into());
             }
             return;
         }

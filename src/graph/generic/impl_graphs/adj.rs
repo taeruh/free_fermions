@@ -3,8 +3,8 @@ use std::mem;
 use hashbrown::{HashMap, HashSet};
 
 use crate::graph::{
-    HNodes, Label, LabelEdge, Node,
     generic::{CompactNodes, ImplGraph, NodeCollection},
+    HNodes, Label, LabelEdge, Node,
 };
 
 pub type Neighbourhood = HashSet<Node>;
@@ -186,7 +186,9 @@ mod tests {
     fn from_adj() {
         let list = collect!(vv; (2, [3]), (1, [3]), (3, [1, 2]),);
         let expected_graph = HashMap::from_iter(
-            list.clone().into_iter().map(|(a, b)| (a, HashSet::from_iter(b))),
+            list.clone()
+                .into_iter()
+                .map(|(a, b)| (a, HashSet::from_iter(b))),
         );
         let expected_nodes = vec![
             HashSet::from_iter(vec![1]),    // label 2
@@ -204,8 +206,7 @@ mod tests {
 
     #[test]
     fn invalid_graphs() {
-        let correct =
-            Adj::from_adjacency_labels_unchecked(collect!(vh; (1, [2]), (2, [1]),));
+        let correct = Adj::from_adjacency_labels_unchecked(collect!(vh; (1, [2]), (2, [1]),));
 
         let (mut self_looped, self_looped_err) =
             Adj::from_adjacency_labels(collect!(vh; (1, [1, 2]), (2, [1]),)).unwrap_err();
@@ -217,14 +218,11 @@ mod tests {
         assert_eq!(self_looped, correct);
 
         let mut incompatible_neighbourhoods =
-            Adj::from_symmetric_adjacency_labels_unchecked(
-                collect!(vh; (1, [2]), (2, []),),
-            );
+            Adj::from_symmetric_adjacency_labels_unchecked(collect!(vh; (1, [2]), (2, []),));
         assert_eq!(
             incompatible_neighbourhoods
                 .check()
-                .map_err(|e| e
-                    .map(|node| incompatible_neighbourhoods.get_label(node).unwrap())),
+                .map_err(|e| e.map(|node| incompatible_neighbourhoods.get_label(node).unwrap())),
             Err(InvalidGraph::IncompatibleNeighbourhoods(1, 2))
         );
         incompatible_neighbourhoods.correct();
@@ -281,8 +279,7 @@ mod tests {
             (3, [2]),
         ))
         .unwrap();
-        let nodes =
-            HNodes::from_iter([1, 3].into_iter().map(|e| graph.find_node(e).unwrap()));
+        let nodes = HNodes::from_iter([1, 3].into_iter().map(|e| graph.find_node(e).unwrap()));
         let expected = Adj::from_adjacency_labels_unchecked(collect!(hh;
             (1, []),
             (3, []),
@@ -298,8 +295,7 @@ mod tests {
             (3, [2]),
         ))
         .unwrap();
-        let nodes =
-            HNodes::from_iter([1].into_iter().map(|e| graph.find_node(e).unwrap()));
+        let nodes = HNodes::from_iter([1].into_iter().map(|e| graph.find_node(e).unwrap()));
         let expected = Adj::from_adjacency_labels_unchecked(collect!(hh;
             (1, []),
         ))

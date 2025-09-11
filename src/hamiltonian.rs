@@ -37,6 +37,7 @@ pub enum Pauli {
     Z,
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 enum FullPauli {
     I,
@@ -70,9 +71,7 @@ impl<const N: usize, Op: Commutator> Commutator for LocalOperator<N, Op> {
         let mut anticommute = false;
         for s in 0..N {
             for o in 0..N {
-                if self.index[s] == other.index[o]
-                    && !self.pauli[s].commute(&other.pauli[o])
-                {
+                if self.index[s] == other.index[o] && !self.pauli[s].commute(&other.pauli[o]) {
                     anticommute ^= true;
                 }
             }
@@ -81,6 +80,7 @@ impl<const N: usize, Op: Commutator> Commutator for LocalOperator<N, Op> {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct PauliString {
     n: usize,
@@ -97,6 +97,7 @@ impl Commutator for PauliString {
 }
 
 impl PauliString {
+    #[allow(dead_code)]
     pub fn from_paulis(n: usize, paulis: Vec<LocalOperator<1, Pauli>>) -> Self {
         let mut z = BitVec::repeat(false, n);
         let mut x = BitVec::repeat(false, n);
@@ -121,6 +122,7 @@ impl PauliString {
         }
     }
 
+    #[allow(dead_code)]
     pub fn draw_as_paulis(&self) {
         let mut paulis = Vec::with_capacity(self.n);
         for i in 0..self.n {
@@ -204,6 +206,6 @@ fn draw_doubles(density: f64, rng: &mut impl Rng) -> Vec<(Pauli, Pauli)> {
 pub mod bricks;
 pub mod electronic_structure;
 pub mod oned_chain;
+pub mod sparse;
 pub mod square_lattice;
 pub mod two_local;
-pub mod sparse;

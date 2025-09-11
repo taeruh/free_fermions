@@ -3,7 +3,7 @@ use rand::Rng;
 use super::{Density, SINGLES};
 use crate::{
     fix_int::int,
-    hamiltonian::{DOUBLES, Pauli},
+    hamiltonian::{Pauli, DOUBLES},
 };
 
 type LocalOperator = super::LocalOperator<2, Pauli>;

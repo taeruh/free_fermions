@@ -2,7 +2,7 @@
 // tricks. We only care about correctness and not at all about performance. Essentially,
 // we just use the ndarray crate and call basic methods.
 
-use ndarray::{Array2, LinalgScalar, linalg::Dot};
+use ndarray::{linalg::Dot, Array2, LinalgScalar};
 
 use super::MatrixTools;
 
@@ -12,10 +12,7 @@ where
 {
     type Error = ndarray::ShapeError;
 
-    fn from_vec_with_shape(
-        vec: Vec<T>,
-        shape: (usize, usize),
-    ) -> Result<Self, Self::Error> {
+    fn from_vec_with_shape(vec: Vec<T>, shape: (usize, usize)) -> Result<Self, Self::Error> {
         Array2::from_shape_vec(shape, vec)
     }
 

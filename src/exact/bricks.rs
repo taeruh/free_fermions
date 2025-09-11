@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     binary_search::TreeStack,
-    graph::generic::{self, ImplGraph, Pet, algorithms::is_line_graph::SageProcess},
-    hamiltonian::{self, DOUBLES, LocalOperator, Pauli},
+    graph::generic::{self, algorithms::is_line_graph::SageProcess, ImplGraph, Pet},
+    hamiltonian::{self, LocalOperator, Pauli, DOUBLES},
     run::check,
 };
 
@@ -119,19 +119,19 @@ pub fn run() {
         match index % 5 {
             0 => {
                 state.e1.push(DOUBLES[pindex]);
-            },
+            }
             1 => {
                 state.e2.push(DOUBLES[pindex]);
-            },
+            }
             2 => {
                 state.e3.push(DOUBLES[pindex]);
-            },
+            }
             3 => {
                 state.e4.push(DOUBLES[pindex]);
-            },
+            }
             4 => {
                 state.e5.push(DOUBLES[pindex]);
-            },
+            }
             _ => unreachable!(),
         }
         check(state, &mut sage_process)
@@ -173,8 +173,11 @@ pub fn run() {
     tree.search(&mut f_true, &mut f_false, &f_result);
     let results = tree.into_results();
 
-    fs::write("output/exact_bricks.msgpack", rmp_serde::to_vec(&results).unwrap())
-        .unwrap();
+    fs::write(
+        "output/exact_bricks.msgpack",
+        rmp_serde::to_vec(&results).unwrap(),
+    )
+    .unwrap();
 }
 
 pub fn run_analyse() {
@@ -198,8 +201,14 @@ pub fn run_analyse() {
             continue;
         }
         let index = instance.num_ops;
-        assert!(index > 4, "graph cannot be two-dimensional with less than 5 operator");
-        assert!(instance.coll_valid, "all graphs should be scf after the collapse");
+        assert!(
+            index > 4,
+            "graph cannot be two-dimensional with less than 5 operator"
+        );
+        assert!(
+            instance.coll_valid,
+            "all graphs should be scf after the collapse"
+        );
         coefficients.scf[index] += 1.0;
         if !instance.orig_valid {
             coefficients.dscf[index] += 1.0;

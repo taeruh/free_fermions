@@ -4,10 +4,9 @@ use petgraph::Direction;
 
 use crate::{
     graph::{
-        Label,
         algorithms::modular_decomposition::{NodeIndex, Tree},
         generic::{Graph, ImplGraph, NodeCollection},
-        int,
+        int, Label,
     },
     matrix::MatrixTools,
 };
@@ -67,7 +66,7 @@ impl<G: ImplGraph> Graph<G> {
     pub fn is_claw_free(&self, tree: &Tree) -> ClawFree {
         match self.has_right_structure(tree) {
             Structure::No(fail) => return ClawFree::No(FailKind::Structure(fail)),
-            Structure::Yes => {},
+            Structure::Yes => {}
         }
 
         match tree.graph.node_weight(tree.root).unwrap() {
@@ -110,7 +109,10 @@ impl<G: ImplGraph> Graph<G> {
     }
 
     fn parallel_claw_check(&self, tree: &Tree) -> ClawFree {
-        for child in tree.graph.neighbors_directed(tree.root, Direction::Outgoing) {
+        for child in tree
+            .graph
+            .neighbors_directed(tree.root, Direction::Outgoing)
+        {
             if let ClawFree::No(fail) = match tree.graph.node_weight(child).unwrap() {
                 ModuleKind::Prime => self.prime_claw_check(tree, child),
                 ModuleKind::Series => self.series_claw_check(tree, child),
@@ -148,31 +150,28 @@ impl<G: ImplGraph> Graph<G> {
                                 child, grandchild,
                             ));
                         }
-                    },
+                    }
                     ModuleKind::Series => {
                         unreachable!("series node in series node")
-                    },
+                    }
                     ModuleKind::Parallel => {
                         let mut count = 0;
-                        for grandchild in
-                            tree.graph.neighbors_directed(child, Direction::Outgoing)
+                        for grandchild in tree.graph.neighbors_directed(child, Direction::Outgoing)
                         {
                             count += 1;
                             if count > 2 {
-                                return Structure::No(
-                                    StructureFail::SeriesParallelCount(child, count),
-                                );
+                                return Structure::No(StructureFail::SeriesParallelCount(
+                                    child, count,
+                                ));
                             }
                             if !tree.module_is_clique(grandchild) {
-                                return Structure::No(
-                                    StructureFail::SeriesParallelNonClique(
-                                        child, grandchild,
-                                    ),
-                                );
+                                return Structure::No(StructureFail::SeriesParallelNonClique(
+                                    child, grandchild,
+                                ));
                             }
                         }
-                    },
-                    ModuleKind::Node(_) => {},
+                    }
+                    ModuleKind::Node(_) => {}
                 };
             }
             Structure::Yes
@@ -187,55 +186,41 @@ impl<G: ImplGraph> Graph<G> {
                         //     return false;
                         // }
                         match prime_check(tree, child) {
-                            Structure::Yes => {},
+                            Structure::Yes => {}
                             Structure::No(StructureFail::PrimeNonClique(grandchild)) => {
-                                return Structure::No(
-                                    StructureFail::ParallelPrimeNonClique(
-                                        child, grandchild,
-                                    ),
-                                );
-                            },
+                                return Structure::No(StructureFail::ParallelPrimeNonClique(
+                                    child, grandchild,
+                                ));
+                            }
                             _ => unreachable!(),
                         }
-                    },
+                    }
                     ModuleKind::Series => match series_check(tree, child) {
-                        Structure::Yes => {},
-                        Structure::No(StructureFail::SeriesPrimeNonClique(
-                            grandchild,
-                            ggchild,
-                        )) => {
-                            return Structure::No(
-                                StructureFail::ParallelSeriesPrimeNonClique(
-                                    child, grandchild, ggchild,
-                                ),
-                            );
-                        },
+                        Structure::Yes => {}
+                        Structure::No(StructureFail::SeriesPrimeNonClique(grandchild, ggchild)) => {
+                            return Structure::No(StructureFail::ParallelSeriesPrimeNonClique(
+                                child, grandchild, ggchild,
+                            ));
+                        }
                         Structure::No(StructureFail::SeriesParallelNonClique(
                             grandchild,
                             ggchild,
                         )) => {
-                            return Structure::No(
-                                StructureFail::ParallelSeriesParallelNonClique(
-                                    child, grandchild, ggchild,
-                                ),
-                            );
-                        },
-                        Structure::No(StructureFail::SeriesParallelCount(
-                            grandchild,
-                            count,
-                        )) => {
-                            return Structure::No(
-                                StructureFail::ParallelSeriesParallelCount(
-                                    child, grandchild, count,
-                                ),
-                            );
-                        },
+                            return Structure::No(StructureFail::ParallelSeriesParallelNonClique(
+                                child, grandchild, ggchild,
+                            ));
+                        }
+                        Structure::No(StructureFail::SeriesParallelCount(grandchild, count)) => {
+                            return Structure::No(StructureFail::ParallelSeriesParallelCount(
+                                child, grandchild, count,
+                            ));
+                        }
                         _ => unreachable!(),
                     },
                     ModuleKind::Parallel => {
                         unreachable!("parallel node in parallel node")
-                    },
-                    ModuleKind::Node(_) => {},
+                    }
+                    ModuleKind::Node(_) => {}
                 }
             }
             Structure::Yes
@@ -286,7 +271,10 @@ fn to_matrix<G: ImplGraph>(graph: &Graph<G>) -> (Vec<Label>, Matrix) {
             array[col * len + row] = has_edge.into();
         }
     }
-    (indices, Matrix::from_vec_with_shape(array, (len, len)).unwrap())
+    (
+        indices,
+        Matrix::from_vec_with_shape(array, (len, len)).unwrap(),
+    )
 }
 
 #[cfg(test)]

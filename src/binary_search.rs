@@ -23,7 +23,10 @@ struct TreePath<S> {
 
 impl<S> TreePath<S> {
     fn new(init_state: S) -> Self {
-        Self { state: init_state, index: 0 }
+        Self {
+            state: init_state,
+            index: 0,
+        }
     }
 
     // changes the state to the new state, according to the true branch, and returns
@@ -90,11 +93,7 @@ impl<S: Clone + Debug, R, const N: usize> TreeStack<S, R, N> {
         }
     }
 
-    fn step<
-        Ft: FnMut(&mut S, usize) -> bool,
-        Ff: FnMut(&mut S, usize) -> bool,
-        Fr: Fn(S) -> R,
-    >(
+    fn step<Ft: FnMut(&mut S, usize) -> bool, Ff: FnMut(&mut S, usize) -> bool, Fr: Fn(S) -> R>(
         &mut self,
         f_true: &mut Ft,
         f_false: &mut Ff,
@@ -128,7 +127,7 @@ impl<S: Clone + Debug, R, const N: usize> TreeStack<S, R, N> {
                     }
                     // haven't tried the false branch yet, so we never step back
                     true
-                },
+                }
                 Tried::True => {
                     current.tries = Tried::Both;
                     if next.tree.try_false(f_false) {
@@ -140,7 +139,7 @@ impl<S: Clone + Debug, R, const N: usize> TreeStack<S, R, N> {
                         // step back
                         false
                     }
-                },
+                }
             }
         }
     }
