@@ -45,31 +45,31 @@ fn check(state: &mut State, sage_process: &mut SageProcess) -> bool {
             for p in state.e5.iter() {
                 operators.push(LocalOperator {
                     index: [row + col, ((row + 8) % 16) + ((col + 7) % 8)],
-                    pauli: [p.0, p.1],
+                    operator_at_index: [p.0, p.1],
                 });
             }
             for p in state.e1.iter() {
                 operators.push(LocalOperator {
                     index: [row + col, row + col + 1],
-                    pauli: [p.0, p.1],
+                    operator_at_index: [p.0, p.1],
                 });
             }
             for p in state.e2.iter() {
                 operators.push(LocalOperator {
                     index: [row + col + 1, row + col + 2],
-                    pauli: [p.0, p.1],
+                    operator_at_index: [p.0, p.1],
                 });
             }
             for p in state.e3.iter() {
                 operators.push(LocalOperator {
                     index: [row + col + 2, row + col + 3],
-                    pauli: [p.0, p.1],
+                    operator_at_index: [p.0, p.1],
                 });
             }
             for p in state.e4.iter() {
                 operators.push(LocalOperator {
                     index: [row + col + 3, row + (col + 4) % 8],
-                    pauli: [p.0, p.1],
+                    operator_at_index: [p.0, p.1],
                 });
             }
         }

@@ -21,7 +21,7 @@ impl OpenChain {
             for s in singles.iter() {
                 operators.push(LocalOperator {
                     index: [i, 0],
-                    pauli: [*s, Pauli::X],
+                    operator_at_index: [*s, Pauli::X],
                 });
             }
         }
@@ -29,7 +29,7 @@ impl OpenChain {
             for d in doubles.iter() {
                 operators.push(LocalOperator {
                     index: [i, i + 1],
-                    pauli: [d.0, d.1],
+                    operator_at_index: [d.0, d.1],
                 });
             }
         }

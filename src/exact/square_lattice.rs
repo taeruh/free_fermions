@@ -43,7 +43,7 @@ fn check(state: &mut State, sage_process: &mut SageProcess) -> bool {
             for p in state.e_nuclei.iter() {
                 operators.push(LocalOperator {
                     index: [1 + i * 3 + j, 10 + i * 3 + j],
-                    pauli: [p.0, p.1],
+                    operator_at_index: [p.0, p.1],
                 });
             }
         }
@@ -56,13 +56,13 @@ fn check(state: &mut State, sage_process: &mut SageProcess) -> bool {
             for p in state.ee_horizontal.iter() {
                 operators.push(LocalOperator {
                     index: [site, horizontal],
-                    pauli: [p.0, p.1],
+                    operator_at_index: [p.0, p.1],
                 });
             }
             for p in state.ee_vertical.iter() {
                 operators.push(LocalOperator {
                     index: [site, vertical],
-                    pauli: [p.0, p.1],
+                    operator_at_index: [p.0, p.1],
                 });
             }
         }

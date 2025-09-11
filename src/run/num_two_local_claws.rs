@@ -6,6 +6,6 @@ type LocalOperator = crate::hamiltonian::LocalOperator<2, Pauli>;
 pub fn run() {
     let _center = LocalOperator {
         index: [1, 2],
-        pauli: [Pauli::X, Pauli::X],
+        operator_at_index: [Pauli::X, Pauli::X],
     };
 }

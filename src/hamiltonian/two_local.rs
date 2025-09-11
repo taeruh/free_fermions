@@ -23,7 +23,7 @@ pub fn init_pool(n: usize) -> Vec<LocalOperator> {
         ((i + 1)..(n + 1)).flat_map(move |j| {
             DOUBLES.into_iter().map(move |p| LocalOperator {
                 index: [i, j],
-                pauli: [p.0, p.1],
+                operator_at_index: [p.0, p.1],
             })
         })
     });
@@ -31,7 +31,7 @@ pub fn init_pool(n: usize) -> Vec<LocalOperator> {
         ret.chain((1..n + 1).flat_map(|i| {
             SINGLES.into_iter().map(move |p| LocalOperator {
                 index: [i, 0],
-                pauli: [p, Pauli::X],
+                operator_at_index: [p, Pauli::X],
             })
         }))
         .collect::<Vec<_>>()

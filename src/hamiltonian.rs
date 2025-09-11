@@ -29,7 +29,7 @@ pub trait Commutator {
 // enum I variant); this way, their second index never matches any other index; doing
 // this introduces an overhead for the single particle, however, there are much more two
 // particle operators, so this is probably better than introducing an enum to separate
-// the two cases or using trait objects opertors
+// the two cases or using trait objects operators
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Pauli {
     X,
@@ -49,7 +49,7 @@ enum FullPauli {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LocalOperator<const N: usize, Op> {
     pub index: [usize; N],
-    pub pauli: [Op; N],
+    pub operator_at_index: [Op; N],
 }
 // }}}
 
@@ -71,7 +71,7 @@ impl<const N: usize, Op: Commutator> Commutator for LocalOperator<N, Op> {
         let mut anticommute = false;
         for s in 0..N {
             for o in 0..N {
-                if self.index[s] == other.index[o] && !self.pauli[s].commute(&other.pauli[o]) {
+                if self.index[s] == other.index[o] && !self.operator_at_index[s].commute(&other.operator_at_index[o]) {
                     anticommute ^= true;
                 }
             }
@@ -102,7 +102,7 @@ impl PauliString {
         let mut z = BitVec::repeat(false, n);
         let mut x = BitVec::repeat(false, n);
         for op in paulis {
-            match op.pauli[0] {
+            match op.operator_at_index[0] {
                 Pauli::X => x.set(op.index[0], true),
                 Pauli::Y => {
                     x.set(op.index[0], true);
