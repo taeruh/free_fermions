@@ -1,20 +1,22 @@
 use std::cmp;
 
+#[allow(unused_imports)]
 use hashbrown::HashSet;
 use itertools::Itertools;
 use modular_decomposition::ModuleKind;
-use petgraph::{Direction, Undirected, graph::NodeIndex};
+use petgraph::{graph::NodeIndex, Direction, Undirected};
 
 use super::{GenGraph, Graph};
+#[allow(unused_imports)]
 use crate::{
     fix_int::int,
     graph::{
-        Node,
         algorithms::modular_decomposition::Tree,
         generic::{
-            ImplGraph, NodeCollection,
             algorithms::claw_free::{ClawFree, ClawFreeNaive},
+            ImplGraph, NodeCollection,
         },
+        Node,
     },
 };
 
@@ -111,13 +113,13 @@ pub fn do_check(graph: &Graph, tree: &Tree) -> Check {
         }
         ret.claw_free = true;
         ret.simplicial = true;
-        for subgraph in
-            tree.graph
-                .neighbors_directed(tree.root, Direction::Outgoing)
-                .map(|child| {
-                    let nodes = tree.module_nodes(child, None);
-                    unsafe { graph.subgraph(nodes.len(), nodes) }
-                })
+        for subgraph in tree
+            .graph
+            .neighbors_directed(tree.root, Direction::Outgoing)
+            .map(|child| {
+                let nodes = tree.module_nodes(child, None);
+                unsafe { graph.subgraph(nodes.len(), nodes) }
+            })
         {
             let subtree = subgraph.modular_decomposition();
             if !unsafe { subgraph.is_claw_free(&subtree) } {

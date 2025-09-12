@@ -42,19 +42,19 @@ impl PeriodicLattice {
                 for p in electrons.iter() {
                     operators.push(LocalOperator {
                         index: [1 + i * 3 + j, 0],
-                        pauli: [*p, Pauli::X],
+                        operator_at_index: [*p, Pauli::X],
                     });
                 }
                 for p in nuclei.iter() {
                     operators.push(LocalOperator {
                         index: [10 + i * 3 + j, 0],
-                        pauli: [*p, Pauli::X],
+                        operator_at_index: [*p, Pauli::X],
                     });
                 }
                 for p in en_interactions.iter() {
                     operators.push(LocalOperator {
                         index: [1 + i * 3 + j, 10 + i * 3 + j],
-                        pauli: [p.0, p.1],
+                        operator_at_index: [p.0, p.1],
                     });
                 }
             }
@@ -67,13 +67,13 @@ impl PeriodicLattice {
                 for p in ee_horizontal.iter() {
                     operators.push(LocalOperator {
                         index: [site, horizontal],
-                        pauli: [p.0, p.1],
+                        operator_at_index: [p.0, p.1],
                     });
                 }
                 for p in ee_vertical.iter() {
                     operators.push(LocalOperator {
                         index: [site, vertical],
-                        pauli: [p.0, p.1],
+                        operator_at_index: [p.0, p.1],
                     });
                 }
             }

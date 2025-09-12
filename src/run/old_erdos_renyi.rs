@@ -11,13 +11,14 @@ use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
 use serde::Serialize;
 
+#[allow(unused_imports)]
 use crate::{
     fix_int::int,
     graph::{
+        generic::{algorithms::claw_free::ClawFreeNaive, ImplGraph},
         Label, Node,
-        generic::{ImplGraph, algorithms::claw_free::ClawFreeNaive},
     },
-    run::{GenGraph, Graph, check},
+    run::{check, GenGraph, Graph},
 };
 
 const NUM_THREADS: usize = 8;
@@ -37,6 +38,7 @@ struct Notification {
     jobs_per_size: Vec<usize>,
 }
 
+#[allow(dead_code)]
 impl Notification {
     fn new() -> Self {
         Self {
@@ -74,6 +76,7 @@ fn num_samples(_size: int) -> usize {
     NUM_SAMPLES_PER_THREAD
 }
 
+#[allow(dead_code)]
 pub fn run() {
     let rng = &mut Pcg64::from_entropy();
     // let rng = &mut Pcg64::from_seed([0; 32]);
@@ -110,7 +113,7 @@ pub fn run() {
         let rng = &mut Pcg64::from_seed(seeds[id]);
 
         for size in SIZES_RANGE {
-            let edge_pool = (0..size-1).flat_map(|i| (i + 1..size).map(move |j| (i, j)));
+            let edge_pool = (0..size - 1).flat_map(|i| (i + 1..size).map(move |j| (i, j)));
             let num_samples = num_samples(size);
 
             let mut sweep = Sweep {
@@ -123,6 +126,7 @@ pub fn run() {
             };
 
             for density in densities.clone() {
+                #[allow(unused_variables)]
                 let mut naive_before_collapse_claw_free = 0;
                 let mut before_collapse_claw_free = 0;
                 let mut before_collapse_simplicial = 0;
@@ -158,8 +162,7 @@ pub fn run() {
                         }
                     }
 
-                    let mut gen_graph =
-                        GenGraph::from_edge_labels(edges.iter().copied()).unwrap();
+                    let mut gen_graph = GenGraph::from_edge_labels(edges.iter().copied()).unwrap();
 
                     // note that the from_edge_labels does not ensure that the graph has
                     // actually `size` nodes, since if a node does not appear in any edge,
@@ -170,8 +173,7 @@ pub fn run() {
                         if CONSIDER_PARALLEL_GRAPHS {
                             // need to fill up
                             let nodes = gen_graph.iter_labels().collect::<HashSet<_>>();
-                            let mut fill_up =
-                                Vec::with_capacity(size as usize - nodes.len());
+                            let mut fill_up = Vec::with_capacity(size as usize - nodes.len());
                             for node in 0..size {
                                 if !nodes.contains(&node) {
                                     gen_graph.add_labelled_node_symmetrically((node, []));
@@ -244,10 +246,7 @@ pub fn run() {
                     let mut graph = Graph::from_edge_labels(edges).unwrap();
                     if !fill_up.is_empty() {
                         for node in fill_up {
-                            unsafe {
-                                graph
-                                    .add_labelled_node_symmetrically_unchecked((node, []))
-                            };
+                            unsafe { graph.add_labelled_node_symmetrically_unchecked((node, [])) };
                         }
                     }
                     let mut tree = graph.modular_decomposition();
@@ -274,7 +273,9 @@ pub fn run() {
                 }
                 // println!("{:?}", (id, size, density, _tries));
 
-                sweep.before_collapse_claw_free.push(before_collapse_claw_free as f64);
+                sweep
+                    .before_collapse_claw_free
+                    .push(before_collapse_claw_free as f64);
                 sweep
                     .before_collapse_simplicial
                     .push(before_collapse_simplicial as f64);
@@ -291,8 +292,9 @@ pub fn run() {
     };
 
     let rets: Vec<_> = thread::scope(|scope| {
-        let handles: Vec<_> =
-            (0..NUM_THREADS).map(|i| scope.spawn(move || job(i))).collect();
+        let handles: Vec<_> = (0..NUM_THREADS)
+            .map(|i| scope.spawn(move || job(i)))
+            .collect();
         handles.into_iter().map(|h| h.join().unwrap()).collect()
     });
 

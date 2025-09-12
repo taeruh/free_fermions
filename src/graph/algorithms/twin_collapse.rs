@@ -4,7 +4,10 @@ pub mod tests {
     use hashbrown::HashMap;
 
     use crate::graph::{
-        algorithms::{modular_decomposition::Tree, test_impls::RequiredMethods}, generic::algorithms::is_line_graph::SageProcess, test_utils::{collect, RandomMap}, HLabels, Label
+        algorithms::{modular_decomposition::Tree, test_impls::RequiredMethods},
+        generic::algorithms::is_line_graph::SageProcess,
+        test_utils::{collect, RandomMap},
+        HLabels, Label,
     };
 
     fn check<G: RequiredMethods>(
@@ -13,8 +16,10 @@ pub mod tests {
         show_info: bool,
     ) {
         let mut graph = G::from_adj_list(input);
-        let expected: Vec<G> =
-            collapsed.into_iter().map(|adj| G::from_adj_list(adj)).collect();
+        let expected: Vec<G> = collapsed
+            .into_iter()
+            .map(|adj| G::from_adj_list(adj))
+            .collect();
 
         let mut sage_process = SageProcess::default();
 

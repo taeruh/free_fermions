@@ -3,7 +3,7 @@ use rand::Rng;
 use super::{Density, SINGLES};
 use crate::{
     fix_int::int,
-    hamiltonian::{DOUBLES, Pauli},
+    hamiltonian::{Pauli, DOUBLES},
 };
 
 type LocalOperator = super::LocalOperator<2, Pauli>;
@@ -15,6 +15,8 @@ pub struct TwoLocal {
     operators: Vec<LocalOperator>,
 }
 
+/// All possible operators acting on `2` qubits at a time among a total of `n` available.
+/// If `INCLUDE_SINGLES` then also the ones acting on `1` qubit.
 // for small n and and especially small k this is fine; for bigger we probably do not want
 // to collect and if they are really big it has to be done completely differently, e.g.,
 // encode it somehow into numbers that we can directly draw with rand::seq::index::sample
@@ -23,7 +25,7 @@ pub fn init_pool(n: usize) -> Vec<LocalOperator> {
         ((i + 1)..(n + 1)).flat_map(move |j| {
             DOUBLES.into_iter().map(move |p| LocalOperator {
                 index: [i, j],
-                pauli: [p.0, p.1],
+                operator_at_index: [p.0, p.1],
             })
         })
     });
@@ -31,7 +33,7 @@ pub fn init_pool(n: usize) -> Vec<LocalOperator> {
         ret.chain((1..n + 1).flat_map(|i| {
             SINGLES.into_iter().map(move |p| LocalOperator {
                 index: [i, 0],
-                pauli: [p, Pauli::X],
+                operator_at_index: [p, Pauli::X],
             })
         }))
         .collect::<Vec<_>>()

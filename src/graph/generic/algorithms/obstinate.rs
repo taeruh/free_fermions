@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 
 use crate::graph::{
-    Node,
     algorithms::obstinate::{Obstinate, ObstinateKind},
     generic::{Graph, ImplGraph, NodeCollection, NodeCollectionRef},
+    Node,
 };
 
 impl<G: ImplGraph + Clone> Graph<G> {

@@ -5,7 +5,11 @@ use rand_pcg::Pcg64;
 use serde::Serialize;
 
 use super::GenGraph;
-use crate::{graph::generic::{algorithms::is_line_graph::SageProcess, ImplGraph}, hamiltonian::Density, run::check};
+use crate::{
+    graph::generic::{algorithms::is_line_graph::SageProcess, ImplGraph},
+    hamiltonian::Density,
+    run::check,
+};
 
 #[derive(Debug, Serialize)]
 pub struct Results {
@@ -72,12 +76,7 @@ impl CountResults {
 
 impl Results {
     // pub fn init(num_density_steps: usize, num_sizes: usize, num_samples: usize) -> Self {
-    pub fn init(
-        densities: Vec<f64>,
-        sizes: Vec<usize>,
-        seed: u64,
-        num_samples: usize,
-    ) -> Self {
+    pub fn init(densities: Vec<f64>, sizes: Vec<usize>, seed: u64, num_samples: usize) -> Self {
         let num_density_steps = densities.len();
         let num_sizes = sizes.len();
         Self {
@@ -128,6 +127,7 @@ impl Results {
     }
 }
 
+#[allow(dead_code)]
 pub fn sweep(
     seed: u64,
     seeds: Vec<u64>,
@@ -211,8 +211,9 @@ pub fn sweep(
     };
 
     let results: Vec<_> = thread::scope(|scope| {
-        let handles: Vec<_> =
-            (0..num_threads).map(|i| scope.spawn(move || job(i))).collect();
+        let handles: Vec<_> = (0..num_threads)
+            .map(|i| scope.spawn(move || job(i)))
+            .collect();
         handles.into_iter().map(|h| h.join().unwrap()).collect()
     });
 

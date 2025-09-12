@@ -150,7 +150,9 @@ pub mod tests {
             }
         };
     }
+    #[allow(unused_imports)]
     use rand::SeedableRng;
+    #[allow(unused_imports)]
     use rand_pcg::Pcg64;
     pub(crate) use test_it;
 

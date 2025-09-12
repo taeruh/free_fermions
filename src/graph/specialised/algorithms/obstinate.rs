@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 
 use crate::graph::{
-    Node,
     algorithms::obstinate::{Obstinate, ObstinateKind},
     specialised::{Graph, GraphData},
+    Node,
 };
 
 impl<G: GraphData> Graph<G> {
@@ -51,8 +51,7 @@ impl<G: GraphData> Graph<G> {
             for (i, deg) in (start..end_exclusive).enumerate() {
                 // safety: this is the invariant of the function
                 if unsafe {
-                    (deg != (*degrees.add(2 * i)).1)
-                        || (deg != (*degrees.add(2 * i + 1)).1)
+                    (deg != (*degrees.add(2 * i)).1) || (deg != (*degrees.add(2 * i + 1)).1)
                 } {
                     return false;
                 }
@@ -76,7 +75,10 @@ impl<G: GraphData> Graph<G> {
         // safety: we are clearly in bounds
         let (a_end, b_start) = match kind {
             ObstinateKind::Itself => unsafe {
-                (degrees.get_unchecked(len - 2).0, degrees.get_unchecked(len - 1).0)
+                (
+                    degrees.get_unchecked(len - 2).0,
+                    degrees.get_unchecked(len - 1).0,
+                )
             },
             ObstinateKind::Complement => unsafe {
                 (degrees.get_unchecked(0).0, degrees.get_unchecked(1).0)
