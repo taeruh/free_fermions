@@ -19,6 +19,8 @@ impl Density {
     }
 }
 
+/// Do these two operators commute or anticommute?
+/// Operators that implement this trait are not allowing any other possibilities.
 pub trait Commutator {
     fn commute(&self, other: &Self) -> bool;
 }
@@ -46,6 +48,9 @@ enum FullPauli {
     Z,
 }
 
+/// A tensor product of `N` single site operators.
+/// If we have `index = [a,b,c]` and `operator_at_index = [U,V,W]`
+/// this means `U_a \otimes V_b \otimes W_c` and identity on all the others.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LocalOperator<const N: usize, Op> {
     pub index: [usize; N],
@@ -152,6 +157,10 @@ fn bitvec_from_usize(max_bit: usize, bits: usize) -> BitVec {
     ret
 }
 
+/// Suppose we have `k` operators in `ops` and
+/// pairwise they either commute or anticommute.
+/// We can create an unoriented graph on `k` vertices where the edges
+/// indicate that the corresponding operators anticommute.
 pub fn get_edges<Op: Commutator>(ops: &[Op]) -> Vec<(int, int)> {
     let mut ret = Vec::new();
     if ops.is_empty() {
@@ -180,6 +189,9 @@ pub const DOUBLES: [(Pauli, Pauli); 9] = [
     (Pauli::Z, Pauli::Z),
 ];
 
+/// With probability `density` take each item
+/// from `iter`. Collecting the ones that we
+/// actually did select into a `Vec<I>`.
 pub fn draw_from_iter<'a, I: Copy + 'a>(
     density: f64,
     rng: &mut impl Rng,

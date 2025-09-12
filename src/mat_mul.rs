@@ -2,6 +2,8 @@ use std::fmt::{self, Debug};
 
 use crate::graph::Node;
 
+/// A matrix of `Node` entries with specified `dims`
+/// stored in row major order.
 pub struct Matrix {
     data: Vec<Node>,
     dims: (usize, usize),
@@ -49,6 +51,8 @@ impl Matrix {
         &self.data[start..end]
     }
 
+    /// For a square matrix `A`, give the
+    /// diagonal entries of `A^3`.
     pub fn diag_cube(&self) -> Vec<Node> {
         assert_eq!(self.dims.0, self.dims.1);
         let dim = self.dims.0;
