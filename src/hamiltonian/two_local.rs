@@ -15,6 +15,8 @@ pub struct TwoLocal {
     operators: Vec<LocalOperator>,
 }
 
+/// All possible operators acting on `2` qubits at a time among a total of `n` available.
+/// If `INCLUDE_SINGLES` then also the ones acting on `1` qubit.
 // for small n and and especially small k this is fine; for bigger we probably do not want
 // to collect and if they are really big it has to be done completely differently, e.g.,
 // encode it somehow into numbers that we can directly draw with rand::seq::index::sample
