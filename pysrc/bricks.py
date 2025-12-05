@@ -124,14 +124,14 @@ def main():
         linestyle=linestyles[0],
     )
 
-    exact = np.array([exact_scf(d) for d in densities])
-    ax.plot(
-        densities,
-        exact,
-        label=labels[3],
-        color=colors[3],
-        linestyle=linestyles[3],
-    )
+    # exact = np.array([exact_scf(d) for d in densities])
+    # ax.plot(
+    #     densities,
+    #     exact,
+    #     label=labels[3],
+    #     color=colors[3],
+    #     linestyle=linestyles[3],
+    # )
 
     axl.set_ylabel(r"[\%]")
     axl.plot(
@@ -149,14 +149,14 @@ def main():
         linestyle=linestyles[2],
     )
 
-    exact = np.array([exact_dscf(d) for d in densities])
-    axl.plot(
-        densities,
-        exact * 100,
-        label=labels[4],
-        color=colors[4],
-        linestyle=linestyles[4],
-    )
+    # exact = np.array([exact_dscf(d) for d in densities])
+    # axl.plot(
+    #     densities,
+    #     exact * 100,
+    #     label=labels[4],
+    #     color=colors[4],
+    #     linestyle=linestyles[4],
+    # )
 
     # print(
     #     f"before sum(|scf - cf|) = {np.abs(results["before_claw_free"] -
