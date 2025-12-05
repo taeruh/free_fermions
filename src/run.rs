@@ -16,6 +16,7 @@ mod density_size_sweep;
 mod erdos_renyi;
 mod lin_sparse;
 mod majoranas;
+mod nams_symmetries;
 mod num_two_local_claws;
 mod old_erdos_renyi;
 mod removal_examples;
@@ -40,13 +41,14 @@ pub fn run() {
     // small_claw_free::run();
     // num_two_local_claws::run();
     // sparse::run();
-    lin_sparse::run();
+    // lin_sparse::run();
     // twod_square_lattice::run();
     // exact::square_lattice::run();
     // exact::square_lattice::run_analyse();
     // bricks::run();
     // exact::bricks::run();
     // exact::bricks::run_analyse();
+    nams_symmetries::run();
 }
 
 fn uniform_values(

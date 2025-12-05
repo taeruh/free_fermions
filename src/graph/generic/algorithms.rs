@@ -1,9 +1,10 @@
 pub mod claw_free;
+pub mod is_line_graph;
 pub mod modular_decomposition;
 pub mod obstinate;
 pub mod simplicial;
+pub mod trace_twin_collapse;
 pub mod twin_collapse;
-pub mod is_line_graph;
 
 #[cfg(test)]
 mod test_impl {

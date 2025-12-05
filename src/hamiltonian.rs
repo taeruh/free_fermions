@@ -82,7 +82,7 @@ impl<const N: usize, Op: Commutator> Commutator for LocalOperator<N, Op> {
 }
 
 #[derive(Debug, Clone)]
-struct PauliString {
+pub struct PauliString {
     n: usize,
     z: BitVec,
     x: BitVec,
@@ -106,7 +106,7 @@ impl PauliString {
                 Pauli::Y => {
                     x.set(op.index[0], true);
                     z.set(op.index[0], true);
-                }
+                },
                 Pauli::Z => z.set(op.index[0], true),
             }
         }
@@ -119,6 +119,25 @@ impl PauliString {
             z: bitvec_from_usize(max_bit, z),
             x: bitvec_from_usize(max_bit, x),
         }
+    }
+
+    pub fn from_str(s: &str) -> Self {
+        let n = s.len();
+        let mut z = BitVec::repeat(false, n);
+        let mut x = BitVec::repeat(false, n);
+        for (i, c) in s.chars().enumerate() {
+            match c {
+                'I' => {},
+                'X' => x.set(i, true),
+                'Y' => {
+                    x.set(i, true);
+                    z.set(i, true);
+                },
+                'Z' => z.set(i, true),
+                _ => panic!("Invalid character in Pauli string"),
+            }
+        }
+        Self { n, z, x }
     }
 
     pub fn draw_as_paulis(&self) {
@@ -137,6 +156,25 @@ impl PauliString {
             }
         }
         println!("{paulis:?}");
+    }
+
+    pub fn draw_as_pauli_string(&self) -> String {
+        let mut s = String::with_capacity(self.n);
+        for i in 0..self.n {
+            let z = *self.z.get(i).unwrap();
+            let x = *self.x.get(i).unwrap();
+            let c = if z && x {
+                'Y'
+            } else if z {
+                'Z'
+            } else if x {
+                'X'
+            } else {
+                'I'
+            };
+            s.push(c);
+        }
+        s
     }
 }
 
@@ -204,6 +242,6 @@ fn draw_doubles(density: f64, rng: &mut impl Rng) -> Vec<(Pauli, Pauli)> {
 pub mod bricks;
 pub mod electronic_structure;
 pub mod oned_chain;
+pub mod sparse;
 pub mod square_lattice;
 pub mod two_local;
-pub mod sparse;
