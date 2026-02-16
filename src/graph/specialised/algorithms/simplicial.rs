@@ -44,7 +44,6 @@ impl<G: GraphData> Graph<G> {
     // for the consistency tests to succeed
     #[cfg(debug_assertions)]
     fn prime_simplicial(&self, tree: &Tree) -> HashSet<VNodes> {
-
         let ret = self._prime_simplicial_debug(tree);
         let check = self._prime_simplicial(tree);
         for c in check.iter() {
@@ -267,7 +266,13 @@ impl<G: GraphData> Graph<G> {
         let mut complement = self.clone();
         complement.complement();
         if let Some(bipartition) = complement.try_bipartion() {
-            return bipartition;
+            let mut ret = HashSet::new();
+            for clique in bipartition.into_iter() {
+                if !clique.is_empty() {
+                    ret.insert(clique);
+                }
+            }
+            return ret;
         }
 
         let mut count = 0;
