@@ -181,7 +181,14 @@ impl<G: ImplGraph> Graph<G> {
         let mut complement = self.clone();
         complement.complement();
         if let Some((a, b)) = complement.try_bipartition() {
-            return self.map_simplicial_cliques([a, b]);
+            let mut ret = Vec::new();
+            if !a.is_empty() {
+                ret.push(a);
+            }
+            if !b.is_empty() {
+                ret.push(b);
+            }
+            return self.map_simplicial_cliques(ret);
         }
 
         let mut count = 0;
@@ -336,7 +343,7 @@ mod tests {
     use super::*;
     use crate::graph::{
         algorithms::simplicial,
-        generic::{algorithms::is_line_graph::SageProcess, Adj, Graph, Pet},
+        generic::{Adj, Graph, Pet, algorithms::is_line_graph::SageProcess},
         test_utils::collect,
     };
 
