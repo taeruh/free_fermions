@@ -1,8 +1,8 @@
 use hashbrown::{HashMap, HashSet};
 
 use crate::graph::{
-    CompactNodes,
     specialised::{GraphData, GraphDataSpecializerHelper, Label, Neighbours, Node},
+    CompactNodes,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -92,9 +92,7 @@ impl GraphData for Custom {
         self.nodes.iter_mut()
     }
 
-    fn enumerate_neighbours_mut(
-        &mut self,
-    ) -> impl Iterator<Item = (Node, &mut Neighbours)> {
+    fn enumerate_neighbours_mut(&mut self) -> impl Iterator<Item = (Node, &mut Neighbours)> {
         self.nodes.iter_mut().enumerate()
     }
 

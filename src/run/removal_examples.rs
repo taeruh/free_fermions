@@ -25,19 +25,30 @@ struct PauliString<const N: usize> {
 
 impl<const N: usize> Default for PauliString<N> {
     fn default() -> Self {
-        PauliString { z: [false; N], x: [false; N] }
+        PauliString {
+            z: [false; N],
+            x: [false; N],
+        }
     }
 }
 
 impl<const N: usize> fmt::Display for PauliString<N> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for s in 0..N {
-            write!(f, "{}", Pauli { z: self.z[s], x: self.x[s] })?;
+            write!(
+                f,
+                "{}",
+                Pauli {
+                    z: self.z[s],
+                    x: self.x[s]
+                }
+            )?;
         }
         Ok(())
     }
 }
 
+#[allow(dead_code)]
 impl<const N: usize> PauliString<N> {
     fn set(&mut self, pauli: Pauli, idx: usize) {
         self.z[idx] = pauli.z;
@@ -80,6 +91,7 @@ fn four_pauli_iterator() -> impl Iterator<Item = (Pauli, Pauli, Pauli, Pauli)> {
     })
 }
 
+#[allow(dead_code)]
 pub fn run() {
     const N: usize = 4;
 

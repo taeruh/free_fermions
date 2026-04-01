@@ -65,8 +65,8 @@ pub mod hamiltonian;
 pub mod mat_mul;
 pub mod matrix;
 // pub mod playing_around;
-pub mod run;
 pub mod rand_helper;
+pub mod run;
 
 pub mod binary_search;
 pub mod exact;

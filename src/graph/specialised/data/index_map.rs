@@ -5,8 +5,8 @@ use indexmap::map::Entry;
 
 use super::super::GraphDataSpecializerHelper;
 use crate::graph::{
-    CompactNodes,
     specialised::{GraphData, Label, Neighbours, Node},
+    CompactNodes,
 };
 
 pub type IndexMap = indexmap::IndexMap<Label, Neighbours>;
@@ -57,7 +57,7 @@ impl GraphData for IndexMap {
                 let idx = e.index();
                 e.insert(HashSet::new());
                 idx
-            },
+            }
         }
     }
 
@@ -92,9 +92,7 @@ impl GraphData for IndexMap {
         self.values().enumerate()
     }
 
-    fn enumerate_neighbours_mut(
-        &mut self,
-    ) -> impl Iterator<Item = (Node, &mut Neighbours)> {
+    fn enumerate_neighbours_mut(&mut self) -> impl Iterator<Item = (Node, &mut Neighbours)> {
         self.values_mut().enumerate()
     }
 
@@ -115,7 +113,8 @@ impl GraphData for IndexMap {
     }
 
     fn swap_remove(&mut self, node: Node) -> Option<Neighbours> {
-        self.swap_remove_index(node).map(|(_, neighbours)| neighbours)
+        self.swap_remove_index(node)
+            .map(|(_, neighbours)| neighbours)
     }
 }
 

@@ -24,7 +24,7 @@ use crate::{
 const NUM_THREADS: usize = 50;
 // const NUM_THREADS: usize = 10;
 const NUM_SAMPLES: usize = 5000; // per thread
-// const NUM_SAMPLES: usize = 100; // per thread
+                                 // const NUM_SAMPLES: usize = 100; // per thread
 
 const DENSITY_START: f64 = 0.01;
 const DENSITY_END: f64 = 0.40;
@@ -34,6 +34,7 @@ const NUM_DENSITY_STEPS: usize = 300;
 
 const NUM_TOTAL_SAMPLES: usize = NUM_THREADS * NUM_SAMPLES;
 
+#[allow(dead_code)]
 fn get_densities() -> Vec<f64> {
     const DELTA: f64 = (DENSITY_END - DENSITY_START) / (NUM_DENSITY_STEPS - 1) as f64;
     (0..NUM_DENSITY_STEPS)
@@ -66,6 +67,7 @@ struct CountResults {
     max_sc_size: usize,
 }
 
+#[allow(dead_code)]
 impl CountResults {
     fn init() -> Self {
         Self {
@@ -94,6 +96,7 @@ impl CountResults {
     }
 }
 
+#[allow(dead_code)]
 impl Results {
     fn init() -> Self {
         Self {
@@ -120,14 +123,11 @@ impl Results {
         ret.max_sc_size = results.max_sc_size;
 
         for i in 0..NUM_DENSITY_STEPS {
-            ret.before_claw_free[i] =
-                results.before_claw_free[i] as f64 / NUM_TOTAL_SAMPLES as f64;
+            ret.before_claw_free[i] = results.before_claw_free[i] as f64 / NUM_TOTAL_SAMPLES as f64;
             ret.before_simplicial[i] =
                 results.before_simplicial[i] as f64 / NUM_TOTAL_SAMPLES as f64;
-            ret.after_claw_free[i] =
-                results.claw_free[i] as f64 / NUM_TOTAL_SAMPLES as f64;
-            ret.after_simplicial[i] =
-                results.simplicial[i] as f64 / NUM_TOTAL_SAMPLES as f64;
+            ret.after_claw_free[i] = results.claw_free[i] as f64 / NUM_TOTAL_SAMPLES as f64;
+            ret.after_simplicial[i] = results.simplicial[i] as f64 / NUM_TOTAL_SAMPLES as f64;
             ret.collapsed[i] = results.collapsed[i] / NUM_TOTAL_SAMPLES as f64;
         }
         ret
@@ -136,8 +136,10 @@ impl Results {
 
 struct Notification {
     remaining: Vec<(f64, usize)>,
+    #[allow(dead_code)]
     start_time: Instant,
 }
+#[allow(dead_code)]
 impl Notification {
     fn new(densities: impl Iterator<Item = f64>) -> Self {
         Self {
@@ -177,8 +179,10 @@ pub fn periodic() {
         let mut sage_process = SageProcess::default();
 
         for (density_idx, density) in densities.iter().copied().enumerate() {
-            let (e1d, e2d, e3d, e4d, e5d) =
-                (0..5).map(|_| Density::new(density)).collect_tuple().unwrap();
+            let (e1d, e2d, e3d, e4d, e5d) = (0..5)
+                .map(|_| Density::new(density))
+                .collect_tuple()
+                .unwrap();
             let mut before_claw_free = 0;
             let mut before_simplicial = 0;
             let mut after_claw_free = 0;
@@ -258,16 +262,14 @@ pub fn periodic() {
     };
 
     let results: Vec<_> = thread::scope(|scope| {
-        let handles: Vec<_> =
-            (0..NUM_THREADS).map(|i| scope.spawn(move || job(i))).collect();
+        let handles: Vec<_> = (0..NUM_THREADS)
+            .map(|i| scope.spawn(move || job(i)))
+            .collect();
         handles.into_iter().map(|h| h.join().unwrap()).collect()
     });
 
-    let results = Results::normalise_merged_count_results(
-        CountResults::merge(results),
-        densities,
-        seed,
-    );
+    let results =
+        Results::normalise_merged_count_results(CountResults::merge(results), densities, seed);
 
     fs::write(
         // format!("output/periodic_bricks_full_{id}.json"),
@@ -278,6 +280,7 @@ pub fn periodic() {
     .unwrap();
 }
 
+#[allow(dead_code)]
 pub fn run() {
     periodic()
 }

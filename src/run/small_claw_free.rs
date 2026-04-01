@@ -2,6 +2,7 @@ use itertools::Itertools;
 
 type Graph = petgraph::graph::Graph<(), (), petgraph::Undirected, u32>;
 
+#[allow(dead_code)]
 pub fn run() {
     let size = 6;
 

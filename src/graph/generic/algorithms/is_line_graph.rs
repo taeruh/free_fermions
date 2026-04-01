@@ -28,10 +28,10 @@ impl<G: ImplGraph> Graph<G> {
     pub fn is_line_graph(&self, sage_process: &mut SageProcess) -> bool {
         let sage_process = &mut sage_process.process;
 
-        let adj_list =
-            Vec::from_iter(self.iter_with_neighbourhoods().map(|(node, neighbours)| {
-                (node, neighbours.iter().collect::<Vec<usize>>())
-            }));
+        let adj_list = Vec::from_iter(
+            self.iter_with_neighbourhoods()
+                .map(|(node, neighbours)| (node, neighbours.iter().collect::<Vec<usize>>())),
+        );
         let mut serde_list = serde_json::to_string(&adj_list).unwrap();
         serde_list.push('\n'); // so that we don't block
 
@@ -47,6 +47,9 @@ impl<G: ImplGraph> Graph<G> {
             .expect("Failed to read from stdout");
 
         output.pop(); // pop the newline
-        output.to_lowercase().parse::<bool>().expect("Failed to parse output")
+        output
+            .to_lowercase()
+            .parse::<bool>()
+            .expect("Failed to parse output")
     }
 }

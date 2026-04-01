@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     binary_search::TreeStack,
-    graph::generic::{self, ImplGraph, Pet, algorithms::is_line_graph::SageProcess},
-    hamiltonian::{self, DOUBLES, LocalOperator, Pauli},
+    graph::generic::{self, algorithms::is_line_graph::SageProcess, ImplGraph, Pet},
+    hamiltonian::{self, LocalOperator, Pauli, DOUBLES},
     run::check,
 };
 
@@ -45,31 +45,31 @@ fn check(state: &mut State, sage_process: &mut SageProcess) -> bool {
             for p in state.e5.iter() {
                 operators.push(LocalOperator {
                     index: [row + col, ((row + 8) % 16) + ((col + 7) % 8)],
-                    pauli: [p.0, p.1],
+                    operator_at_index: [p.0, p.1],
                 });
             }
             for p in state.e1.iter() {
                 operators.push(LocalOperator {
                     index: [row + col, row + col + 1],
-                    pauli: [p.0, p.1],
+                    operator_at_index: [p.0, p.1],
                 });
             }
             for p in state.e2.iter() {
                 operators.push(LocalOperator {
                     index: [row + col + 1, row + col + 2],
-                    pauli: [p.0, p.1],
+                    operator_at_index: [p.0, p.1],
                 });
             }
             for p in state.e3.iter() {
                 operators.push(LocalOperator {
                     index: [row + col + 2, row + col + 3],
-                    pauli: [p.0, p.1],
+                    operator_at_index: [p.0, p.1],
                 });
             }
             for p in state.e4.iter() {
                 operators.push(LocalOperator {
                     index: [row + col + 3, row + (col + 4) % 8],
-                    pauli: [p.0, p.1],
+                    operator_at_index: [p.0, p.1],
                 });
             }
         }
@@ -119,19 +119,19 @@ pub fn run() {
         match index % 5 {
             0 => {
                 state.e1.push(DOUBLES[pindex]);
-            },
+            }
             1 => {
                 state.e2.push(DOUBLES[pindex]);
-            },
+            }
             2 => {
                 state.e3.push(DOUBLES[pindex]);
-            },
+            }
             3 => {
                 state.e4.push(DOUBLES[pindex]);
-            },
+            }
             4 => {
                 state.e5.push(DOUBLES[pindex]);
-            },
+            }
             _ => unreachable!(),
         }
         check(state, &mut sage_process)
@@ -173,8 +173,11 @@ pub fn run() {
     tree.search(&mut f_true, &mut f_false, &f_result);
     let results = tree.into_results();
 
-    fs::write("output/exact_bricks.msgpack", rmp_serde::to_vec(&results).unwrap())
-        .unwrap();
+    fs::write(
+        "output/exact_bricks.msgpack",
+        rmp_serde::to_vec(&results).unwrap(),
+    )
+    .unwrap();
 }
 
 pub fn run_analyse() {
@@ -198,8 +201,14 @@ pub fn run_analyse() {
             continue;
         }
         let index = instance.num_ops;
-        assert!(index > 4, "graph cannot be two-dimensional with less than 5 operator");
-        assert!(instance.coll_valid, "all graphs should be scf after the collapse");
+        assert!(
+            index > 4,
+            "graph cannot be two-dimensional with less than 5 operator"
+        );
+        assert!(
+            instance.coll_valid,
+            "all graphs should be scf after the collapse"
+        );
         coefficients.scf[index] += 1.0;
         if !instance.orig_valid {
             coefficients.dscf[index] += 1.0;

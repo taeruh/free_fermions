@@ -3,9 +3,9 @@ use std::{env, fs, thread};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
 
-use super::{GenGraph, density_size_sweep::Results};
+use super::{density_size_sweep::Results, GenGraph};
 use crate::{
-    graph::generic::{ImplGraph, algorithms::is_line_graph::SageProcess},
+    graph::generic::{algorithms::is_line_graph::SageProcess, ImplGraph},
     hamiltonian::sparse::Sparse,
     rand_helper,
     run::{check, density_size_sweep::CountResults},
@@ -53,10 +53,9 @@ pub fn run() {
 
                 let mut i = 0;
                 while i < NUM_THREAD_SAMPLES {
-                    let mut graph = GenGraph::from_edge_labels(
-                        Sparse::draw(num_ops, size, rng).get_graph(),
-                    )
-                    .unwrap();
+                    let mut graph =
+                        GenGraph::from_edge_labels(Sparse::draw(num_ops, size, rng).get_graph())
+                            .unwrap();
 
                     if graph.is_empty() {
                         i += 1;
@@ -104,8 +103,9 @@ pub fn run() {
     };
 
     let results: Vec<_> = thread::scope(|scope| {
-        let handles: Vec<_> =
-            (0..NUM_THREADS).map(|i| scope.spawn(move || job(i))).collect();
+        let handles: Vec<_> = (0..NUM_THREADS)
+            .map(|i| scope.spawn(move || job(i)))
+            .collect();
         handles.into_iter().map(|h| h.join().unwrap()).collect()
     });
 

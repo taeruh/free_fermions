@@ -12,7 +12,10 @@ pub struct Enumerate<I> {
 }
 impl<I> Enumerate<I> {
     pub fn new(iter: I, offset: usize) -> Enumerate<I> {
-        Enumerate { iter, count: offset }
+        Enumerate {
+            iter,
+            count: offset,
+        }
     }
 }
 

@@ -1,16 +1,17 @@
+#[allow(unused_imports)]
 use std::ptr;
 
-use hashbrown::{HashMap, HashSet, hash_set::Entry};
+use hashbrown::{hash_set::Entry, HashMap, HashSet};
 use modular_decomposition::ModuleKind;
 use petgraph::Direction;
 
 use crate::graph::{
-    Node, VNodes,
     algorithms::{
         modular_decomposition::{NodeIndex, Tree},
         obstinate::{Obstinate, ObstinateKind},
     },
     specialised::{Graph, GraphData},
+    Node, VNodes,
 };
 
 enum NonTrivialChild {
@@ -85,7 +86,7 @@ impl<G: GraphData> Graph<G> {
             let subcliques = graph.prime_recurse(self);
             for mut clique in subcliques.into_iter() {
                 match checked_cliques.entry(clique.clone()) {
-                    Entry::Occupied(_) => {},
+                    Entry::Occupied(_) => {}
                     Entry::Vacant(e) => {
                         let clique = e.get();
                         if self.clique_is_simplicial(clique) {
@@ -93,22 +94,20 @@ impl<G: GraphData> Graph<G> {
                         } else {
                             e.insert();
                         }
-                    },
+                    }
                 }
                 clique.push(node);
                 clique.sort_unstable();
                 match checked_cliques.entry(clique) {
-                    Entry::Occupied(_) => {},
+                    Entry::Occupied(_) => {}
                     Entry::Vacant(e) => {
                         let clique = e.get();
-                        if self.set_is_clique(clique.iter())
-                            && self.clique_is_simplicial(clique)
-                        {
+                        if self.set_is_clique(clique.iter()) && self.clique_is_simplicial(clique) {
                             return HashSet::from_iter([clique.clone()]);
                         } else {
                             e.insert();
                         }
-                    },
+                    }
                 }
             }
         }
@@ -162,7 +161,7 @@ impl<G: GraphData> Graph<G> {
                         );
                     }
                 }
-            },
+            }
             Obstinate::True(ObstinateKind::Complement, (a, b)) => {
                 debug_assert_eq!(a.len(), self.len() / 2);
                 let mut cliques = Vec::with_capacity(self.len());
@@ -173,7 +172,7 @@ impl<G: GraphData> Graph<G> {
                 Some(HashSet::from_iter(
                     cliques.into_iter().map(|c| self.to_parent_map(parent, c)),
                 ))
-            },
+            }
             Obstinate::False => None,
         }
     }
@@ -243,16 +242,14 @@ impl<G: GraphData> Graph<G> {
                 clique.push(node);
                 clique.sort_unstable();
                 match checked_cliques.entry(clique) {
-                    Entry::Occupied(_) => {},
+                    Entry::Occupied(_) => {}
                     Entry::Vacant(e) => {
                         let clique = e.get();
-                        if self.set_is_clique(clique.iter())
-                            && self.clique_is_simplicial(clique)
-                        {
+                        if self.set_is_clique(clique.iter()) && self.clique_is_simplicial(clique) {
                             cliques.insert(self.clone_to_parent_map(parent, clique));
                         }
                         e.insert();
-                    },
+                    }
                 }
             }
             // well, not having this here was a painful misunderstanding from the paper
@@ -278,7 +275,10 @@ impl<G: GraphData> Graph<G> {
         let mut count = 0;
         let mut non_trivial_child = None;
 
-        for child in tree.graph.neighbors_directed(tree.root, Direction::Outgoing) {
+        for child in tree
+            .graph
+            .neighbors_directed(tree.root, Direction::Outgoing)
+        {
             match tree.graph.node_weight(child).unwrap() {
                 ModuleKind::Prime => {
                     count += 1;
@@ -288,7 +288,7 @@ impl<G: GraphData> Graph<G> {
                     } else {
                         non_trivial_child = Some(NonTrivialChild::Prime(child));
                     }
-                },
+                }
                 ModuleKind::Series => unsafe {
                     // safety: assume modular decomposition is correct
                     debug_unreachable_unchecked!("series module has series children");
@@ -300,7 +300,7 @@ impl<G: GraphData> Graph<G> {
                     } else {
                         non_trivial_child = Some(NonTrivialChild::Parallel(child));
                     }
-                },
+                }
                 ModuleKind::Node(_) => continue,
             }
         }
@@ -322,15 +322,13 @@ impl<G: GraphData> Graph<G> {
                         .into_iter()
                         .map(|clique| graph.to_parent_map(self, clique))
                         .collect()
-                },
+                }
                 NonTrivialChild::Parallel(child) => {
                     #[cfg(debug_assertions)]
                     #[allow(clippy::needless_return)]
                     {
                         let mut cliques: HashSet<VNodes> = HashSet::with_capacity(2);
-                        for gchild in
-                            tree.graph.neighbors_directed(child, Direction::Outgoing)
-                        {
+                        for gchild in tree.graph.neighbors_directed(child, Direction::Outgoing) {
                             let clique = tree.module_nodes(gchild, Some(1));
                             assert!(self.set_is_clique(clique.iter()));
                             assert!(self.clique_is_simplicial(&clique));
@@ -347,7 +345,7 @@ impl<G: GraphData> Graph<G> {
                             .map(|gchild| tree.module_nodes(gchild, Some(1)))
                             .collect()
                     }
-                },
+                }
             }
         } else {
             HashSet::new()
@@ -368,10 +366,7 @@ impl<G: GraphData> Graph<G> {
         true
     }
 
-    fn set_is_clique<'s, I: Iterator<Item = &'s Node> + Clone>(
-        &'s self,
-        mut set: I,
-    ) -> bool {
+    fn set_is_clique<'s, I: Iterator<Item = &'s Node> + Clone>(&'s self, mut set: I) -> bool {
         while let Some(node) = set.next() {
             // safety: we only ever pass in nodes from the graph itself
             let neighbours = unsafe { self.get_neighbours_unchecked(*node) };
@@ -445,10 +440,10 @@ mod tests {
     use petgraph::Direction::Outgoing;
 
     use crate::graph::{
-        Label,
         algorithms::simplicial,
         specialised::{Custom, Graph, IndexMap},
         test_utils::collect,
+        Label,
     };
 
     simplicial::tests::test_it!(custom, Graph<Custom>);
@@ -461,11 +456,11 @@ mod tests {
     fn simplicial_vertex_but_subgraph_not_prime() {
         const VERTEX: Label = 2; // the simplicial vertex we remove
         const MODULE: [Label; 2] = [3, 4]; // the module we then get
-        //         ------
-        //        /      \
-        // 0 -- 1 -- 2    3 -- 5
-        //       \     \     /
-        //         ----- 4 -
+                                           //         ------
+                                           //        /      \
+                                           // 0 -- 1 -- 2    3 -- 5
+                                           //       \     \     /
+                                           //         ----- 4 -
         let mut graph = Graph::<Custom>::from_edge_labels(collect!(v;
             (0, 1),
             (1, 2),
@@ -487,9 +482,7 @@ mod tests {
         let module_node = tree
             .graph
             .neighbors_directed(tree.root, Outgoing)
-            .find(|&node| {
-                matches!(tree.graph.node_weight(node).unwrap(), ModuleKind::Parallel)
-            })
+            .find(|&node| matches!(tree.graph.node_weight(node).unwrap(), ModuleKind::Parallel))
             .unwrap();
         let mut module: Vec<_> = tree
             .module_nodes(module_node, None)

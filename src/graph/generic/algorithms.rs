@@ -1,9 +1,9 @@
 pub mod claw_free;
+pub mod is_line_graph;
 pub mod modular_decomposition;
 pub mod obstinate;
 pub mod simplicial;
 pub mod twin_collapse;
-pub mod is_line_graph;
 
 #[cfg(test)]
 mod test_impl {
@@ -11,13 +11,13 @@ mod test_impl {
 
     use super::{claw_free::ClawFree, is_line_graph::SageProcess};
     use crate::graph::{
-        HLabels, Label, Node, VLabels,
         algorithms::{
             modular_decomposition::Tree,
             obstinate::ObstinateMapped,
             test_impls::{DoItOnce, RequiredMethods},
         },
         generic::{Adj, Graph, ImplGraph, Pet},
+        HLabels, Label, Node, VLabels,
     };
 
     impl<G: ImplGraph> RequiredMethods for Graph<G>

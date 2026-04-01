@@ -13,8 +13,7 @@ impl<G: GraphData> Graph<G> {
     pub fn is_claw_free_naive(&self) -> bool {
         for neighbourhood in self.iter_neighbours() {
             // safety: neighbourhood nodes have to be valid nodes
-            let mut graph =
-                unsafe { self.subgraph_from_set(neighbourhood.len(), neighbourhood) };
+            let mut graph = unsafe { self.subgraph_from_set(neighbourhood.len(), neighbourhood) };
             graph.complement();
             if graph.has_triangle() {
                 return false;
@@ -50,29 +49,30 @@ impl<G: GraphData> Graph<G> {
 
         #[inline]
         fn series_check(tree: &Tree) -> bool {
-            for child in tree.graph.neighbors_directed(tree.root, Direction::Outgoing) {
+            for child in tree
+                .graph
+                .neighbors_directed(tree.root, Direction::Outgoing)
+            {
                 match tree.graph.node_weight(child).unwrap() {
                     ModuleKind::Prime => {
                         if !prime_check(tree, child) {
                             return false;
                         }
-                    },
+                    }
                     ModuleKind::Series => unsafe {
                         // safety: assume modular decomposition is correct
                         debug_unreachable_unchecked!("series module has series children");
                     },
                     ModuleKind::Parallel => {
                         let mut count = 0;
-                        for gchild in
-                            tree.graph.neighbors_directed(child, Direction::Outgoing)
-                        {
+                        for gchild in tree.graph.neighbors_directed(child, Direction::Outgoing) {
                             count += 1;
                             if (count > 2) || !tree.module_is_clique(gchild) {
                                 return false;
                             }
                         }
-                    },
-                    ModuleKind::Node(_) => {},
+                    }
+                    ModuleKind::Node(_) => {}
                 }
             }
             true
@@ -92,12 +92,14 @@ impl<G: GraphData> Graph<G> {
     fn prime_claw_check(&self, tree: &Tree) -> bool {
         let representatives = tree.reduced_module(tree.root);
         // safety: representatives are collected from graph nodes
-        unsafe { self.subgraph(representatives.len(), representatives) }
-            .is_claw_free_naive()
+        unsafe { self.subgraph(representatives.len(), representatives) }.is_claw_free_naive()
     }
 
     fn series_claw_check(&self, tree: &Tree) -> bool {
-        for child in tree.graph.neighbors_directed(tree.root, Direction::Outgoing) {
+        for child in tree
+            .graph
+            .neighbors_directed(tree.root, Direction::Outgoing)
+        {
             match tree.graph.node_weight(child).unwrap() {
                 ModuleKind::Prime => {
                     // any independent set of size 3 will induce a claw, because they have
@@ -109,7 +111,7 @@ impl<G: GraphData> Graph<G> {
                     if complement_representative_graph.has_triangle() {
                         return false;
                     }
-                },
+                }
                 ModuleKind::Series => unsafe {
                     // safety: assume modular decomposition is correct
                     debug_unreachable_unchecked!("series module has series children");
@@ -119,8 +121,8 @@ impl<G: GraphData> Graph<G> {
                     // nothing to do here: we know that we have the right structure, so
                     // this module does not contain any independent set of size 3 (cf.
                     // paper)
-                },
-                ModuleKind::Node(_) => {},
+                }
+                ModuleKind::Node(_) => {}
             }
         }
         true

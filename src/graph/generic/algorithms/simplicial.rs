@@ -8,12 +8,12 @@ use petgraph::Direction;
 
 use super::claw_free::ClawFree;
 use crate::graph::{
-    Node, VLabels, VNodes,
     algorithms::{
         modular_decomposition::{NodeIndex, Tree},
         obstinate::{Obstinate, ObstinateKind},
     },
     generic::{Graph, ImplGraph, NodeCollection, NodeCollectionMut},
+    Node, VLabels, VNodes,
 };
 
 impl<G: ImplGraph> Graph<G> {
@@ -46,7 +46,7 @@ impl<G: ImplGraph> Graph<G> {
                     match kind {
                         ModuleKind::Node(node) => {
                             ret.push(self.map_simplicial_cliques(vec![vec![*node]]));
-                        },
+                        }
                         ModuleKind::Prime => {
                             // not really efficient here (e.g., instead of re-doing the
                             // modular partition for the subtree, we could just take the
@@ -54,22 +54,20 @@ impl<G: ImplGraph> Graph<G> {
                             let graph = self.subgraph(&tree.module_nodes(child, Some(2)));
                             let tree = graph.modular_decomposition();
                             ret.push(graph.prime_simplicial(&tree));
-                        },
+                        }
                         ModuleKind::Series => {
                             let graph = self.subgraph(&tree.module_nodes(child, Some(3)));
                             let tree = graph.modular_decomposition();
                             ret.push(graph.series_simplicial(&tree));
-                        },
+                        }
                         ModuleKind::Parallel => {
                             unreachable!("parallel child of parallel node");
-                        },
+                        }
                     }
                 }
                 Some(ret)
-            },
-            ModuleKind::Node(a) => {
-                Some(vec![self.map_simplicial_cliques(vec![vec![*a]])])
-            },
+            }
+            ModuleKind::Node(a) => Some(vec![self.map_simplicial_cliques(vec![vec![*a]])]),
         }
     }
 
@@ -80,7 +78,10 @@ impl<G: ImplGraph> Graph<G> {
 
         let (mut modules, mut representatives) = (HashMap::new(), Vec::new());
 
-        for child in tree.graph.neighbors_directed(tree.root, Direction::Outgoing) {
+        for child in tree
+            .graph
+            .neighbors_directed(tree.root, Direction::Outgoing)
+        {
             let repr = tree.module_representative(child);
             representatives.push(repr);
             modules.insert(self.get_label(repr).unwrap(), child);
@@ -126,17 +127,16 @@ impl<G: ImplGraph> Graph<G> {
             let mut subcliques = graph.prime_recurse();
             // need to have them with the correct index sets in the parent graph (self)
             subcliques.iter_mut().for_each(|clique| {
-                clique.iter_mut().for_each(|v| {
-                    *v = self.find_node(graph.get_label(*v).unwrap()).unwrap()
-                })
+                clique
+                    .iter_mut()
+                    .for_each(|v| *v = self.find_node(graph.get_label(*v).unwrap()).unwrap())
             });
             for mut clique in subcliques.into_iter() {
                 if self.clique_is_simplicial(&clique) {
                     cliques.push(clique.clone());
                 }
                 clique.push(node);
-                if self.set_is_clique(clique.iter()) && self.clique_is_simplicial(&clique)
-                {
+                if self.set_is_clique(clique.iter()) && self.clique_is_simplicial(&clique) {
                     cliques.push(clique);
                 }
             }
@@ -199,7 +199,10 @@ impl<G: ImplGraph> Graph<G> {
         let mut ret: Vec<VLabels> = Vec::new();
         let mut non_trivial_child: Option<NodeIndex> = None;
 
-        for child in tree.graph.neighbors_directed(tree.root, Direction::Outgoing) {
+        for child in tree
+            .graph
+            .neighbors_directed(tree.root, Direction::Outgoing)
+        {
             match tree.graph.node_weight(child).unwrap() {
                 ModuleKind::Node(_) => continue,
                 ModuleKind::Prime => {
@@ -208,7 +211,7 @@ impl<G: ImplGraph> Graph<G> {
                     } else {
                         non_trivial_child = Some(child);
                     }
-                },
+                }
                 ModuleKind::Series => unreachable!("series child of series node"),
                 ModuleKind::Parallel => {
                     if update_count() {
@@ -216,7 +219,7 @@ impl<G: ImplGraph> Graph<G> {
                     } else {
                         non_trivial_child = Some(child);
                     }
-                },
+                }
             }
         }
 
@@ -226,12 +229,10 @@ impl<G: ImplGraph> Graph<G> {
                     let graph = self.subgraph(&tree.module_nodes(child, Some(2)));
                     let tree = graph.modular_decomposition();
                     ret = graph.prime_simplicial(&tree);
-                },
+                }
                 ModuleKind::Parallel => {
                     let mut cliques: Vec<VNodes> = Vec::with_capacity(2);
-                    for gchild in
-                        tree.graph.neighbors_directed(child, Direction::Outgoing)
-                    {
+                    for gchild in tree.graph.neighbors_directed(child, Direction::Outgoing) {
                         let clique = tree.module_nodes(gchild, Some(1));
                         assert!(self.set_is_clique(clique.iter()));
                         assert!(self.clique_is_simplicial(&clique));
@@ -240,7 +241,7 @@ impl<G: ImplGraph> Graph<G> {
                     assert_eq!(cliques.len(), 2);
                     // no early return ... cf. above
                     ret = self.map_simplicial_cliques(cliques);
-                },
+                }
                 _ => unreachable!(),
             }
         }
@@ -307,11 +308,9 @@ impl<G: ImplGraph> Graph<G> {
                         vec![b[1]],
                     ]);
                 } else {
-                    panic!(
-                        "claw-free and obstinate (itself), but the length is not 2 or 4"
-                    );
+                    panic!("claw-free and obstinate (itself), but the length is not 2 or 4");
                 }
-            },
+            }
             Obstinate::True(ObstinateKind::Complement, (a, b)) => {
                 debug_assert_eq!(a.len(), self.len() / 2);
                 let mut ret = Vec::with_capacity(self.len());
@@ -320,7 +319,7 @@ impl<G: ImplGraph> Graph<G> {
                     ret.push(b[..i + 1].to_vec());
                 }
                 Some(ret)
-            },
+            }
             Obstinate::False => None,
         }
     }
@@ -332,7 +331,10 @@ impl<G: ImplGraph> Graph<G> {
         cliques
             .into_iter()
             .map(|clique| {
-                clique.into_iter().map(|v| self.get_label(v).unwrap()).collect()
+                clique
+                    .into_iter()
+                    .map(|v| self.get_label(v).unwrap())
+                    .collect()
             })
             .collect()
     }

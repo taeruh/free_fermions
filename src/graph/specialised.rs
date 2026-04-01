@@ -5,13 +5,10 @@ use std::{
     ops::Range,
 };
 
-use hashbrown::{HashMap, HashSet, hash_set};
+use hashbrown::{hash_set, HashMap, HashSet};
 use petgraph::{
+    visit::{GraphBase, GraphProp, IntoNeighbors, NodeCompactIndexable, NodeCount, NodeIndexable},
     Undirected,
-    visit::{
-        GraphBase, GraphProp, IntoNeighbors, NodeCompactIndexable, NodeCount,
-        NodeIndexable,
-    },
 };
 
 use super::{CompactNodes, Edge, InvalidGraph, Label, LabelEdge, Node, SwapRemoveMap};
@@ -60,9 +57,7 @@ impl<T: GraphData> UnsafeGraph<T> {
 }
 
 /// Inner graph data structure.
-pub trait GraphData:
-    CompactNodes + GraphDataSpecializerHelper + Debug + Clone + Default
-{
+pub trait GraphData: CompactNodes + GraphDataSpecializerHelper + Debug + Clone + Default {
     /// # Safety
     /// The label must be valid.
     unsafe fn get_index_unchecked(&self, label: Label) -> Node;
@@ -114,9 +109,7 @@ pub trait GraphData:
 
     fn enumerate_neighbours(&self) -> impl Iterator<Item = (Node, &Neighbours)> + Clone;
 
-    fn enumerate_neighbours_mut(
-        &mut self,
-    ) -> impl Iterator<Item = (Node, &mut Neighbours)>;
+    fn enumerate_neighbours_mut(&mut self) -> impl Iterator<Item = (Node, &mut Neighbours)>;
 
     fn enumerate_full(&self) -> impl Iterator<Item = (Node, Label, &Neighbours)>;
 
@@ -177,9 +170,7 @@ impl<G: GraphData> Graph<G> {
         self.0.iter_neighbours()
     }
     #[inline(always)]
-    pub fn enumerate_neighbours(
-        &self,
-    ) -> impl Iterator<Item = (Node, &Neighbours)> + Clone {
+    pub fn enumerate_neighbours(&self) -> impl Iterator<Item = (Node, &Neighbours)> + Clone {
         self.0.enumerate_neighbours()
     }
     #[inline(always)]
@@ -241,9 +232,7 @@ impl<G: GraphData> Graph<G> {
 
     /// # Safety
     /// Must not create a graph with self-loops.
-    pub unsafe fn from_edge_labels_unchecked(
-        edges: impl IntoIterator<Item = LabelEdge>,
-    ) -> Self {
+    pub unsafe fn from_edge_labels_unchecked(edges: impl IntoIterator<Item = LabelEdge>) -> Self {
         let mut ret = Self::default();
         for edge in edges {
             unsafe { ret.add_labelled_edge_unchecked(edge) };
@@ -276,9 +265,7 @@ impl<G: GraphData> Graph<G> {
         ret
     }
 
-    pub fn from_adjacency_labels<A, N>(
-        adj: A,
-    ) -> Result<Self, (UnsafeGraph<G>, InvalidGraph<Node>)>
+    pub fn from_adjacency_labels<A, N>(adj: A) -> Result<Self, (UnsafeGraph<G>, InvalidGraph<Node>)>
     where
         A: IntoIterator<Item = (Label, N)>,
         N: IntoIterator<Item = Label>,
@@ -327,9 +314,7 @@ impl<G: GraphData> Graph<G> {
                     return Err(InvalidGraph::SelfLoop(node));
                 }
                 if !self.0.get_neighbours(neighbour).unwrap().contains(&node) {
-                    return Err(InvalidGraph::IncompatibleNeighbourhoods(
-                        node, neighbour,
-                    ));
+                    return Err(InvalidGraph::IncompatibleNeighbourhoods(node, neighbour));
                 }
             }
         }
@@ -349,7 +334,11 @@ impl<G: GraphData> Graph<G> {
         debug_assert!(!self.0.get_neighbours(node).unwrap().contains(&node),);
         // the API safety invariant ensures self.len > 0
         let last_node = self.0.len() - 1;
-        debug_assert!(!self.0.get_neighbours(last_node).unwrap().contains(&last_node),);
+        debug_assert!(!self
+            .0
+            .get_neighbours(last_node)
+            .unwrap()
+            .contains(&last_node),);
 
         if node == last_node {
             let neighbours = self.0.pop().unwrap();
@@ -379,7 +368,11 @@ impl<G: GraphData> Graph<G> {
         );
         let last_node = self.0.len() - 1;
         assert!(
-            !self.0.get_neighbours(last_node).unwrap().contains(&last_node),
+            !self
+                .0
+                .get_neighbours(last_node)
+                .unwrap()
+                .contains(&last_node),
             "last node has self-loop"
         );
         unsafe { self.remove_node_unchecked(node) }
@@ -438,12 +431,17 @@ impl<G: GraphData> Graph<G> {
         for node in nodes_to_add {
             let idx = ret.0.get_index_or_insert(self.0.get_label(node).unwrap());
             for &neighbour in unsafe { self.0.get_neighbours_unchecked(node) }.iter() {
-                if let Some(neighbour_idx) =
-                    ret.0.get_index(unsafe { self.0.get_label_unchecked(neighbour) })
+                if let Some(neighbour_idx) = ret
+                    .0
+                    .get_index(unsafe { self.0.get_label_unchecked(neighbour) })
                 {
                     unsafe {
-                        ret.0.get_neighbours_mut_unchecked(idx).insert(neighbour_idx);
-                        ret.0.get_neighbours_mut_unchecked(neighbour_idx).insert(idx);
+                        ret.0
+                            .get_neighbours_mut_unchecked(idx)
+                            .insert(neighbour_idx);
+                        ret.0
+                            .get_neighbours_mut_unchecked(neighbour_idx)
+                            .insert(idx);
                     }
                 }
             }
@@ -458,12 +456,12 @@ impl<G: GraphData> Graph<G> {
         subgraph_size: usize,
         nodes: impl IntoIterator<Item = Node>,
     ) -> Self {
-        if subgraph_size as f64
-            >= self.0.len() as f64 * DECIDER_SUBGRAPH_VIA_DELETION_IF_LESS
-        {
+        if subgraph_size as f64 >= self.0.len() as f64 * DECIDER_SUBGRAPH_VIA_DELETION_IF_LESS {
             let nodes = HashSet::<_>::from_iter(nodes);
-            let nodes_to_delete =
-                self.iter_nodes().filter(|n| !nodes.contains(n)).collect::<Vec<_>>();
+            let nodes_to_delete = self
+                .iter_nodes()
+                .filter(|n| !nodes.contains(n))
+                .collect::<Vec<_>>();
             unsafe { self.clone().subgraph_via_deletion(nodes_to_delete) }
         } else {
             unsafe { self.subgraph_via_creation(nodes) }
@@ -475,16 +473,12 @@ impl<G: GraphData> Graph<G> {
     ///
     /// # Safety
     /// The `nodes` must be valid, i.e., between `0` and `self.len() - 1`.
-    pub unsafe fn subgraph_from_set(
-        &self,
-        subgraph_size: usize,
-        nodes: &HashSet<Node>,
-    ) -> Self {
-        if subgraph_size as f64
-            >= self.0.len() as f64 * DECIDER_SUBGRAPH_VIA_DELETION_IF_LESS
-        {
-            let nodes_to_delete =
-                self.iter_nodes().filter(|n| !nodes.contains(n)).collect::<Vec<_>>();
+    pub unsafe fn subgraph_from_set(&self, subgraph_size: usize, nodes: &HashSet<Node>) -> Self {
+        if subgraph_size as f64 >= self.0.len() as f64 * DECIDER_SUBGRAPH_VIA_DELETION_IF_LESS {
+            let nodes_to_delete = self
+                .iter_nodes()
+                .filter(|n| !nodes.contains(n))
+                .collect::<Vec<_>>();
             unsafe { self.clone().subgraph_via_deletion(nodes_to_delete) }
         } else {
             unsafe { self.subgraph_via_creation(nodes.into_iter().copied()) }
@@ -564,7 +558,11 @@ impl<G: GraphData> Graph<G> {
     pub fn map_to_full(&self) -> Vec<GraphNode> {
         self.0
             .enumerate_full()
-            .map(|(index, label, neighbours)| GraphNode { index, label, neighbours })
+            .map(|(index, label, neighbours)| GraphNode {
+                index,
+                label,
+                neighbours,
+            })
             .collect()
     }
 
@@ -583,7 +581,9 @@ impl<G: GraphData> Graph<G> {
 
 impl<G: GraphData> Debug for Graph<G> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Graph").field("nodes", &self.map_to_full()).finish()
+        f.debug_struct("Graph")
+            .field("nodes", &self.map_to_full())
+            .finish()
     }
 }
 

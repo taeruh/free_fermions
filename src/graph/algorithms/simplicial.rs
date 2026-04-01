@@ -6,11 +6,11 @@ pub mod tests {
     use rand_pcg::Pcg64;
 
     use crate::graph::{
-        HLabels, Label, VLabels, VNodes,
         algorithms::test_impls::RequiredMethods,
-        generic::{self, Adj, ImplGraph, Pet, algorithms::is_line_graph::SageProcess},
+        generic::{self, algorithms::is_line_graph::SageProcess, Adj, ImplGraph, Pet},
         specialised::{self, Custom, IndexMap},
-        test_utils::{self, RandomMap, collect},
+        test_utils::{self, collect, RandomMap},
+        HLabels, Label, VLabels, VNodes,
     };
 
     fn sort_cliques(cliques: Vec<Vec<VLabels>>) -> HashSet<VLabels> {
@@ -24,9 +24,7 @@ pub mod tests {
             .collect()
     }
 
-    fn get_cliques<G: RequiredMethods>(
-        data: HashMap<Label, HLabels>,
-    ) -> HashSet<VLabels> {
+    fn get_cliques<G: RequiredMethods>(data: HashMap<Label, HLabels>) -> HashSet<VLabels> {
         let graph = G::from_adj_list(data);
         // println!("{:?}", graph);
         let tree = graph.modular_decomposition();
@@ -397,9 +395,7 @@ pub mod tests {
 
                 if !bool::from(graph.is_claw_free(&tree)) {
                     continue;
-                } else if let ModuleKind::Parallel =
-                    tree.graph.node_weight(tree.root).unwrap()
-                {
+                } else if let ModuleKind::Parallel = tree.graph.node_weight(tree.root).unwrap() {
                     continue;
                 } else {
                     break (graph, tree);

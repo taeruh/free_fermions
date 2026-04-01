@@ -1,5 +1,6 @@
 use std::fs;
 
+#[allow(unused_imports)]
 use crate::{
     exact,
     graph::{
@@ -26,6 +27,7 @@ mod twod_square_lattice;
 
 // TODO: roughly test which implementations is the fastest
 type GenGraph = generic::Graph<Pet>;
+#[allow(dead_code)]
 type GenGraphAdj = generic::Graph<Adj>;
 type Graph = specialised::Graph<Custom>;
 
@@ -49,6 +51,7 @@ pub fn run() {
     // exact::bricks::run_analyse();
 }
 
+#[allow(dead_code)]
 fn uniform_values(
     value_start: f64,
     value_end: f64,

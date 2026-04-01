@@ -1,15 +1,18 @@
-use rand::{Rng, SeedableRng, seq::index};
+#[allow(unused_imports)]
+use rand::{seq::index, Rng, SeedableRng};
+#[allow(unused_imports)]
 use rand_pcg::Pcg64;
 
 use super::PauliString;
 use crate::fix_int::int;
 
+#[allow(private_interfaces)]
 pub struct Sparse {
     pub ops: Vec<PauliString>,
 }
 
 impl Sparse {
-    pub fn draw<'a>(num_operators: usize, num_spins: usize, rng: &mut impl Rng) -> Self {
+    pub fn draw(num_operators: usize, num_spins: usize, rng: &mut impl Rng) -> Self {
         assert!(num_spins <= 31); // otherwise the shifting we do below will overflow
 
         let max_code = (1 << (2 * num_spins)) - 1;

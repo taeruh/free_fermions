@@ -19,6 +19,8 @@ impl Density {
     }
 }
 
+/// Do these two operators commute or anticommute?
+/// Operators that implement this trait are not allowing any other possibilities.
 pub trait Commutator {
     fn commute(&self, other: &Self) -> bool;
 }
@@ -29,7 +31,7 @@ pub trait Commutator {
 // enum I variant); this way, their second index never matches any other index; doing
 // this introduces an overhead for the single particle, however, there are much more two
 // particle operators, so this is probably better than introducing an enum to separate
-// the two cases or using trait objects opertors
+// the two cases or using trait objects operators
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Pauli {
     X,
@@ -37,6 +39,7 @@ pub enum Pauli {
     Z,
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 enum FullPauli {
     I,
@@ -45,10 +48,13 @@ enum FullPauli {
     Z,
 }
 
+/// A tensor product of `N` single site operators.
+/// If we have `index = [a,b,c]` and `operator_at_index = [U,V,W]`
+/// this means `U_a \otimes V_b \otimes W_c` and identity on all the others.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LocalOperator<const N: usize, Op> {
     pub index: [usize; N],
-    pub pauli: [Op; N],
+    pub operator_at_index: [Op; N],
 }
 // }}}
 
@@ -70,9 +76,7 @@ impl<const N: usize, Op: Commutator> Commutator for LocalOperator<N, Op> {
         let mut anticommute = false;
         for s in 0..N {
             for o in 0..N {
-                if self.index[s] == other.index[o]
-                    && !self.pauli[s].commute(&other.pauli[o])
-                {
+                if self.index[s] == other.index[o] && !self.operator_at_index[s].commute(&other.operator_at_index[o]) {
                     anticommute ^= true;
                 }
             }
@@ -81,6 +85,7 @@ impl<const N: usize, Op: Commutator> Commutator for LocalOperator<N, Op> {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct PauliString {
     n: usize,
@@ -97,11 +102,12 @@ impl Commutator for PauliString {
 }
 
 impl PauliString {
+    #[allow(dead_code)]
     pub fn from_paulis(n: usize, paulis: Vec<LocalOperator<1, Pauli>>) -> Self {
         let mut z = BitVec::repeat(false, n);
         let mut x = BitVec::repeat(false, n);
         for op in paulis {
-            match op.pauli[0] {
+            match op.operator_at_index[0] {
                 Pauli::X => x.set(op.index[0], true),
                 Pauli::Y => {
                     x.set(op.index[0], true);
@@ -121,6 +127,7 @@ impl PauliString {
         }
     }
 
+    #[allow(dead_code)]
     pub fn draw_as_paulis(&self) {
         let mut paulis = Vec::with_capacity(self.n);
         for i in 0..self.n {
@@ -150,6 +157,10 @@ fn bitvec_from_usize(max_bit: usize, bits: usize) -> BitVec {
     ret
 }
 
+/// Suppose we have `k` operators in `ops` and
+/// pairwise they either commute or anticommute.
+/// We can create an unoriented graph on `k` vertices where the edges
+/// indicate that the corresponding operators anticommute.
 pub fn get_edges<Op: Commutator>(ops: &[Op]) -> Vec<(int, int)> {
     let mut ret = Vec::new();
     if ops.is_empty() {
@@ -178,6 +189,9 @@ pub const DOUBLES: [(Pauli, Pauli); 9] = [
     (Pauli::Z, Pauli::Z),
 ];
 
+/// With probability `density` take each item
+/// from `iter`. Collecting the ones that we
+/// actually did select into a `Vec<I>`.
 pub fn draw_from_iter<'a, I: Copy + 'a>(
     density: f64,
     rng: &mut impl Rng,
@@ -204,6 +218,6 @@ fn draw_doubles(density: f64, rng: &mut impl Rng) -> Vec<(Pauli, Pauli)> {
 pub mod bricks;
 pub mod electronic_structure;
 pub mod oned_chain;
+pub mod sparse;
 pub mod square_lattice;
 pub mod two_local;
-pub mod sparse;

@@ -2,17 +2,18 @@ use itertools::Itertools;
 use petgraph::Undirected;
 
 use super::check;
+#[allow(unused_imports)]
 use crate::{
     fix_int::int,
-    graph::{Label, Node, generic::ImplGraph},
+    graph::{generic::ImplGraph, Label, Node},
     run::GenGraph,
 };
 
+#[allow(dead_code)]
 pub fn run() {
     let size = 5;
     let total_num_edges = size * (size - 1) / 2;
-    let edge_pool =
-        (0..size).flat_map(|i| (i + 1..size).map(move |j| (i as int, j as int)));
+    let edge_pool = (0..size).flat_map(|i| (i + 1..size).map(move |j| (i as int, j as int)));
 
     let mut results = vec![(0, 0); total_num_edges + 1];
     let mut naive_results = vec![0; total_num_edges + 1];
@@ -53,7 +54,7 @@ pub fn run() {
         // assert_eq!(results[len].1, naive_results[len],);
 
         let graph = petgraph::Graph::<(), (), Undirected, int>::from_edges(&edges);
-        let node_count = graph.node_count();
+        let _node_count = graph.node_count();
         // if node_count < 5 {
         //     println!("{:?}", edges);
         //     println!("{:?}", graph);
@@ -82,9 +83,11 @@ pub fn run() {
         }
     }
 
-    let results = results.into_iter().enumerate().map(|(i, r)| {
-        (i as f64 / total_num_edges as f64, r.1, r.0)
-    }).collect::<Vec<_>>();
+    let results = results
+        .into_iter()
+        .enumerate()
+        .map(|(i, r)| (i as f64 / total_num_edges as f64, r.1, r.0))
+        .collect::<Vec<_>>();
 
     println!("{:?}", results);
 

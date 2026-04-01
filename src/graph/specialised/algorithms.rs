@@ -9,7 +9,6 @@ mod test_impl {
     use hashbrown::HashMap;
 
     use crate::graph::{
-        HLabels, Label, Node, VLabels,
         algorithms::{
             modular_decomposition::Tree,
             obstinate::ObstinateMapped,
@@ -17,6 +16,7 @@ mod test_impl {
         },
         generic::algorithms::is_line_graph::SageProcess,
         specialised::{Custom, Graph, GraphData, IndexMap},
+        HLabels, Label, Node, VLabels,
     };
 
     impl<G: GraphData> RequiredMethods for Graph<G>
@@ -41,11 +41,9 @@ mod test_impl {
         }
         fn simplicial(&self, tree: &Tree) -> Vec<Vec<VLabels>> {
             let cliques = unsafe { self.simplicial(tree) };
-            vec![Vec::from_iter(
-                cliques
-                    .into_iter()
-                    .map(|c| c.into_iter().map(|v| self.get_label(v).unwrap()).collect()),
-            )]
+            vec![Vec::from_iter(cliques.into_iter().map(|c| {
+                c.into_iter().map(|v| self.get_label(v).unwrap()).collect()
+            }))]
         }
         fn get_label_mapping(&self) -> impl Fn(Node) -> Label + Copy {
             self.get_label_mapping()

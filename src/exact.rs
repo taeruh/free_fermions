@@ -1,2 +1,2 @@
-pub mod square_lattice;
 pub mod bricks;
+pub mod square_lattice;

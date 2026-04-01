@@ -26,9 +26,11 @@
 //! ```
 
 use itertools::Itertools;
-use rand::{Rng, seq::SliceRandom};
+#[allow(unused_imports)]
+use rand::{seq::SliceRandom, Rng};
 
 use super::{Density, Pauli};
+#[allow(unused_imports)]
 use crate::{fix_int::int, hamiltonian::DOUBLES};
 
 type LocalOperator = super::LocalOperator<2, Pauli>;
@@ -65,22 +67,22 @@ impl Bricks {
         // let num_ops = e1.len() + e2.len() + e3.len() + e4.len() + e5.len();
 
         let mut num_ops = 0;
-        let (e1, e2, e3, e4, e5) =
-            [e1_density, e2_density, e3_density, e4_density, e5_density]
-                .into_iter()
-                .enumerate()
-                .map(|(i, density)| {
-                    let d = density.0;
-                    // assert!(d >= 1. / 9., "density {i} too low");
-                    let mut e = super::draw_doubles(d, rng);
-                    while e.is_empty() {
-                        e = super::draw_doubles(d, rng);
-                    }
-                    num_ops += e.len();
-                    e
-                })
-                .collect_tuple()
-                .unwrap();
+        #[allow(clippy::unused_enumerate_index)]
+        let (e1, e2, e3, e4, e5) = [e1_density, e2_density, e3_density, e4_density, e5_density]
+            .into_iter()
+            .enumerate()
+            .map(|(_i, density)| {
+                let d = density.0;
+                // assert!(d >= 1. / 9., "density {i} too low");
+                let mut e = super::draw_doubles(d, rng);
+                while e.is_empty() {
+                    e = super::draw_doubles(d, rng);
+                }
+                num_ops += e.len();
+                e
+            })
+            .collect_tuple()
+            .unwrap();
 
         let mut operators = Vec::with_capacity(num_ops * 4);
 
@@ -91,31 +93,31 @@ impl Bricks {
                 for p in e5.iter() {
                     operators.push(LocalOperator {
                         index: [row + col, ((row + 8) % 16) + ((col + 7) % 8)],
-                        pauli: [p.0, p.1],
+                        operator_at_index: [p.0, p.1],
                     });
                 }
                 for p in e1.iter() {
                     operators.push(LocalOperator {
                         index: [row + col, row + col + 1],
-                        pauli: [p.0, p.1],
+                        operator_at_index: [p.0, p.1],
                     });
                 }
                 for p in e2.iter() {
                     operators.push(LocalOperator {
                         index: [row + col + 1, row + col + 2],
-                        pauli: [p.0, p.1],
+                        operator_at_index: [p.0, p.1],
                     });
                 }
                 for p in e3.iter() {
                     operators.push(LocalOperator {
                         index: [row + col + 2, row + col + 3],
-                        pauli: [p.0, p.1],
+                        operator_at_index: [p.0, p.1],
                     });
                 }
                 for p in e4.iter() {
                     operators.push(LocalOperator {
                         index: [row + col + 3, row + (col + 4) % 8],
-                        pauli: [p.0, p.1],
+                        operator_at_index: [p.0, p.1],
                     });
                 }
             }

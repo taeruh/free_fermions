@@ -45,7 +45,7 @@ impl InvalidGraph<Node> {
             Self::SelfLoop(node) => InvalidGraph::SelfLoop(map(*node)),
             Self::IncompatibleNeighbourhoods(node, neighbour) => {
                 InvalidGraph::IncompatibleNeighbourhoods(map(*node), map(*neighbour))
-            },
+            }
         }
     }
 }
@@ -163,7 +163,7 @@ pub mod specialised;
 pub mod test_utils {
 
     use hashbrown::HashMap;
-    use rand::{Rng, SeedableRng, distributions::Uniform, seq::IteratorRandom};
+    use rand::{distributions::Uniform, seq::IteratorRandom, Rng, SeedableRng};
     use rand_pcg::Pcg64;
 
     use super::*;
@@ -205,8 +205,7 @@ pub mod test_utils {
         }
         let map = RandomMap::with_rng(num_nodes, num_nodes * 5, rng);
         let dist = Uniform::new(0, num_nodes);
-        let mut ret =
-            HashMap::from_iter((0..num_nodes).map(|i| (map.map(i), HLabels::new())));
+        let mut ret = HashMap::from_iter((0..num_nodes).map(|i| (map.map(i), HLabels::new())));
         for _ in 0..num_edges {
             loop {
                 let (a, b) = (rng.sample(dist), rng.sample(dist));
@@ -237,17 +236,11 @@ pub mod test_utils {
         };
     }
 
-    pub fn adj_hash_hash(
-        map: &RandomMap,
-        list: Vec<VLabelInfo>,
-    ) -> HashMap<Label, HLabels> {
+    pub fn adj_hash_hash(map: &RandomMap, list: Vec<VLabelInfo>) -> HashMap<Label, HLabels> {
         adj_map!(map, list)
     }
 
-    pub fn adj_hash_vec(
-        map: &RandomMap,
-        list: Vec<VLabelInfo>,
-    ) -> HashMap<Label, VLabels> {
+    pub fn adj_hash_vec(map: &RandomMap, list: Vec<VLabelInfo>) -> HashMap<Label, VLabels> {
         adj_map!(map, list)
     }
 
@@ -276,7 +269,10 @@ pub mod test_utils {
             $list
                 .into_iter()
                 .map(|collection| {
-                    collection.into_iter().map(|element| $map.map(element)).collect()
+                    collection
+                        .into_iter()
+                        .map(|element| $map.map(element))
+                        .collect()
                 })
                 .collect()
         };
@@ -300,11 +296,13 @@ pub mod test_utils {
         edge_map!(map, list)
     }
 
+    #[allow(unused_macros)]
     macro_rules! collect_adj {
         ($(($node:expr, [$($neighbor:expr),*]),)*) => {
             vec![$(($node, vec![$($neighbor),*]),)*]
         };
     }
+    #[allow(unused_imports)]
     pub(crate) use collect_adj;
 
     #[allow(unused)]
@@ -316,6 +314,7 @@ pub mod test_utils {
     #[allow(unused)]
     pub(crate) use collect_col;
 
+    #[allow(unused_macros)]
     macro_rules! collect {
         (hh, $map:expr; $(($node:expr, $neighbours:tt),)*) => {
             $crate::graph::test_utils::adj_hash_hash(
@@ -382,6 +381,7 @@ pub mod test_utils {
             )
         };
     }
+    #[allow(unused_imports)]
     pub(crate) use collect;
 
     // just a naive test whether the utils compile, more or less
@@ -394,7 +394,9 @@ pub mod test_utils {
         let map = RandomMap::with_rng(10, 20, &mut Pcg64::from_entropy());
         assert_eq!(
             HashSet::from_iter(
-                [(1, 2), (1, 3)].into_iter().map(|(a, b)| (map.map(a), map.map(b)))
+                [(1, 2), (1, 3)]
+                    .into_iter()
+                    .map(|(a, b)| (map.map(a), map.map(b)))
             ),
             collect!(h, map; (1, 2), (1, 3),)
         );
@@ -403,7 +405,7 @@ pub mod test_utils {
 
 #[cfg(test)]
 mod tests {
-    use rand::{SeedableRng, seq::SliceRandom};
+    use rand::{seq::SliceRandom, SeedableRng};
     use rand_pcg::Pcg64;
 
     use super::*;

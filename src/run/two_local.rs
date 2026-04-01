@@ -4,12 +4,12 @@ use hashbrown::HashMap;
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
 
-use super::{GenGraph, density_size_sweep};
+use super::{density_size_sweep, GenGraph};
 use crate::{
     graph::generic::ImplGraph,
     hamiltonian::{
-        Density,
         two_local::{self, TwoLocal},
+        Density,
     },
     rand_helper,
 };
@@ -25,6 +25,7 @@ const DENSITY_END: f64 = 0.06;
 const NUM_DENSITY_STEPS: usize = 500;
 // const NUM_DENSITY_STEPS: usize = 40;
 
+#[allow(dead_code)]
 pub fn run() {
     let id = env::args()
         .nth(1)
@@ -36,8 +37,7 @@ pub fn run() {
     // let seed = Pcg64::seed_from_u64(0).gen();
     let seeds = rand_helper::generate_seeds::<NUM_THREADS>(Some(seed));
 
-    let densities =
-        super::uniform_values(DENSITY_START, DENSITY_END, NUM_DENSITY_STEPS);
+    let densities = super::uniform_values(DENSITY_START, DENSITY_END, NUM_DENSITY_STEPS);
     let sizes = SIZES.to_vec();
 
     let pools = sizes

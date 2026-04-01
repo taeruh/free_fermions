@@ -7,16 +7,17 @@ use std::{
     time::Instant,
 };
 
+#[allow(unused_imports)]
 use itertools::Itertools;
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64;
 use serde::Serialize;
 
 use crate::{
-    graph::generic::{ImplGraph, algorithms::is_line_graph::SageProcess},
-    hamiltonian::{Density, square_lattice::PeriodicLattice},
+    graph::generic::{algorithms::is_line_graph::SageProcess, ImplGraph},
+    hamiltonian::{square_lattice::PeriodicLattice, Density},
     rand_helper,
-    run::{GenGraph, check},
+    run::{check, GenGraph},
 };
 
 // adjust to hpc_run ncpus (don't need extra thread for main, because it is not doing
@@ -24,7 +25,7 @@ use crate::{
 const NUM_THREADS: usize = 50;
 // const NUM_THREADS: usize = 10;
 const NUM_SAMPLES: usize = 50000; // per thread
-// const NUM_SAMPLES: usize = 100; // per thread
+                                  // const NUM_SAMPLES: usize = 100; // per thread
 
 const FORCE_2D: bool = true;
 // const FORCE_2D: bool = false;
@@ -69,6 +70,7 @@ struct CountResults {
     max_sc_size: usize,
 }
 
+#[allow(dead_code)]
 impl CountResults {
     fn init() -> Self {
         Self {
@@ -97,6 +99,7 @@ impl CountResults {
     }
 }
 
+#[allow(dead_code)]
 impl Results {
     fn init() -> Self {
         Self {
@@ -123,14 +126,11 @@ impl Results {
         ret.max_sc_size = results.max_sc_size;
 
         for i in 0..NUM_DENSITY_STEPS {
-            ret.before_claw_free[i] =
-                results.before_claw_free[i] as f64 / NUM_TOTAL_SAMPLES as f64;
+            ret.before_claw_free[i] = results.before_claw_free[i] as f64 / NUM_TOTAL_SAMPLES as f64;
             ret.before_simplicial[i] =
                 results.before_simplicial[i] as f64 / NUM_TOTAL_SAMPLES as f64;
-            ret.after_claw_free[i] =
-                results.claw_free[i] as f64 / NUM_TOTAL_SAMPLES as f64;
-            ret.after_simplicial[i] =
-                results.simplicial[i] as f64 / NUM_TOTAL_SAMPLES as f64;
+            ret.after_claw_free[i] = results.claw_free[i] as f64 / NUM_TOTAL_SAMPLES as f64;
+            ret.after_simplicial[i] = results.simplicial[i] as f64 / NUM_TOTAL_SAMPLES as f64;
             ret.collapsed[i] = results.collapsed[i] / NUM_TOTAL_SAMPLES as f64;
         }
         ret
@@ -139,8 +139,10 @@ impl Results {
 
 struct Notification {
     remaining: Vec<(f64, usize)>,
+    #[allow(dead_code)]
     start_time: Instant,
 }
+#[allow(dead_code)]
 impl Notification {
     fn new(densities: impl Iterator<Item = f64>) -> Self {
         Self {
@@ -268,16 +270,14 @@ pub fn periodic() {
     };
 
     let results: Vec<_> = thread::scope(|scope| {
-        let handles: Vec<_> =
-            (0..NUM_THREADS).map(|i| scope.spawn(move || job(i))).collect();
+        let handles: Vec<_> = (0..NUM_THREADS)
+            .map(|i| scope.spawn(move || job(i)))
+            .collect();
         handles.into_iter().map(|h| h.join().unwrap()).collect()
     });
 
-    let results = Results::normalise_merged_count_results(
-        CountResults::merge(results),
-        densities,
-        seed,
-    );
+    let results =
+        Results::normalise_merged_count_results(CountResults::merge(results), densities, seed);
 
     let force_2d = if FORCE_2D { "force_2d" } else { "" };
     fs::write(
@@ -287,6 +287,7 @@ pub fn periodic() {
     .unwrap();
 }
 
+#[allow(dead_code)]
 pub fn run() {
     periodic()
 }

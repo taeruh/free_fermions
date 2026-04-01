@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use modular_decomposition::ModuleKind;
-use petgraph::{Direction, graph::DiGraph};
+use petgraph::{graph::DiGraph, Direction};
 
 use crate::graph::{Label, Node};
 
@@ -27,7 +27,7 @@ fn mapped_eq(
         (ModuleKind::Parallel, ModuleKind::Parallel) => true,
         (ModuleKind::Node(left_node), ModuleKind::Node(right_node)) => {
             left_map(*left_node) == right_map(*right_node)
-        },
+        }
         _ => false,
     }
 }
@@ -36,8 +36,10 @@ fn mapped_eq(
 impl Tree {
     pub fn module_representative(&self, mut module: NodeIndex) -> Node {
         loop {
-            module = if let Some(m) =
-                self.graph.neighbors_directed(module, Direction::Outgoing).next()
+            module = if let Some(m) = self
+                .graph
+                .neighbors_directed(module, Direction::Outgoing)
+                .next()
             {
                 m
             } else {
@@ -80,11 +82,7 @@ impl Tree {
     // when roughly looking at the implementation of our Neighbors iterator here, it is
     // probably not cache-friendly anyway
     // TODO: implement an unsafe version, where we use a stack on the stack
-    pub fn module_nodes(
-        &self,
-        module: NodeIndex,
-        stack_size_hint: Option<usize>,
-    ) -> Vec<Node> {
+    pub fn module_nodes(&self, module: NodeIndex, stack_size_hint: Option<usize>) -> Vec<Node> {
         if let ModuleKind::Node(idx) = self.graph.node_weight(module).unwrap() {
             return vec![*idx];
         }
@@ -103,16 +101,14 @@ impl Tree {
                 match self.graph.node_weight(child).unwrap() {
                     ModuleKind::Node(idx) => ret.push(*idx),
                     _ => {
-                        stack.push(
-                            self.graph.neighbors_directed(child, Direction::Outgoing),
-                        );
+                        stack.push(self.graph.neighbors_directed(child, Direction::Outgoing));
                         // checking if the logic about claw-free graphs is correct
                         #[cfg(debug_assertions)]
                         if let Some(stack_size) = stack_size_hint {
                             assert!(stack.len() <= stack_size);
                         }
                         continue 'outer;
-                    },
+                    }
                 }
             }
             stack.pop();
@@ -125,7 +121,10 @@ impl Tree {
         if !matches!(self.graph.node_weight(module).unwrap(), ModuleKind::Prime) {
             return false;
         }
-        for child in self.graph.neighbors_directed(self.root, Direction::Outgoing) {
+        for child in self
+            .graph
+            .neighbors_directed(self.root, Direction::Outgoing)
+        {
             if !matches!(self.graph.node_weight(child).unwrap(), ModuleKind::Node(_)) {
                 return false;
             }
@@ -139,13 +138,13 @@ impl Tree {
             ModuleKind::Series => {
                 for child in self.graph.neighbors_directed(module, Direction::Outgoing) {
                     match self.graph.node_weight(child).unwrap() {
-                        ModuleKind::Node(_) => {},
+                        ModuleKind::Node(_) => {}
                         _ => return false,
                     }
                 }
-            },
+            }
             ModuleKind::Parallel => return false,
-            ModuleKind::Node(_) => {},
+            ModuleKind::Node(_) => {}
         }
         true
     }
@@ -223,8 +222,7 @@ impl Tree {
             return false;
         } else if left_tree.graph.node_count() == 1 {
             let get_node = |tree: &Self| {
-                if let ModuleKind::Node(node) = tree.graph.node_weight(tree.root).unwrap()
-                {
+                if let ModuleKind::Node(node) = tree.graph.node_weight(tree.root).unwrap() {
                     *node
                 } else {
                     unreachable!("tree has only one node, so it must be a leaf node")
@@ -274,8 +272,9 @@ impl Tree {
 
         let true_left_leaf_siblings: HashSet<_> =
             left_tree.get_leaf_children(left_map, left_parent).collect();
-        let true_right_leaf_siblings: HashSet<_> =
-            right_tree.get_leaf_children(right_map, right_parent).collect();
+        let true_right_leaf_siblings: HashSet<_> = right_tree
+            .get_leaf_children(right_map, right_parent)
+            .collect();
 
         if (true_left_leaf_siblings != true_right_leaf_siblings)
             || !mapped_eq(
@@ -317,15 +316,15 @@ impl Tree {
         map: impl FnOnce(Node) -> Label + Copy + 'a,
         node: NodeIndex,
     ) -> impl Iterator<Item = Label> + 'a {
-        self.graph.neighbors_directed(node, Direction::Outgoing).filter_map(
-            move |child| {
+        self.graph
+            .neighbors_directed(node, Direction::Outgoing)
+            .filter_map(move |child| {
                 if let ModuleKind::Node(weight) = self.graph[child] {
                     Some(map(weight))
                 } else {
                     None
                 }
-            },
-        )
+            })
     }
 
     fn get_leaves_with_inverted_map(
@@ -372,8 +371,7 @@ pub mod tests {
         let spec_index =
             specialised::Graph::<IndexMap>::from_adjacency_labels(data.clone()).unwrap();
         let tree_spec_index = spec_index.modular_decomposition();
-        let spec_cus =
-            specialised::Graph::<IndexMap>::from_adjacency_labels(data).unwrap();
+        let spec_cus = specialised::Graph::<IndexMap>::from_adjacency_labels(data).unwrap();
         let tree_spec_cus = spec_cus.modular_decomposition();
 
         assert!(Tree::is_equivalent(
@@ -439,11 +437,9 @@ pub mod tests {
                 break (data_a, data_b);
             }
         };
-        let graph_a =
-            specialised::Graph::<IndexMap>::from_adjacency_labels(data_a).unwrap();
+        let graph_a = specialised::Graph::<IndexMap>::from_adjacency_labels(data_a).unwrap();
         let tree_a = graph_a.modular_decomposition();
-        let graph_b =
-            specialised::Graph::<IndexMap>::from_adjacency_labels(data_b).unwrap();
+        let graph_b = specialised::Graph::<IndexMap>::from_adjacency_labels(data_b).unwrap();
         let tree_b = graph_b.modular_decomposition();
         assert!(!Tree::is_equivalent(
             &tree_a,

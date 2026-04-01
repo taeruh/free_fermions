@@ -1,11 +1,11 @@
 use std::{iter::Map, mem};
 
 use hashbrown::HashSet;
-use petgraph::{Undirected, graph::Neighbors, operator};
+use petgraph::{graph::Neighbors, operator, Undirected};
 
 use crate::graph::{
-    Label, LabelEdge,
     generic::{CompactNodes, HNodes, ImplGraph, Node, NodeCollection, NodeCollectionRef},
+    Label, LabelEdge,
 };
 
 pub type NodeIndex = petgraph::graph::NodeIndex<Node>; // = int

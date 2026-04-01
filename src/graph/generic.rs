@@ -5,18 +5,15 @@ use std::{
     ptr, slice,
 };
 
-use hashbrown::{HashMap, HashSet, hash_set};
+use hashbrown::{hash_set, HashMap, HashSet};
 use petgraph::{
+    visit::{GraphBase, GraphProp, IntoNeighbors, NodeCompactIndexable, NodeCount, NodeIndexable},
     Undirected,
-    visit::{
-        GraphBase, GraphProp, IntoNeighbors, NodeCompactIndexable, NodeCount,
-        NodeIndexable,
-    },
 };
 
 use super::{
-    CompactNodes, Edge, HLabels, HNodes, InvalidGraph, Label, LabelEdge, Node,
-    SwapRemoveMap, VNodes,
+    CompactNodes, Edge, HLabels, HNodes, InvalidGraph, Label, LabelEdge, Node, SwapRemoveMap,
+    VNodes,
 };
 
 /// Newtype around `impl `[ImplGraph] types that supports foreign traits.
@@ -121,9 +118,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
         }
     }
 
-    fn from_symmetric_adjacency_labels<A, N>(
-        adj: A,
-    ) -> Result<Self, (Self, InvalidGraph<Node>)>
+    fn from_symmetric_adjacency_labels<A, N>(adj: A) -> Result<Self, (Self, InvalidGraph<Node>)>
     where
         A: IntoIterator<Item = (Label, N)>,
         N: IntoIterator<Item = Label>,
@@ -218,10 +213,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
                     }
                 })
                 .collect();
-            ret.add_labelled_node_symmetrically((
-                self.get_label(node).unwrap(),
-                neighbours,
-            ));
+            ret.add_labelled_node_symmetrically((self.get_label(node).unwrap(), neighbours));
         }
         ret
     }
@@ -317,9 +309,7 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
                     return Err(InvalidGraph::SelfLoop(node));
                 }
                 if !self.get_neighbours(neighbour).unwrap().contains(node) {
-                    return Err(InvalidGraph::IncompatibleNeighbourhoods(
-                        node, neighbour,
-                    ));
+                    return Err(InvalidGraph::IncompatibleNeighbourhoods(node, neighbour));
                 }
             }
         }
@@ -331,7 +321,10 @@ pub trait ImplGraph: CompactNodes + Clone + Debug + Default {
             .map(|(node, neighbours)| {
                 (
                     self.get_label(node).unwrap(),
-                    neighbours.iter_ref().map(|n| self.get_label(n).unwrap()).collect(),
+                    neighbours
+                        .iter_ref()
+                        .map(|n| self.get_label(n).unwrap())
+                        .collect(),
                 )
             })
             .collect()
@@ -587,7 +580,7 @@ impl<'a, T: NodeCollection> NodeCollectionRef for &'a T {
     }
 }
 
-impl<'a, T: NodeCollection> NodeCollection for &'a T {
+impl<T: NodeCollection> NodeCollection for &T {
     type Collected = T::Collected;
     type Iter<'b>
         = T::Iter<'b>
